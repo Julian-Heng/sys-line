@@ -11,7 +11,7 @@ class StringBuilder():
     def __init__(self):
         self.extract_reg = re.compile(r"\{((\w+)\.(\w+))(?:\?)?")
         self.trim_reg_1 = re.compile(r"\{\}")
-        self.trim_reg_2 = re.compile(r"\{((\w+)\.(\w+))(?:\?)?")
+        self.trim_reg_2 = re.compile(r"\{\?|\}$")
 
 
     def build(self, sys, fmt):
