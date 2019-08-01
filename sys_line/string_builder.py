@@ -1,41 +1,50 @@
 #!/usr/bin/env python3
+# pylint: disable=too-few-public-methods
 
 """ String builder module to construct a string from a format """
 
 import re
 
+class StringBuilder():
+    """ String Builder class """
 
-def string_build(sys, fmt):
-    """ Recursive function to build a string from a format """
-    out = ""
+    def __init__(self):
+        self.extract_reg = re.compile(r"\{((\w+)\.(\w+))(?:\?)?")
+        self.trim_reg_1 = re.compile(r"\{\}")
+        self.trim_reg_2 = re.compile(r"\{((\w+)\.(\w+))(?:\?)?")
 
-    for i in tokenize(fmt):
-        extract = re.search(r"\{((\w+)\.(\w+))(?:\?)?", i)
-        if extract is not None:
-            domain = extract.group(2)
-            info = extract.group(3)
-            sys.fetch(domain, info)
-            replace = sys.get(domain, info)
 
-            parse = re.sub(extract.group(1), "", i)
+    def build(self, sys, fmt):
+        """ Recursive function to build a string from a format """
+        out = ""
 
-            if replace is not None:
-                if isinstance(replace, bool):
-                    if replace:
-                        replace = string_build(sys, parse)
+        for i in tokenize(fmt):
+            extract = self.extract_reg.search(i)
+            if extract is not None:
+                domain = extract.group(2)
+                info = extract.group(3)
+                sys.fetch(domain, info)
+                replace = sys.get(domain, info)
+
+                parse = re.sub(extract.group(1), "", i)
+
+                if replace is not None:
+                    if isinstance(replace, bool):
+                        if replace:
+                            replace = self.build(sys, parse)
+                        else:
+                            replace = ""
                     else:
-                        replace = ""
-                else:
-                    replace = str(replace)
-                    replace = re.sub(r"\{\}", replace, parse, 1)
-                    replace = re.sub(r"\{\?|\}$", "", replace)
-                    if re.search(r"\{((\w+)\.(\w+))(?:\?)?", i):
-                        replace = string_build(sys, replace)
-                out += replace
-        else:
-            out += i
+                        replace = str(replace)
+                        replace = self.trim_reg_1.sub(replace, parse, 1)
+                        replace = self.trim_reg_2.sub("", replace)
+                        if self.extract_reg.search(i):
+                            replace = self.build(sys, replace)
+                    out += replace
+            else:
+                out += i
 
-    return out
+        return out
 
 
 def tokenize(string):

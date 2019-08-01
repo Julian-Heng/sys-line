@@ -10,7 +10,7 @@ from .options import parse
 from .abstract import *
 from .systems.darwin import *
 from .utils import *
-from .string_builder import *
+from .string_builder import StringBuilder
 
 
 def init_system(options):
@@ -26,4 +26,4 @@ def main():
     """ Main method """
     options = parse()
     system = init_system(options)
-    print(string_build(system, options.format))
+    print(StringBuilder().build(system, options.format))
