@@ -3,23 +3,34 @@
 
 """ sys-line initialization """
 
+import sys
 import os
 import re
 
 from .options import parse
 from .abstract import *
-from .systems.darwin import *
 from .utils import *
 from .string_builder import StringBuilder
 
+from .systems.darwin import *
+from .systems.linux import *
 
 def init_system(options):
     """ Determine what system class this machine should use """
-    os_name = os.uname().sysname
-    if os_name == "Darwin":
-        sys = Darwin(os_name, options)
+    systems = {
+        "Darwin": Darwin,
+        "Linux": Linux
+    }
 
-    return sys
+    os_name = os.uname().sysname
+    try:
+        system = systems[os_name](os_name, options)
+    except KeyError:
+        print("Unknown system: {}\nExiting...".format(os_name),
+              file=sys.stderr)
+        sys.exit(1)
+
+    return system
 
 
 def main():
