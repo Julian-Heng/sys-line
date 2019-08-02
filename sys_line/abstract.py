@@ -94,22 +94,23 @@ class AbstractCpu(AbstractGetter):
 
     def get_cpu(self):
         """ Returns cpu string """
+        cpu_reg = re.compile(r"\s+@\s+(\d+\.)?\d+GHz")
         trim_reg = re.compile(r"CPU|\((R|TM)\)")
 
         if self.get("cores") is None:
             self.call("cores")
+        cores = self.get("cores")
 
         cpu, speed = self._get_cpu_speed()
         cpu = trim_reg.sub("", cpu.strip())
 
         if speed is not None:
-            fmt = r" ({}) @ {}GHz"
-            fmt = fmt.format(self.get("cores"), speed)
+            fmt = r" ({}) @ {}GHz".format(cores, speed)
+            cpu = cpu_reg.sub(fmt, cpu)
         else:
-            fmt = r"({}) @"
-            fmt = fmt.format(self.get("cores"))
+            fmt = r"({}) @".format(cores)
+            cpu = re.sub(r"@", fmt, cpu)
 
-        cpu = re.sub(r"@", fmt, cpu)
         cpu = re.sub(r"\s+", " ", cpu)
 
         return cpu
