@@ -160,7 +160,7 @@ class Disk(AbstractDisk):
 
         diskutil = run(["diskutil", "info", self.get("dev")]).split("\n")
         diskutil = [re.sub(r"\s+", " ", i).strip() for i in diskutil]
-        diskutil = [i for i in diskutil if i != ""]
+        diskutil = [i for i in diskutil if i]
         self.diskutil = dict(i.split(": ", 1) for i in diskutil)
 
 
@@ -191,7 +191,7 @@ class Battery(AbstractBattery):
 
         bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
         bat = [re.sub("[\"{}]", "", i.strip()) for i in bat]
-        self.bat = dict(i.split(" = ", 1) for i in bat if i.strip() != "")
+        self.bat = dict(i.split(" = ", 1) for i in bat if i.strip())
 
         self.current = None
         self.current_capacity = None
