@@ -11,6 +11,15 @@ def percent(num_1, num_2):
     """ Calculate percentage """
     return None if num_2 == 0 else (num_1 / num_2) * 100
 
+
+
+def open_read(filename):
+    """ Wrapper for opening and reading a file """
+    with open(filename) as f:
+        contents = f.read()
+    return contents
+
+
 def run(cmd):
     """ Runs cmd and returns output as a string """
     stdout = subprocess.PIPE
