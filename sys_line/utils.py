@@ -35,10 +35,10 @@ def unix_epoch_to_str(secs):
     mins = int(secs / 60 % 60)
     secs = (secs % 60) % 60
     string = "{} {} {} {}s".format(
-                "{}d".format(days) if days != 0 else "",
-                "{}h".format(hours) if hours != 0 else "",
-                "{}m".format(mins) if mins != 0 else "",
-                secs)
+        "{}d".format(days) if days != 0 else "",
+        "{}h".format(hours) if hours != 0 else "",
+        "{}m".format(mins) if mins != 0 else "",
+        secs)
 
     string = re.sub(r"\s+", " ", string.strip())
     return string
