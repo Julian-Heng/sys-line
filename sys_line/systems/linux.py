@@ -80,12 +80,10 @@ class Cpu(AbstractCpu):
 
 
     def get_fan(self):
-        check = lambda f: int(open_read(f)) != 0
-
         fan = None
         fan_dir = "/sys/devices/platform"
         glob = "fan1_input"
-        files = (f for f in p(fan_dir).rglob(glob) if check(f))
+        files = (f for f in p(fan_dir).rglob(glob))
 
         fan = next(files, None)
         if fan is not None:
@@ -219,28 +217,107 @@ class Disk(AbstractDisk):
 class Battery(AbstractBattery):
     """ Linux implementation of AbstractBattery class """
 
+    def __init__(self, options):
+        super(Battery, self).__init__(options)
+
+        self.bat_dir = None
+        self.status = None
+        self.current_capacity = None
+        self.full_capacity = None
+        self.current = None
+
+        check = lambda f: p(f).exists() and bool(int(open_read(f)))
+        bat_dir = p("/sys/class/power_supply").glob("*BAT*")
+        bat_dir = (d for d in bat_dir if check("{}/present".format(d)))
+        self.bat_dir = next(bat_dir, None)
+
+
+    def __get_status(self):
+        self.status = open_read("{}/status".format(self.bat_dir)).strip()
+
+
+    def __get_current_capacity(self):
+        if self.bat_dir is not None:
+            charge_file = "{}/charge_now".format(self.bat_dir)
+            self.current_capacity = int(open_read(charge_file))
+
+
+    def __get_full_capacity(self):
+        if self.bat_dir is not None:
+            charge_file = "{}/charge_full".format(self.bat_dir)
+            self.full_capacity = int(open_read(charge_file))
+
+
+    def __get_amperage(self):
+        if self.bat_dir is not None:
+            current_file = "{}/current_now".format(self.bat_dir)
+            self.current = int(open_read(current_file))
+
+
+    def __compare_status(self, query):
+        if self.status is None:
+            self.__get_status()
+        return None if self.bat_dir is None else self.status == query
+
+
     def get_is_present(self):
-        pass
+        return self.bat_dir is not None
 
 
     def get_is_charging(self):
-        pass
+        return self.__compare_status("Charging")
 
 
     def get_is_full(self):
-        pass
+        return self.__compare_status("Full")
 
 
     def get_percent(self):
-        pass
+        perc = None
+        if self.bat_dir is not None:
+            if self.current_capacity is None:
+                self.__get_current_capacity()
+            if self.full_capacity is None:
+                self.__get_full_capacity()
+
+            perc = percent(self.current_capacity, self.full_capacity)
+            perc = round(perc, self.options.bat_percent_round)
+
+        return perc
 
 
     def _get_time(self):
-        pass
+        time = None
+        if self.bat_dir is not None:
+            if self.current_capacity is None:
+                self.__get_current_capacity()
+            if self.full_capacity is None:
+                self.__get_full_capacity()
+            if self.current is None:
+                self.__get_amperage()
+                if self.current == 0:
+                    return 0
+
+            charge = self.current_capacity
+            if self.get("is_charging"):
+                charge = self.full_capacity - charge
+
+            time = int((charge / self.current) * 3600)
+
+        return time
 
 
     def get_power(self):
-        pass
+        power = None
+        if self.bat_dir is not None:
+            if self.current is None:
+                self.__get_amperage()
+
+            voltage = int(open_read("{}/voltage_now".format(self.bat_dir)))
+            power = (self.current * voltage) / 10e11
+            power = round(power, self.options.bat_power_round)
+
+        return power
 
 
 class Network(AbstractNetwork):
@@ -271,7 +348,7 @@ class Network(AbstractNetwork):
             if (len(open_read(wifi).strip().split("\n"))) >= 3:
                 if shutil.which("iw"):
                     ssid_exe = ["iw", "dev", dev, "link"]
-                    regex = "^SSID: (.*)$"
+                    regex = re.compile("^SSID: (.*)$")
 
         return ssid_exe, regex
 
@@ -296,21 +373,35 @@ class Misc(AbstractMisc):
         reg = re.compile(r"|".join(systems.keys()))
 
         vol = None
-        pids = [extract(i) for i in p("/proc").iterdir() if check(i)]
+        pids = (extract(i) for i in p("/proc").iterdir() if check(i))
         pids = (reg.search(i) for i in pids if i and reg.search(i))
         audio = next(pids, None)
 
         if audio is not None:
             vol = systems[audio.group(0)]()
+            vol = round(vol, self.options.misc_volume_round)
 
-        return round(vol, self.options.misc_volume_round)
+        return vol
 
 
     def get_scr(self):
-        pass
+        check = lambda f: "kbd" not in f and "backlight" in f
+
+        scr = None
+        scr_files = (f for f in p("/sys/devices").rglob("*") if check(f.name))
+        scr_dir = next(scr_files, None)
+
+        if scr_dir is not None:
+            curr = int(open_read("{}/brightness".format(scr_dir)))
+            max_bright = int(open_read("{}/max_brightness".format(scr_dir)))
+            scr = percent(curr, max_bright)
+            scr = round(scr, self.options.misc_screen_round)
+
+        return scr
 
 
     def __pulseaudio(self):
+        """ Return system volume using pulse audio """
         default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
         pac_dump = run(["pacmd", "dump"])
 
@@ -321,6 +412,6 @@ class Misc(AbstractMisc):
             vol_reg = re.compile(vol_reg, re.M)
             vol = vol_reg.search(pac_dump)
             if vol is not None:
-                vol = percent(int(vol.group(1), 16), pow(2, 16))
+                vol = percent(int(vol.group(1), 16), 0x10000)
 
         return vol
