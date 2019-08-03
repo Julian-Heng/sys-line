@@ -14,12 +14,15 @@ from .string_builder import StringBuilder
 
 from .systems.darwin import *
 from .systems.linux import *
+from .systems.freebsd import *
+
 
 def init_system(options):
     """ Determine what system class this machine should use """
     systems = {
         "Darwin": Darwin,
-        "Linux": Linux
+        "Linux": Linux,
+        "FreeBSD": FreeBSD
     }
 
     os_name = os.uname().sysname
