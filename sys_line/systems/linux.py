@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=no-self-use
+# pylint: disable=no-self-use,no-member
 
 """ Linux specific module """
 
@@ -32,7 +32,7 @@ class Linux(System):
             "mem": Memory,
             "swap": Swap,
             "disk": Disk,
-            "bat": Battery,
+            "bat": detect_battery(),
             "net": Network,
             "misc": Misc
         }
@@ -214,44 +214,77 @@ class Disk(AbstractDisk):
         return self.__lookup_lsblk("FSTYPE")
 
 
+def detect_battery():
+    """
+    Linux stores battery information in /sys/class/power_supply However,
+    depending on the machine/driver it may store different information.
+
+    Example:
+
+        On one machine it might contain these files:
+            /sys/class/power_supply/charge_now
+            /sys/class/power_supply/charge_full
+            /sys/class/power_supply/current_now
+
+        On another it might contain these files:
+            /sys/class/power_supply/energy_now
+            /sys/class/power_supply/energy_full
+            /sys/class/power_supply/power_now
+
+    So the purpose of this method is to determine which implementation it
+    should use
+    """
+    bat = None
+    bat_dir = _get_battery_dir()
+
+    avail = {
+        "{}/charge_now".format(bat_dir): BatteryAmp,
+        "{}/energy_now".format(bat_dir): BatteryWatt
+    }
+
+    if bat_dir is not None:
+        check = lambda d: p(d).exists()
+        bat = next((v for k, v in avail.items() if check(k)), BatteryStub)
+
+    return bat
+
+
+def _get_battery_dir():
+    check = lambda f: p(f).exists() and bool(int(open_read(f)))
+    bat_dir = p("/sys/class/power_supply").glob("*BAT*")
+    bat_dir = (d for d in bat_dir if check("{}/present".format(d)))
+    return next(bat_dir, None)
+
+
 class Battery(AbstractBattery):
     """ Linux implementation of AbstractBattery class """
 
     def __init__(self, options):
         super(Battery, self).__init__(options)
-
-        self.bat_dir = None
+        self.bat_dir = _get_battery_dir()
         self.status = None
-        self.current_capacity = None
-        self.full_capacity = None
-        self.current = None
-
-        check = lambda f: p(f).exists() and bool(int(open_read(f)))
-        bat_dir = p("/sys/class/power_supply").glob("*BAT*")
-        bat_dir = (d for d in bat_dir if check("{}/present".format(d)))
-        self.bat_dir = next(bat_dir, None)
+        self.current_charge = None
+        self.full_charge = None
+        self.drain_rate = None
 
 
     def __get_status(self):
         self.status = open_read("{}/status".format(self.bat_dir)).strip()
 
 
-    def __get_current_capacity(self):
+    def _get_current_charge(self):
         if self.bat_dir is not None:
-            charge_file = "{}/charge_now".format(self.bat_dir)
-            self.current_capacity = int(open_read(charge_file))
+            self.current_charge = int(open_read(self.files["current"]))
 
 
-    def __get_full_capacity(self):
+    def _get_full_charge(self):
         if self.bat_dir is not None:
-            charge_file = "{}/charge_full".format(self.bat_dir)
-            self.full_capacity = int(open_read(charge_file))
+            self.full_charge = int(open_read(self.files["full"]))
 
 
-    def __get_amperage(self):
+    def _get_drain_rate(self):
         if self.bat_dir is not None:
-            current_file = "{}/current_now".format(self.bat_dir)
-            self.current = int(open_read(current_file))
+            self.drain_rate = int(open_read(self.files["drain"]))
 
 
     def __compare_status(self, query):
@@ -275,12 +308,12 @@ class Battery(AbstractBattery):
     def get_percent(self):
         perc = None
         if self.bat_dir is not None:
-            if self.current_capacity is None:
-                self.__get_current_capacity()
-            if self.full_capacity is None:
-                self.__get_full_capacity()
+            if self.current_charge is None:
+                self._get_current_charge()
+            if self.full_charge is None:
+                self._get_full_charge()
 
-            perc = percent(self.current_capacity, self.full_capacity)
+            perc = percent(self.current_charge, self.full_charge)
             perc = round(perc, self.options.bat_percent_round)
 
         return perc
@@ -289,35 +322,100 @@ class Battery(AbstractBattery):
     def _get_time(self):
         time = None
         if self.bat_dir is not None:
-            if self.current_capacity is None:
-                self.__get_current_capacity()
-            if self.full_capacity is None:
-                self.__get_full_capacity()
-            if self.current is None:
-                self.__get_amperage()
-                if self.current == 0:
+            if self.get("is_charging") is None:
+                self.call("is_charging")
+            if self.current_charge is None:
+                self._get_current_charge()
+            if self.full_charge is None:
+                self._get_full_charge()
+            if self.drain_rate is None:
+                self._get_drain_rate()
+                if self.drain_rate == 0:
                     return 0
 
-            charge = self.current_capacity
-            if self.get("is_charging"):
-                charge = self.full_capacity - charge
+            charge = self.current_charge
 
-            time = int((charge / self.current) * 3600)
+            if self.get("is_charging"):
+                charge = self.full_charge - charge
+
+            time = int((charge / self.drain_rate) * 3600)
 
         return time
 
 
     def get_power(self):
+        pass
+
+
+class BatteryAmp(Battery):
+    """ Stores filenames for batteries using amps """
+
+    def __init__(self, options):
+        super(BatteryAmp, self).__init__(options)
+        self.files = {
+            "current": "{}/charge_now".format(self.bat_dir),
+            "full": "{}/charge_full".format(self.bat_dir),
+            "drain": "{}/current_now".format(self.bat_dir)
+        }
+
+
+    def get_power(self):
         power = None
         if self.bat_dir is not None:
-            if self.current is None:
-                self.__get_amperage()
+            if self.drain_rate is None:
+                self._get_drain_rate()
 
             voltage = int(open_read("{}/voltage_now".format(self.bat_dir)))
-            power = (self.current * voltage) / 10e11
+            power = (self.drain_rate * voltage) / 10e11
             power = round(power, self.options.bat_power_round)
 
         return power
+
+
+class BatteryWatt(Battery):
+    """ Stores filenames for batteries using watts """
+
+    def __init__(self, options):
+        super(BatteryWatt, self).__init__(options)
+        self.files = {
+            "current": "{}/energy_now".format(self.bat_dir),
+            "full": "{}/energy_full".format(self.bat_dir),
+            "drain": "{}/power_now".format(self.bat_dir)
+        }
+
+
+    def get_power(self):
+        if self.drain_rate is None:
+            self._get_drain_rate()
+
+        return round(self.drain_rate / 10e5, self.options.bat_power_round)
+
+
+class BatteryStub(AbstractBattery):
+    """ Battery stub class for desktop machines """
+
+    def get_is_present(self):
+        return False
+
+
+    def get_is_charging(self):
+        pass
+
+
+    def get_is_full(self):
+        pass
+
+
+    def get_percent(self):
+        pass
+
+
+    def _get_time(self):
+        return 0
+
+
+    def get_power(self):
+        pass
 
 
 class Network(AbstractNetwork):
