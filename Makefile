@@ -1,9 +1,10 @@
 EXEC = sys-line
 PREFIX = /usr/local
 PYFLAGS = --onefile --name $(EXEC)
+PYCC = pyinstaller
 
 all:
-	pyinstaller $(PYFLAGS) ./$(EXEC)
+	$(PYCC) $(PYFLAGS) ./$(EXEC)
 
 clean:
 	$(RM) -rv ./dist ./build ./*.spec
