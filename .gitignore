@@ -1,6 +1,7 @@
 __pycache__/
-build/
-dist/
+*build/
+*.dist/
+*.bin
 *.py[cod]
 *.swp
 *.spec

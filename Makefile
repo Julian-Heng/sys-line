@@ -1,13 +1,22 @@
 EXEC = sys-line
 PREFIX = /usr/local
-PYFLAGS = --onefile --name $(EXEC)
-PYCC = pyinstaller
+PYFLAGS = --recurse-all \
+		  --python-flag=no_site \
+		  --warn-implicit-exceptions \
+		  --warn-unusual-code \
+		  --plugin-enable=pylint-warnings \
+		  --full-compat \
+		  --show-progress \
+		  --show-scons
+PYCC = python3 -X utf8 -m nuitka
 
 all:
-	$(PYCC) $(PYFLAGS) ./$(EXEC)
+	$(PYCC) $(PYFLAGS) -o $(EXEC).bin ./$(EXEC)
+
 
 clean:
-	$(RM) -rv ./dist ./build ./*.spec
+	$(RM) -rv ./$(EXEC).bin ./$(EXEC).dist ./$(EXEC).build
+
 
 install: all
-	@install -v ./dist/$(EXEC) $(PREFIX)/bin/$(EXEC)
+	@install -v ./$(EXEC).bin $(PREFIX)/bin/$(EXEC)

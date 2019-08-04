@@ -3,6 +3,7 @@
 """ Argument handling """
 
 import argparse
+import platform
 import textwrap
 
 
@@ -18,10 +19,26 @@ def parse():
     """.format(", ".join(prefixes))
     epilog = textwrap.dedent(epilog)
 
+    ver = "%(prog)s ("
+
+    if "__compiled__" in globals():
+        ver = "{}Nuitka {}.{}.{}-{}, ".format(ver,
+                                              __compiled__.major,
+                                              __compiled__.minor,
+                                              __compiled__.micro,
+                                              __compiled__.releaselevel)
+
+    ver = "{}{} {}, {})".format(ver,
+                                platform.python_implementation(),
+                                platform.python_version(),
+                                " ".join(platform.python_build()))
+
     parser = argparse.ArgumentParser(description=desc, epilog=epilog,
                                      formatter_class=fmt)
 
     parser.add_argument("format")
+    parser.add_argument("-v", "--version", action="version",
+                        version=ver)
 
     groups = {
         "cpu": parser.add_argument_group("cpu"),
