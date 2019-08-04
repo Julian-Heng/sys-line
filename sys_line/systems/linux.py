@@ -157,16 +157,16 @@ class Swap(AbstractSwap):
         used = int(self.mem_file["SwapTotal"])
         used -= int(self.mem_file["SwapFree"])
         used = Storage(value=used, prefix="KiB",
-                       rounding=self.options.mem_used_round)
-        used.set_prefix(self.options.mem_used_prefix)
+                       rounding=self.options.swap_used_round)
+        used.set_prefix(self.options.swap_used_prefix)
         return used
 
 
     def get_total(self):
         total = Storage(int(self.mem_file["SwapTotal"]), prefix="KiB",
-                        rounding=self.options.mem_total_round)
+                        rounding=self.options.swap_total_round)
 
-        total.set_prefix(self.options.mem_total_prefix)
+        total.set_prefix(self.options.swap_total_prefix)
         return total
 
 
