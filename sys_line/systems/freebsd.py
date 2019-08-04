@@ -45,6 +45,7 @@ class Cpu(AbstractCpu):
 
     def get_fan(self):
         """ Stub """
+        return NotImplementedError
 
 
     def get_temp(self):
@@ -54,6 +55,4 @@ class Cpu(AbstractCpu):
     def _get_uptime_sec(self):
         cmd = ["sysctl", "-n", "kern.boottime"]
         regex = r"sec = (\d+),"
-        sec = int(re.search(regex, run(cmd)).group(1))
-
-        return int(time.time()) - sec
+        return int(time.time()) - int(re.search(regex, run(cmd)).group(1))

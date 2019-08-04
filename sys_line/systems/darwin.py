@@ -238,11 +238,9 @@ class Battery(AbstractBattery):
         if self.current is None:
             self.__get_amperage()
 
-        fmt = "{{:.{}f}}".format(self.options.bat_power_round)
         voltage = int(self.bat["Voltage"])
         power = (self.current * voltage) / 1000000
-
-        return fmt.format(power)
+        return round(power, self.options.bat_power_round)
 
 
     def __get_current_capacity(self):
@@ -282,7 +280,7 @@ class Network(AbstractNetwork):
 
     def _get_ssid(self):
         ssid_exe = "/System/Library/PrivateFrameworks/Apple80211.framework"
-        ssid_exe += "/Versions/Current/Resources/airport"
+        ssid_exe = "{}/Versions/Current/Resources/airport".format(ssid_exe)
         ssid_exe = [ssid_exe, "--getinfo"]
         ssid_reg = re.compile("^SSID: (.*)$")
 
@@ -305,9 +303,8 @@ class Misc(AbstractMisc):
     def get_vol(self):
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
-        fmt = "{{:.{}f}}".format(self.options.misc_volume_round)
-
-        return fmt.format(float(run(cmd if shutil.which("vol") else osa)))
+        vol = float(run(cmd if shutil.which("vol") else osa))
+        return round(vol, self.options.misc_volume_round)
 
 
     def get_scr(self):
@@ -315,6 +312,4 @@ class Misc(AbstractMisc):
         scr = next((i for i in scr if "IODisplayParameters" in i))
         scr = re.search(r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)", scr)
         scr = percent(int(scr.group(2)), int(scr.group(1)))
-        fmt = "{{:.{}f}}".format(self.options.misc_screen_round)
-
-        return fmt.format(scr)
+        return round(scr, self.options.misc_screen_round)

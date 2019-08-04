@@ -339,10 +339,6 @@ class Battery(AbstractBattery):
         return time
 
 
-    def get_power(self):
-        pass
-
-
 class BatteryAmp(Battery):
     """ Stores filenames for batteries using amps """
 
@@ -395,15 +391,15 @@ class BatteryStub(AbstractBattery):
 
 
     def get_is_charging(self):
-        pass
+        raise NotImplementedError
 
 
     def get_is_full(self):
-        pass
+        raise NotImplementedError
 
 
     def get_percent(self):
-        pass
+        raise NotImplementedError
 
 
     def _get_time(self):
@@ -411,7 +407,7 @@ class BatteryStub(AbstractBattery):
 
 
     def get_power(self):
-        pass
+        raise NotImplementedError
 
 
 class Network(AbstractNetwork):
