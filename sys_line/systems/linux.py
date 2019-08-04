@@ -234,19 +234,15 @@ def detect_battery():
     So the purpose of this method is to determine which implementation it
     should use
     """
-    bat = None
     bat_dir = _get_battery_dir()
+    check = lambda d: p(d).exists()
 
     avail = {
         "{}/charge_now".format(bat_dir): BatteryAmp,
         "{}/energy_now".format(bat_dir): BatteryWatt
     }
 
-    if bat_dir is not None:
-        check = lambda d: p(d).exists()
-        bat = next((v for k, v in avail.items() if check(k)), BatteryStub)
-
-    return bat
+    return next((v for k, v in avail.items() if check(k)), BatteryStub)
 
 
 def _get_battery_dir():
