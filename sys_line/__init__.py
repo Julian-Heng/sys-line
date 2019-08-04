@@ -3,10 +3,9 @@
 
 """ sys-line initialization """
 
-import os
-import platform
-import re
 import sys
+import os
+import re
 
 from .options import parse
 from .abstract import *
