@@ -12,7 +12,6 @@ def percent(num_1, num_2):
     return None if num_2 == 0 else (num_1 / num_2) * 100
 
 
-
 def open_read(filename):
     """ Wrapper for opening and reading a file """
     with open(filename) as f:
