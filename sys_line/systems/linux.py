@@ -8,16 +8,16 @@ import shutil
 
 from pathlib import Path as p
 
-from sys_line.abstract import (System,
-                               AbstractCpu,
-                               AbstractMemory,
-                               AbstractSwap,
-                               AbstractDisk,
-                               AbstractBattery,
-                               AbstractNetwork,
-                               AbstractMisc)
-from sys_line.storage import Storage
-from sys_line.utils import open_read, run, percent
+from ..abstract import (System,
+                        AbstractCpu,
+                        AbstractMemory,
+                        AbstractSwap,
+                        AbstractDisk,
+                        AbstractBattery,
+                        AbstractNetwork,
+                        AbstractMisc)
+from ..storage import Storage
+from ..utils import open_read, run, percent
 
 
 class Linux(System):
