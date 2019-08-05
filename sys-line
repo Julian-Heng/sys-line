@@ -4,7 +4,8 @@
 """ The start of sys-line """
 
 import sys
-import sys_line
+from sys_line.__main__ import main
+
 
 if __name__ == "__main__":
-    sys.exit(sys_line.main())
+    sys.exit(main())
