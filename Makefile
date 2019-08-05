@@ -1,5 +1,5 @@
 EXEC = sys-line
-PREFIX = /usr/local
+PREFIX = /usr
 PYFLAGS = --recurse-all \
 		  --python-flag=no_site \
 		  --warn-implicit-exceptions \
@@ -18,5 +18,15 @@ clean:
 	$(RM) -rv ./$(EXEC).bin ./$(EXEC).dist ./$(EXEC).build
 
 
-install: all
-	@install -v ./$(EXEC).bin $(PREFIX)/bin/$(EXEC)
+install:
+	@if [ -e "$(EXEC).bin" ]; then \
+		install -v ./$(EXEC).bin $(PREFIX)/bin/$(EXEC); \
+	else \
+		printf "run 'make' to build\\n"; \
+	fi
+
+
+uninstall:
+	@if [ -e "$(PREFIX)/bin/$(EXEC)" ]; then \
+		$(RM) -v $(PREFIX)/bin/$(EXEC); \
+	fi
