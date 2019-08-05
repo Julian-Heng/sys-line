@@ -15,7 +15,7 @@ from ..abstract import (System,
                         AbstractNetwork,
                         AbstractMisc)
 from ..storage import Storage
-from ..utils import run, percent
+from ..utils import run, percent, _round
 
 
 class Darwin(System):
@@ -70,7 +70,7 @@ class Cpu(AbstractCpu):
             regex = r"CPU: ((\d+\.)?\d+)"
             match = re.search(regex, run(["osx-cpu-temp", "-f", "-c"]))
             temp = float(match.group(1)) if match else 0.0
-            temp = round(temp, self.options.cpu_temp_round)
+            temp = _round(temp, self.options.cpu_temp_round)
 
         return temp
 
@@ -214,7 +214,7 @@ class Battery(AbstractBattery):
             self.__get_current_capacity()
 
         perc = percent(self.current_capacity, int(self.bat["MaxCapacity"]))
-        perc = round(perc, self.options.bat_percent_round)
+        perc = _round(perc, self.options.bat_percent_round)
 
         return perc
 
@@ -240,7 +240,7 @@ class Battery(AbstractBattery):
 
         voltage = int(self.bat["Voltage"])
         power = (self.current * voltage) / 1000000
-        return round(power, self.options.bat_power_round)
+        return _round(power, self.options.bat_power_round)
 
 
     def __get_current_capacity(self):
@@ -304,7 +304,7 @@ class Misc(AbstractMisc):
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
-        return round(vol, self.options.misc_volume_round)
+        return _round(vol, self.options.misc_volume_round)
 
 
     def get_scr(self):
@@ -312,4 +312,4 @@ class Misc(AbstractMisc):
         scr = next((i for i in scr if "IODisplayParameters" in i))
         scr = re.search(r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)", scr)
         scr = percent(int(scr.group(2)), int(scr.group(1)))
-        return round(scr, self.options.misc_screen_round)
+        return _round(scr, self.options.misc_screen_round)

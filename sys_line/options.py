@@ -6,10 +6,12 @@ import argparse
 import platform
 import textwrap
 
+from .storage import Storage
+
 
 def parse():
     """ Parse the program arguments """
-    prefixes = ["B", "KiB", "MiB", "GiB", "TiB"]
+    prefixes = Storage.prefixes
 
     fmt = argparse.RawDescriptionHelpFormatter
     desc = "a simple status line generator"
