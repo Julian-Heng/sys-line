@@ -2,6 +2,9 @@
 
 """ Storage module """
 
+from .utils import _round
+
+
 class Storage():
     """ Storage class for storing values with data prefixes """
     prefixes = ("B", "KiB", "MiB", "GiB", "TiB")
@@ -16,7 +19,7 @@ class Storage():
         val = self.value
         rnd = self.rounding
         prf = self.prefix
-        return "{} {}".format(round(val, rnd) if rnd > -1 else val, prf)
+        return "{} {}".format(_round(val, rnd) if rnd > -1 else val, prf)
 
 
     def __str__(self):

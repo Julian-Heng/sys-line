@@ -17,7 +17,7 @@ from ..abstract import (System,
                         AbstractNetwork,
                         AbstractMisc)
 from ..storage import Storage
-from ..utils import open_read, run, percent
+from ..utils import open_read, run, percent, _round
 
 
 class Linux(System):
@@ -310,7 +310,7 @@ class Battery(AbstractBattery):
                 self._get_full_charge()
 
             perc = percent(self.current_charge, self.full_charge)
-            perc = round(perc, self.options.bat_percent_round)
+            perc = _round(perc, self.options.bat_percent_round)
 
         return perc
 
@@ -339,6 +339,10 @@ class Battery(AbstractBattery):
         return time
 
 
+    def get_power(self):
+        """ To be implemented by BatteryAmp or BatteryWatt """
+
+
 class BatteryAmp(Battery):
     """ Stores filenames for batteries using amps """
 
@@ -359,7 +363,7 @@ class BatteryAmp(Battery):
 
             voltage = int(open_read("{}/voltage_now".format(self.bat_dir)))
             power = (self.drain_rate * voltage) / 10e11
-            power = round(power, self.options.bat_power_round)
+            power = _round(power, self.options.bat_power_round)
 
         return power
 
@@ -380,7 +384,7 @@ class BatteryWatt(Battery):
         if self.drain_rate is None:
             self._get_drain_rate()
 
-        return round(self.drain_rate / 10e5, self.options.bat_power_round)
+        return _round(self.drain_rate / 10e5, self.options.bat_power_round)
 
 
 class BatteryStub(AbstractBattery):
@@ -469,7 +473,7 @@ class Misc(AbstractMisc):
 
         if audio is not None:
             vol = systems[audio.group(0)]()
-            vol = round(vol, self.options.misc_volume_round)
+            vol = _round(vol, self.options.misc_volume_round)
 
         return vol
 
@@ -485,7 +489,7 @@ class Misc(AbstractMisc):
             curr = int(open_read("{}/brightness".format(scr_dir)))
             max_bright = int(open_read("{}/max_brightness".format(scr_dir)))
             scr = percent(curr, max_bright)
-            scr = round(scr, self.options.misc_screen_round)
+            scr = _round(scr, self.options.misc_screen_round)
 
         return scr
 

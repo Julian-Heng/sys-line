@@ -10,7 +10,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime
 
 from .storage import Storage
-from .utils import percent, run, unix_epoch_to_str
+from .utils import percent, run, unix_epoch_to_str, _round
 
 
 class System(metaclass=ABCMeta):
@@ -132,7 +132,7 @@ class AbstractCpu(AbstractGetter):
 
         ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
         cpu_usage = sum([float(i) for i in ps_out]) / cores
-        return round(cpu_usage, self.options.cpu_usage_round)
+        return _round(cpu_usage, self.options.cpu_usage_round)
 
 
     @abstractmethod
@@ -190,7 +190,7 @@ class AbstractMemory(AbstractGetter):
                 self.call(i)
 
         perc = percent(self.get("used"), self.get("total"))
-        return round(perc, self.options.mem_percent_round)
+        return _round(perc, self.options.mem_percent_round)
 
 
 class AbstractSwap(AbstractGetter):
@@ -219,7 +219,7 @@ class AbstractSwap(AbstractGetter):
                 self.call(i)
 
         perc = percent(self.get("used"), self.get("total"))
-        return round(perc, self.options.swap_percent_round)
+        return _round(perc, self.options.swap_percent_round)
 
 
 class AbstractDisk(AbstractGetter):
@@ -313,7 +313,7 @@ class AbstractDisk(AbstractGetter):
                 self.call(i)
 
         perc = percent(self.get("used"), self.get("total"))
-        return round(perc, self.options.disk_percent_round)
+        return _round(perc, self.options.disk_percent_round)
 
 
 class AbstractBattery(AbstractGetter):
