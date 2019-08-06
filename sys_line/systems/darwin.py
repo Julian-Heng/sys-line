@@ -6,16 +6,16 @@ import re
 import shutil
 import time
 
-from ..abstract import (System,
-                        AbstractCpu,
-                        AbstractMemory,
-                        AbstractSwap,
-                        AbstractDisk,
-                        AbstractBattery,
-                        AbstractNetwork,
-                        AbstractMisc)
-from ..storage import Storage
-from ..utils import run, percent, _round
+from .abstract import (System,
+                       AbstractCpu,
+                       AbstractMemory,
+                       AbstractSwap,
+                       AbstractDisk,
+                       AbstractBattery,
+                       AbstractNetwork,
+                       AbstractMisc)
+from ..tools.storage import Storage
+from ..tools.utils import run, percent, _round
 
 
 class Darwin(System):

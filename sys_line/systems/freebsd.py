@@ -6,9 +6,9 @@
 import re
 import time
 
-from ..abstract import (System,
-                        AbstractCpu)
-from ..utils import run
+from .abstract import (System,
+                       AbstractCpu)
+from ..tools.utils import run
 
 
 class FreeBSD(System):

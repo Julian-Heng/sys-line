@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# pylint: disable=C0103
+# pylint: disable=invalid-name
 
-""" The start of sys-line """
+""" sys-line entry script """
 
 import sys
-from sys_line.__main__ import main
+from sys_line.sys_line import main
 
 
 if __name__ == "__main__":

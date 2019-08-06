@@ -9,8 +9,8 @@ import time
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 
-from .storage import Storage
-from .utils import percent, run, unix_epoch_to_str, _round
+from ..tools.storage import Storage
+from ..tools.utils import percent, run, unix_epoch_to_str, _round
 
 
 class System(metaclass=ABCMeta):

@@ -14,8 +14,8 @@ def percent(num_1, num_2):
 
 def open_read(filename):
     """ Wrapper for opening and reading a file """
-    with open(filename) as f:
-        contents = f.read()
+    with open(filename) as _file:
+        contents = _file.read()
     return contents
 
 
