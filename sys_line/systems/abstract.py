@@ -33,7 +33,11 @@ class System(metaclass=ABCMeta):
         if not self.loaded[domain]:
             self.domains[domain] = self.domains[domain](self.options)
             self.loaded[domain] = True
-        self.domains[domain].call(info)
+
+        try:
+            self.domains[domain].call(info)
+        except NotImplementedError:
+            pass
 
 
     def get(self, domain, info):
@@ -189,7 +193,7 @@ class AbstractMemory(AbstractGetter):
             if self.get(i) is None:
                 self.call(i)
 
-        perc = percent(self.get("used"), self.get("total"))
+        perc = percent(self.get("used"), self.get("total")).get_value()
         return _round(perc, self.options.mem_percent_round)
 
 
@@ -218,7 +222,7 @@ class AbstractSwap(AbstractGetter):
             if self.get(i) is None:
                 self.call(i)
 
-        perc = percent(self.get("used"), self.get("total"))
+        perc = percent(self.get("used"), self.get("total")).get_value()
         return _round(perc, self.options.swap_percent_round)
 
 
@@ -247,7 +251,7 @@ class AbstractDisk(AbstractGetter):
         entry = next((i for i in match if i[0]), None)
         if entry is not None:
             dev = entry[0].group(1)
-            self.df_out = entry[1].split()
+            self.df_out = entry[1].split(maxsplit=6)
             if self.options.disk_short_dev:
                 dev = dev.split("/")[-1]
 
@@ -262,12 +266,12 @@ class AbstractDisk(AbstractGetter):
         """
 
 
-    @abstractmethod
     def get_mount(self):
-        """
-        Abstract disk mount method to be implemented
-        Returns the mount location of the disk as a string
-        """
+        """ Returns the mount point of the disk as a string """
+        if self.df_out is None or self.get("dev") is None:
+            self.call("dev")
+
+        return self.df_out[5]
 
 
     @abstractmethod
@@ -312,7 +316,7 @@ class AbstractDisk(AbstractGetter):
             if self.get(i) is None:
                 self.call(i)
 
-        perc = percent(self.get("used"), self.get("total"))
+        perc = percent(self.get("used"), self.get("total")).get_value()
         return _round(perc, self.options.disk_percent_round)
 
 
