@@ -27,28 +27,62 @@ class Storage():
 
 
     def __add__(self, other):
-        val, other = self.__check_storage(other)
-        return val + other
+        val, other, is_storage = self.__check_storage(other)
+        self.set_value(val + other)
 
+        if is_storage:
+            tmp_prefix = self.get_prefix()
+            self.set_prefix_without_value("B")
+            self.set_prefix(tmp_prefix)
+
+        return self
 
     def __sub__(self, other):
-        val, other = self.__check_storage(other)
-        return val - other
+        val, other, is_storage = self.__check_storage(other)
+        self.set_value(val - other)
+
+        if is_storage:
+            tmp_prefix = self.get_prefix()
+            self.set_prefix_without_value("B")
+            self.set_prefix(tmp_prefix)
+
+        return self
 
 
     def __mul__(self, other):
-        val, other = self.__check_storage(other)
-        return val * other
+        val, other, is_storage = self.__check_storage(other)
+        self.set_value(val * other)
+
+        if is_storage:
+            tmp_prefix = self.get_prefix()
+            self.set_prefix_without_value("B")
+            self.set_prefix(tmp_prefix)
+
+        return self
 
 
     def __truediv__(self, other):
-        val, other = self.__check_storage(other)
-        return val / other
+        val, other, is_storage = self.__check_storage(other)
+        self.set_value(val / other)
+
+        if is_storage:
+            tmp_prefix = self.get_prefix()
+            self.set_prefix_without_value("B")
+            self.set_prefix(tmp_prefix)
+
+        return self
 
 
     def __rtruediv__(self, other):
-        val, other = self.__check_storage(other)
-        return other / val
+        val, other, is_storage = self.__check_storage(other)
+        self.set_value(other / val)
+
+        if is_storage:
+            tmp_prefix = self.get_prefix()
+            self.set_prefix_without_value("B")
+            self.set_prefix(tmp_prefix)
+
+        return self
 
 
     def __eq__(self, other):
@@ -62,7 +96,7 @@ class Storage():
     def __check_storage(self, other):
         val = self.get_bytes() if isinstance(other, Storage) else self.value
         oth = other.get_bytes() if isinstance(other, Storage) else other
-        return val, oth
+        return val, oth, isinstance(other, Storage)
 
 
     def set_value(self, value):
@@ -80,6 +114,14 @@ class Storage():
                 self.prefix = prefix
         except ValueError:
             pass
+
+
+    def get_value(self):
+        return self.value
+
+
+    def get_prefix(self):
+        return self.value
 
 
     def set_prefix_without_value(self, prefix):
