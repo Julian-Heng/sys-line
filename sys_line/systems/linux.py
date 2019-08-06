@@ -165,7 +165,6 @@ class Swap(AbstractSwap):
     def get_total(self):
         total = Storage(int(self.mem_file["SwapTotal"]), prefix="KiB",
                         rounding=self.options.swap_total_round)
-
         total.set_prefix(self.options.swap_total_prefix)
         return total
 
