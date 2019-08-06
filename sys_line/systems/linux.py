@@ -206,10 +206,6 @@ class Disk(AbstractDisk):
         return name
 
 
-    def get_mount(self):
-        return self.__lookup_lsblk("MOUNTPOINT")
-
-
     def get_partition(self):
         return self.__lookup_lsblk("FSTYPE")
 

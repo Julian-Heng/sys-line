@@ -175,10 +175,6 @@ class Disk(AbstractDisk):
         return self.__lookup_diskutil("Volume Name")
 
 
-    def get_mount(self):
-        return self.__lookup_diskutil("Mount Point")
-
-
     def get_partition(self):
         return self.__lookup_diskutil("File System Personality")
 
@@ -275,7 +271,7 @@ class Network(AbstractNetwork):
         dev_list = [i.group(1) for i in dev_list if i]
         dev = (i for i in dev_list if check(i))
 
-        return next(dev, "")
+        return next(dev, None)
 
 
     def _get_ssid(self):
