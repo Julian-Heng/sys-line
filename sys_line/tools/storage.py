@@ -117,10 +117,12 @@ class Storage():
 
 
     def get_value(self):
+        """ Return value """
         return self.value
 
 
     def get_prefix(self):
+        """ Return prefix """
         return self.value
 
 
