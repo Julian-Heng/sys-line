@@ -138,7 +138,7 @@ class Swap(AbstractSwap):
 
 
     def get_total(self):
-        total = Storage(self.__lookup_swap("total"),
+        total = Storage(value=self.__lookup_swap("total"),
                         rounding=self.options.swap_total_round)
         total.set_prefix(self.options.swap_total_prefix)
 

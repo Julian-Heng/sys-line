@@ -135,7 +135,7 @@ class Memory(AbstractMemory):
 
 
     def get_total(self):
-        total = Storage(int(self.mem_file["MemTotal"]), prefix="KiB",
+        total = Storage(value=int(self.mem_file["MemTotal"]), prefix="KiB",
                         rounding=self.options.mem_total_round)
 
         total.set_prefix(self.options.mem_total_prefix)
@@ -163,7 +163,7 @@ class Swap(AbstractSwap):
 
 
     def get_total(self):
-        total = Storage(int(self.mem_file["SwapTotal"]), prefix="KiB",
+        total = Storage(value=int(self.mem_file["SwapTotal"]), prefix="KiB",
                         rounding=self.options.swap_total_round)
         total.set_prefix(self.options.swap_total_prefix)
         return total

@@ -473,7 +473,7 @@ class AbstractNetwork(AbstractGetter):
         Returns a Storage class
         """
 
-        download = Storage(self.__calc_bytes_delta_rate("down"))
+        download = Storage(value=self.__calc_bytes_delta_rate("down"))
         download.set_prefix(self.options.net_download_prefix)
         return download
 
@@ -483,7 +483,7 @@ class AbstractNetwork(AbstractGetter):
         Method to calculate network upload speed
         Returns a Storage class
         """
-        upload = Storage(self.__calc_bytes_delta_rate("up"))
+        upload = Storage(value=self.__calc_bytes_delta_rate("up"))
         upload.set_prefix(self.options.net_upload_prefix)
         return upload
 
