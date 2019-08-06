@@ -2,6 +2,7 @@ EXEC = sys-line
 PREFIX = /usr
 PYFLAGS = --recurse-all \
 		  --python-flag=no_site \
+		  --include-package=sys_line \
 		  --warn-implicit-exceptions \
 		  --warn-unusual-code \
 		  --plugin-enable=pylint-warnings \
