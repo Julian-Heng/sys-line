@@ -254,6 +254,8 @@ class AbstractDisk(AbstractGetter):
             self.df_out = entry[1].split(maxsplit=6)
             if self.options.disk_short_dev:
                 dev = dev.split("/")[-1]
+        else:
+            self.df_out = None
 
         return dev
 
@@ -268,10 +270,13 @@ class AbstractDisk(AbstractGetter):
 
     def get_mount(self):
         """ Returns the mount point of the disk as a string """
+        mount = None
         if self.df_out is None or self.get("dev") is None:
             self.call("dev")
+        if self.df_out is not None:
+            mount = self.df_out[5]
 
-        return self.df_out[5]
+        return mount
 
 
     @abstractmethod
