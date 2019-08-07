@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=no-self-use,no-member
+# pylint: disable=no-member
 
 """ Linux specific module """
 
@@ -68,14 +68,13 @@ class Cpu(AbstractCpu):
         speed = next(speed_files, None)
         if speed is not None:
             speed = float(open_read(speed))
-            speed = "{:.2f}".format(speed / 1000000)
+            speed = _round(speed / 1e6, 2)
 
         return cpu, speed
 
 
     def get_load_avg(self):
-        load_file = "/proc/loadavg"
-        load = open_read(load_file).split(" ")
+        load = open_read("/proc/loadavg").split(" ")
         return load[0] if self.options.cpu_load_short else " ".join(load[:3])
 
 
@@ -119,8 +118,7 @@ class Memory(AbstractMemory):
         super(Memory, self).__init__(options)
         reg = re.compile(r"\s+|kB")
         mem_file = open_read("/proc/meminfo").strip().split("\n")
-        mem_file = [reg.sub("", i) for i in mem_file]
-        self.mem_file = dict(i.split(":", 1) for i in mem_file)
+        self.mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
 
 
     def get_used(self):
@@ -137,7 +135,6 @@ class Memory(AbstractMemory):
     def get_total(self):
         total = Storage(value=int(self.mem_file["MemTotal"]), prefix="KiB",
                         rounding=self.options.mem_total_round)
-
         total.set_prefix(self.options.mem_total_prefix)
         return total
 
@@ -149,8 +146,7 @@ class Swap(AbstractSwap):
         super(Swap, self).__init__(options)
         reg = re.compile(r"\s+|kB")
         mem_file = open_read("/proc/meminfo").strip().split("\n")
-        mem_file = [reg.sub("", i) for i in mem_file]
-        self.mem_file = dict(i.split(":", 1) for i in mem_file)
+        self.mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
 
 
     def get_used(self):
@@ -194,6 +190,7 @@ class Disk(AbstractDisk):
     def __lookup_lsblk(self, key):
         if self.lsblk is None:
             self.__set_lsblk()
+
         return self.lsblk[key]
 
 
@@ -357,7 +354,7 @@ class BatteryAmp(Battery):
                 self._get_drain_rate()
 
             voltage = int(open_read("{}/voltage_now".format(self.bat_dir)))
-            power = (self.drain_rate * voltage) / 10e11
+            power = (self.drain_rate * voltage) / 1e12
             power = _round(power, self.options.bat_power_round)
 
         return power
@@ -379,7 +376,7 @@ class BatteryWatt(Battery):
         if self.drain_rate is None:
             self._get_drain_rate()
 
-        return _round(self.drain_rate / 10e5, self.options.bat_power_round)
+        return _round(self.drain_rate / 1e6, self.options.bat_power_round)
 
 
 class BatteryStub(AbstractBattery):
@@ -434,10 +431,10 @@ class Network(AbstractNetwork):
 
         if dev is not None:
             wifi = "/proc/net/wireless"
-            if (len(open_read(wifi).strip().split("\n"))) >= 3:
-                if shutil.which("iw"):
-                    ssid_exe = ["iw", "dev", dev, "link"]
-                    regex = re.compile("^SSID: (.*)$")
+            if (len(open_read(wifi).strip().split("\n")) >= 3 and
+                    shutil.which("iw")):
+                ssid_exe = ["iw", "dev", dev, "link"]
+                regex = re.compile("^SSID: (.*)$")
 
         return ssid_exe, regex
 
@@ -456,7 +453,7 @@ class Misc(AbstractMisc):
         extract = lambda f: open_read("{}/cmdline".format(f))
 
         systems = {
-            "pulseaudio": self.__pulseaudio
+            "pulseaudio": get_vol_pulseaudio
         }
 
         reg = re.compile(r"|".join(systems.keys()))
@@ -489,18 +486,18 @@ class Misc(AbstractMisc):
         return scr
 
 
-    def __pulseaudio(self):
-        """ Return system volume using pulse audio """
-        default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
-        pac_dump = run(["pacmd", "dump"])
+def get_vol_pulseaudio():
+    """ Return system volume using pulse audio """
+    default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
+    pac_dump = run(["pacmd", "dump"])
 
-        vol = None
-        default = default_reg.search(pac_dump)
-        if default is not None:
-            vol_reg = r"^set-sink-volume {} 0x(.*)$".format(default.group(1))
-            vol_reg = re.compile(vol_reg, re.M)
-            vol = vol_reg.search(pac_dump)
-            if vol is not None:
-                vol = percent(int(vol.group(1), 16), 0x10000)
+    vol = None
+    default = default_reg.search(pac_dump)
+    if default is not None:
+        vol_reg = r"^set-sink-volume {} 0x(.*)$".format(default.group(1))
+        vol_reg = re.compile(vol_reg, re.M)
+        vol = vol_reg.search(pac_dump)
+        if vol is not None:
+            vol = percent(int(vol.group(1), 16), 0x10000)
 
-        return vol
+    return vol
