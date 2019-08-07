@@ -22,6 +22,7 @@ def parse():
     """.format(", ".join(prefixes))
     epilog = textwrap.dedent(epilog)
 
+    usage_msg = "%(prog)s [options] format..."
     ver = "%(prog)s ("
 
     if "__compiled__" in globals():
@@ -37,22 +38,16 @@ def parse():
                                 " ".join(platform.python_build()))
 
     parser = argparse.ArgumentParser(description=desc, epilog=epilog,
+                                     usage=usage_msg,
                                      formatter_class=fmt)
 
     parser.add_argument("format")
     parser.add_argument("-v", "--version", action="version",
                         version=ver)
 
-    groups = {
-        "cpu": parser.add_argument_group("cpu"),
-        "mem": parser.add_argument_group("memory"),
-        "swap": parser.add_argument_group("swap"),
-        "disk": parser.add_argument_group("disk"),
-        "bat": parser.add_argument_group("bat"),
-        "net": parser.add_argument_group("network"),
-        "date": parser.add_argument_group("date"),
-        "misc": parser.add_argument_group("misc")
-    }
+    groups = ["cpu", "memory", "swap", "disk",
+              "battery", "network", "date", "misc"]
+    groups = {i: parser.add_argument_group(i) for i in groups}
 
     groups["cpu"].add_argument("-cls", "--cpu-load-short",
                                action="store_true", default=False)
@@ -63,21 +58,23 @@ def parse():
                                action="store", type=int, default=1,
                                metavar="int")
 
-    groups["mem"].add_argument("-mup", "--mem-used-prefix",
-                               action="store", default="MiB",
-                               choices=prefixes, metavar="prefix")
-    groups["mem"].add_argument("-mtp", "--mem-total-prefix",
-                               action="store", default="MiB",
-                               choices=prefixes, metavar="prefix")
-    groups["mem"].add_argument("-mur", "--mem-used-round",
-                               action="store", type=int, default=0,
-                               metavar="int")
-    groups["mem"].add_argument("-mtr", "--mem-total-round",
-                               action="store", type=int, default=0,
-                               metavar="int")
-    groups["mem"].add_argument("-mpr", "--mem-percent-round",
-                               action="store", type=int, default=2,
-                               metavar="int")
+
+    groups["memory"].add_argument("-mup", "--mem-used-prefix",
+                                  action="store", default="MiB",
+                                  choices=prefixes, metavar="prefix")
+    groups["memory"].add_argument("-mtp", "--mem-total-prefix",
+                                  action="store", default="MiB",
+                                  choices=prefixes, metavar="prefix")
+    groups["memory"].add_argument("-mur", "--mem-used-round",
+                                  action="store", type=int, default=0,
+                                  metavar="int")
+    groups["memory"].add_argument("-mtr", "--mem-total-round",
+                                  action="store", type=int, default=0,
+                                  metavar="int")
+    groups["memory"].add_argument("-mpr", "--mem-percent-round",
+                                  action="store", type=int, default=2,
+                                  metavar="int")
+
 
     groups["swap"].add_argument("-sup", "--swap-used-prefix",
                                 action="store", default="MiB",
@@ -95,11 +92,13 @@ def parse():
                                 action="store", type=int, default=2,
                                 metavar="int")
 
+
     mut_group = groups["disk"].add_mutually_exclusive_group()
     mut_group.add_argument("-dd", "--disk", action="store",
                            metavar="disk")
     mut_group.add_argument("-dm", "--mount", action="store", default="/",
                            metavar="mount")
+
 
     groups["disk"].add_argument("-dsd", "--disk-short-dev",
                                 action="store_true", default=False)
@@ -119,34 +118,36 @@ def parse():
                                 action="store", type=int, default=2,
                                 metavar="int")
 
-    groups["bat"].add_argument("-bpr", "--bat-percent-round",
-                               action="store", type=int, default=2,
-                               metavar="int")
 
-    groups["bat"].add_argument("-bppr", "--bat-power-round",
-                               action="store", type=int, default=2,
-                               metavar="int")
+    groups["battery"].add_argument("-bpr", "--bat-percent-round",
+                                   action="store", type=int, default=2,
+                                   metavar="int")
+    groups["battery"].add_argument("-bppr", "--bat-power-round",
+                                   action="store", type=int, default=2,
+                                   metavar="int")
 
-    groups["net"].add_argument("-ndp", "--net-download-prefix",
-                               action="store", default="KiB",
-                               choices=prefixes, metavar="prefix")
-    groups["net"].add_argument("-nup", "--net-upload-prefix",
-                               action="store", default="KiB",
-                               choices=prefixes, metavar="prefix")
-    groups["net"].add_argument("-nur", "--net-used-round",
-                               action="store", type=int, default=2,
-                               metavar="int")
-    groups["net"].add_argument("-ntr", "--net-total-round",
-                               action="store", type=int, default=2,
-                               metavar="int")
+
+    groups["network"].add_argument("-ndp", "--net-download-prefix",
+                                   action="store", default="KiB",
+                                   choices=prefixes, metavar="prefix")
+    groups["network"].add_argument("-nup", "--net-upload-prefix",
+                                   action="store", default="KiB",
+                                   choices=prefixes, metavar="prefix")
+    groups["network"].add_argument("-nur", "--net-used-round",
+                                   action="store", type=int, default=2,
+                                   metavar="int")
+    groups["network"].add_argument("-ntr", "--net-total-round",
+                                   action="store", type=int, default=2,
+                                   metavar="int")
+
 
     groups["date"].add_argument("-tdf", "--date-format",
                                 action="store", type=str, default="%a, %d %h",
                                 metavar="str")
-
     groups["date"].add_argument("-tf", "--time-format",
                                 action="store", type=str, default="%H:%M",
                                 metavar="str")
+
 
     groups["misc"].add_argument("-mvr", "--misc-volume-round",
                                 action="store", type=int, default=0,
