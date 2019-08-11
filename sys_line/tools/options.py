@@ -16,11 +16,10 @@ def parse():
 
     fmt = argparse.RawDescriptionHelpFormatter
     desc = "a simple status line generator"
-    epilog = """
+    epilog = textwrap.dedent("""
         list of prefixes:
             {}
-    """.format(", ".join(prefixes))
-    epilog = textwrap.dedent(epilog)
+    """.format(", ".join(prefixes)))
 
     usage_msg = "%(prog)s [options] format..."
     ver = "%(prog)s ("
@@ -133,10 +132,10 @@ def parse():
     groups["network"].add_argument("-nup", "--net-upload-prefix",
                                    action="store", default="KiB",
                                    choices=prefixes, metavar="prefix")
-    groups["network"].add_argument("-nur", "--net-used-round",
+    groups["network"].add_argument("-ndr", "--net-download-round",
                                    action="store", type=int, default=2,
                                    metavar="int")
-    groups["network"].add_argument("-ntr", "--net-total-round",
+    groups["network"].add_argument("-nur", "--net-upload-round",
                                    action="store", type=int, default=2,
                                    metavar="int")
 
