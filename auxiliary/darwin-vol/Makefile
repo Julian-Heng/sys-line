@@ -8,17 +8,22 @@ SOURCES := $(shell printf "%s\n" ./*.c)
 
 build: dir $(EXEC)
 
+
 clean:
 	$(RM) -rv $(BUILD)
+
 
 $(EXEC): vol.c
 	$(CC) $(CFLAGS) $(INC) -o $(BUILD)/$@ $?
 
+
 install: $(EXEC)
 	@install -v $(BUILD)/$(EXEC) $(PREFIX)/bin/$(EXEC)
 
+
 uninstall: $(EXEC)
 	$(RM) $(PREFIX)/bin/$(EXEC)
+
 
 dir:
 	mkdir -p $(BUILD)
