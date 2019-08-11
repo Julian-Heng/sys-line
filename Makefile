@@ -13,6 +13,10 @@ PYCC = python3 -X utf8 -m nuitka
 FILES = ./files.txt
 SETUPFLAGS = --user --record $(FILES)
 
+ifeq ($(shell uname -s),Darwin)
+SETUPFLAGS += --prefix=
+endif
+
 
 all:
 	python3 setup.py sdist bdist_wheel
