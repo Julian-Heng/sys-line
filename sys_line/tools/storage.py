@@ -7,7 +7,7 @@ from .utils import _round
 
 class Storage():
     """ Storage class for storing values with data prefixes """
-    prefixes = ("B", "KiB", "MiB", "GiB", "TiB")
+    prefixes = ("B", "KiB", "MiB", "GiB", "TiB", "auto")
 
     def __init__(self, value=0, prefix="B", rounding=-1):
         self.value = value
@@ -106,14 +106,22 @@ class Storage():
 
     def set_prefix(self, prefix):
         """ Change the current prefix to a another prefix """
-        try:
-            delta = self.__calc_prefix_delta(self.prefix, prefix)
-            if delta != 0:
-                # Convert the value
-                self.value = self.value / pow(1024, delta)
-                self.prefix = prefix
-        except ValueError:
-            pass
+        if prefix == "auto":
+            count = 0
+            while self.value > 1024:
+                self.value /= 1024
+                count += 1
+            curr_index = self.prefixes.index(self.prefix) + count
+            self.prefix = self.prefixes[curr_index]
+        else:
+            try:
+                delta = self.__calc_prefix_delta(self.prefix, prefix)
+                if delta != 0:
+                    # Convert the value
+                    self.value = self.value / pow(1024, delta)
+                    self.prefix = prefix
+            except ValueError:
+                pass
 
 
     def get_value(self):
