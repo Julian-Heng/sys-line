@@ -10,16 +10,23 @@ PYFLAGS = --recurse-all \
 		  --show-progress \
 		  --show-scons
 PYCC = python3 -X utf8 -m nuitka
+FILES = ./files.txt
+SETUPFLAGS = --user --record $(FILES)
+
 
 all:
+	python3 setup.py sdist bdist_wheel
+
+
+compile:
 	$(PYCC) $(PYFLAGS) -o $(EXEC).bin ./$(EXEC)
 
 
-clean:
-	$(RM) -rv ./$(EXEC).bin ./$(EXEC).dist ./$(EXEC).build
-
-
 install:
+	python3 setup.py install $(SETUPFLAGS)
+
+
+install-compile:
 	@if [ -e "$(EXEC).bin" ]; then \
 		install -v ./$(EXEC).bin $(PREFIX)/bin/$(EXEC); \
 	else \
@@ -28,6 +35,20 @@ install:
 
 
 uninstall:
+	@if [ -e "$(FILES)" ]; then \
+		while read -r file; do \
+			$(RM) -v $$file; \
+		done < $(FILES); \
+		$(RM) -v $(FILES); \
+	fi
+
+
+uninstall-compile:
 	@if [ -e "$(PREFIX)/bin/$(EXEC)" ]; then \
 		$(RM) -v $(PREFIX)/bin/$(EXEC); \
 	fi
+
+
+clean:
+	$(RM) -rv ./$(EXEC).bin ./$(EXEC).dist ./$(EXEC).build \
+			  ./dist ./build *.egg-info $(FILES)

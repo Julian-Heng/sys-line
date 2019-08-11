@@ -1,7 +1,9 @@
 __pycache__/
+*.egg-info/
 *build/
-*.dist/
+*dist/
 *.bin
 *.py[cod]
 *.swp
 *.spec
+files.txt
