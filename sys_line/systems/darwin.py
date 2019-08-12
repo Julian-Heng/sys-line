@@ -59,7 +59,7 @@ class Cpu(AbstractCpu):
         if shutil.which("osx-cpu-temp"):
             regex = r"(\d+) RPM"
             match = re.search(regex, run(["osx-cpu-temp", "-f", "-c"]))
-            fan = int(match.group(1)) if match else 0
+            fan = int(match.group(1)) if match else None
 
         return fan
 
@@ -89,7 +89,7 @@ class Memory(AbstractMemory):
     def get_used(self):
         words = ["active", "wired down", "occupied by compressor"]
         vm_stat = run(["vm_stat"]).strip().split("\n")[1:]
-        vm_stat = [re.sub(r"Pages |\.", r"", i) for i in vm_stat]
+        vm_stat = (re.sub(r"Pages |\.", r"", i) for i in vm_stat)
         vm_stat = dict(i.split(":", 1) for i in vm_stat)
         mem_used = Storage(value=sum([int(vm_stat[i]) for i in words]) * 4096,
                            rounding=self.options.mem_used_round)
@@ -155,13 +155,14 @@ class Disk(AbstractDisk):
 
 
     def __set_diskutil(self):
-        if self.get("dev") is None:
-            self.get_dev()
+        dev = self.get("dev")
+        if dev is None:
+            self.call("dev")
+            dev = self.get("dev")
 
         diskutil = run(["diskutil", "info", self.get("dev")]).split("\n")
-        diskutil = [re.sub(r"\s+", " ", i).strip() for i in diskutil]
-        diskutil = [i for i in diskutil if i]
-        self.diskutil = dict(i.split(": ", 1) for i in diskutil)
+        diskutil = (re.sub(r"\s+", " ", i).strip() for i in diskutil)
+        self.diskutil = dict(i.split(": ", 1) for i in diskutil if i)
 
 
     def __lookup_diskutil(self, key):
@@ -186,7 +187,7 @@ class Battery(AbstractBattery):
         super(Battery, self).__init__(options)
 
         bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
-        bat = [re.sub("[\"{}]", "", i.strip()) for i in bat]
+        bat = (re.sub("[\"{}]", "", i.strip()) for i in bat)
         self.bat = dict(i.split(" = ", 1) for i in bat if i.strip())
 
         self.current = None
@@ -235,7 +236,7 @@ class Battery(AbstractBattery):
             self.__get_amperage()
 
         voltage = int(self.bat["Voltage"])
-        power = (self.current * voltage) / 1000000
+        power = (self.current * voltage) / 1e6
         return _round(power, self.options.bat_power_round)
 
 
@@ -245,9 +246,7 @@ class Battery(AbstractBattery):
 
     def __get_amperage(self):
         current = int(self.bat["InstantAmperage"])
-        if len(str(current)) >= 20:
-            current -= pow(2, 64)
-
+        current -= pow(2, 64) if len(str(current)) >= 20 else 0
         self.current = abs(current)
 
 
@@ -262,16 +261,14 @@ class Network(AbstractNetwork):
     def get_dev(self):
         active = re.compile(r"status: active")
         dev_reg = re.compile(r"Device: (.*)$")
-
         check = lambda i, r=active: r.search(run(["ifconfig", i]))
 
         dev_list = run(["networksetup", "-listallhardwareports"])
         dev_list = dev_list.strip().split("\n")
-        dev_list = [dev_reg.search(i) for i in dev_list]
-        dev_list = [i.group(1) for i in dev_list if i]
-        dev = (i for i in dev_list if check(i))
+        dev_list = (dev_reg.search(i) for i in dev_list)
+        dev_list = (i.group(1) for i in dev_list if i)
 
-        return next(dev, None)
+        return next((i for i in dev_list if check(i)), None)
 
 
     def _get_ssid(self):
@@ -288,7 +285,7 @@ class Network(AbstractNetwork):
         reg = r"^({})(\s+[^\s]+){{{}}}\s+(\d+)"
         reg = reg.format(dev, 8 if mode == "up" else 5)
         reg = re.compile(reg)
-        match = [reg.match(line) for line in run(cmd).split("\n")]
+        match = (reg.match(line) for line in run(cmd).split("\n"))
 
         return int(next((i.group(3) for i in match if i), 0))
 
