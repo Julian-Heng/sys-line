@@ -9,12 +9,12 @@ PYFLAGS = --recurse-all \
 		  --full-compat \
 		  --show-progress \
 		  --show-scons
-PYCC = python3 -X utf8 -m nuitka
 FILES = ./files.txt
 SETUPFLAGS = --user --record $(FILES)
 
 ifeq ($(shell uname -s),Darwin)
 SETUPFLAGS += --prefix=
+PREFIX = /usr/local
 endif
 
 
@@ -23,7 +23,7 @@ all:
 
 
 compile:
-	$(PYCC) $(PYFLAGS) -o $(EXEC).bin ./$(EXEC)
+	python3 -X utf8 -m nuitka $(PYFLAGS) -o $(EXEC).bin ./$(EXEC)
 
 
 install:
@@ -34,7 +34,7 @@ install-compile:
 	@if [ -e "$(EXEC).bin" ]; then \
 		install -v ./$(EXEC).bin $(PREFIX)/bin/$(EXEC); \
 	else \
-		printf "run 'make' to build\\n"; \
+		printf "run 'make compile' to build\\n"; \
 	fi
 
 
