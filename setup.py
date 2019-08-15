@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+""" setup.py """
+
 import setuptools
 
 setuptools.setup(
@@ -9,7 +11,7 @@ setuptools.setup(
     author_email="julianhengwl@gmail.com",
     description="a simple status line generator",
     packages=setuptools.find_packages(),
-    entry_points = {
+    entry_points={
         "console_scripts": ["sys-line = sys_line.__main__:main"]
     }
 )
