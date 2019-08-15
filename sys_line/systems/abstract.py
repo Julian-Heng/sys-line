@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=no-member
+# pylint: disable=no-member,invalid-name
 
 """ Abstract classes for getting system info """
 
@@ -45,6 +45,19 @@ class System(metaclass=ABCMeta):
         return self.domains[domain].get(info)
 
 
+    def return_all(self):
+        """ Return all available info as a single dictionary """
+        info = dict()
+
+        for domain in self.domains:
+            self.domains[domain] = self.domains[domain](self.options)
+            self.loaded[domain] = True
+            for k, v in self.domains[domain].return_all().items():
+                info["{}.{}".format(domain, k)] = v
+
+        return info
+
+
 class AbstractGetter(metaclass=ABCMeta):
     """ Abstract class to map the available functions to names """
 
@@ -76,6 +89,14 @@ class AbstractGetter(metaclass=ABCMeta):
         except KeyError:
             return None
 
+
+    def return_all(self):
+        """ Return all available info in this getter """
+        info = dict()
+        for k, v in self.func.items():
+            info[k] = v()
+
+        return info
 
 class AbstractCpu(AbstractGetter):
     """ Abstract cpu class """

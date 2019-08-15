@@ -40,9 +40,10 @@ def parse():
                                      usage=usage_msg,
                                      formatter_class=fmt)
 
-    parser.add_argument("format")
+    parser.add_argument("format", nargs="?", type=str, default="")
     parser.add_argument("-v", "--version", action="version",
                         version=ver)
+    parser.add_argument("-a", "--all", action="store_true", default=False)
 
     groups = ["cpu", "memory", "swap", "disk",
               "battery", "network", "date", "misc"]

@@ -29,4 +29,11 @@ def main():
     """ Main method """
     options = parse()
     system = init_system(options)
-    print(StringBuilder().build(system, options.format))
+
+    if options.all:
+        for k, v in system.return_all().items():
+            print("{}: {}".format(k, v))
+    elif options.format:
+        print(StringBuilder().build(system, options.format))
+    else:
+        sys.exit(2)
