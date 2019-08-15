@@ -2,29 +2,24 @@
 
 """ sys-line initialization """
 
-import sys
 import os
+import sys
+
+from importlib import import_module
 
 from .tools.options import parse
 from .tools.string_builder import StringBuilder
 
-from .systems.darwin import Darwin
-from .systems.linux import Linux
-from .systems.freebsd import FreeBSD
-
 
 def init_system(options):
     """ Determine what system class this machine should use """
-    systems = {
-        "Darwin": Darwin,
-        "Linux": Linux,
-        "FreeBSD": FreeBSD
-    }
 
     os_name = os.uname().sysname
+    mod = ".systems.{}".format(os_name.lower())
     try:
-        return systems[os_name](os_name, options)
-    except KeyError:
+        mod = import_module(mod, package=__name__.split(".")[0])
+        return getattr(mod, os_name)(os_name, options)
+    except (KeyError, ModuleNotFoundError):
         print("Unknown system: {}\nExiting...".format(os_name),
               file=sys.stderr)
         sys.exit(1)
