@@ -3,8 +3,7 @@
 
 """ Module main """
 
-import sys
 from .sys_line import main
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
