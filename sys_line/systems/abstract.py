@@ -70,7 +70,7 @@ class AbstractGetter(metaclass=ABCMeta):
         #    1. A map called info to store fetched values into
         #    2. A map called func to store the function to get the value
         self.info = {extract(i): None for i in dir(self) if check(i)}
-        self.func = {extract(i): getattr(self, i) for i in dir(self) if check(i)}
+        self.func = {i: getattr(self, "get_{}".format(i)) for i in self.info}
         self.options = options
 
 
@@ -94,9 +94,13 @@ class AbstractGetter(metaclass=ABCMeta):
         """ Return all available info in this getter """
         info = dict()
         for k, v in self.func.items():
-            info[k] = v()
+            try:
+                info[k] = v()
+            except NotImplementedError:
+                info[k] = None
 
         return info
+
 
 class AbstractCpu(AbstractGetter):
     """ Abstract cpu class """
