@@ -221,8 +221,8 @@ class Battery(AbstractBattery):
             self.__get_current_capacity()
         if self.current is None:
             self.__get_amperage()
-            if self.current == 0:
-                return 0
+        if self.current == 0:
+            return 0
 
         charge = self.current_capacity
         if self.get_is_charging():
@@ -302,7 +302,10 @@ class Misc(AbstractMisc):
 
     def get_scr(self):
         scr = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
-        scr = next((i for i in scr if "IODisplayParameters" in i))
-        scr = re.search(r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)", scr)
-        scr = percent(int(scr.group(2)), int(scr.group(1)))
-        return _round(scr, self.options.misc_screen_round)
+        scr = next((i for i in scr if "IODisplayParameters" in i), None)
+        if scr is not None:
+            scr = re.search(r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)", scr)
+            scr = percent(int(scr.group(2)), int(scr.group(1)))
+            scr = _round(scr, self.options.misc_screen_round)
+
+        return scr
