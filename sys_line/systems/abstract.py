@@ -45,11 +45,12 @@ class System(metaclass=ABCMeta):
         return self.domains[domain].get(info)
 
 
-    def return_all(self):
-        """ Return all available info as a single dictionary """
-        for domain in self.domains:
-            self.domains[domain] = self.domains[domain](self.options)
-            self.loaded[domain] = True
+    def return_all(self, domains=None):
+        """ Return all available info from domains """
+        for domain in domains if domains else self.domains.keys():
+            if not self.loaded[domain]:
+                self.domains[domain] = self.domains[domain](self.options)
+                self.loaded[domain] = True
             for k, v in self.domains[domain].return_all():
                 yield ("{}.{}".format(domain, k), v)
 

@@ -13,13 +13,19 @@ from .storage import Storage
 def parse():
     """ Parse the program arguments """
     prefixes = Storage.prefixes
+    groups = [["cpu", "mem", "swap", "disk", "bat", "net", "date", "misc"],
+              ["cpu", "memory", "swap", "disk", "battery",
+               "network", "date", "misc"]]
 
     fmt = argparse.RawDescriptionHelpFormatter
     desc = "a simple status line generator"
     epilog = textwrap.dedent("""
+        list of domains:
+            {}
+
         list of prefixes:
             {}
-    """.format(", ".join(prefixes)))
+    """.format(", ".join(groups[0]), ", ".join(prefixes)))
 
     usage_msg = "%(prog)s [options] format..."
     ver = "%(prog)s ("
@@ -41,13 +47,11 @@ def parse():
                                      formatter_class=fmt)
 
     parser.add_argument("format", nargs="?", type=str, default="")
-    parser.add_argument("-v", "--version", action="version",
-                        version=ver)
-    parser.add_argument("-a", "--all", action="store_true", default=False)
+    parser.add_argument("-v", "--version", action="version", version=ver)
+    parser.add_argument("-a", "--all", nargs="*", choices=groups[0],
+                        default=None, metavar="domain")
 
-    groups = ["cpu", "memory", "swap", "disk",
-              "battery", "network", "date", "misc"]
-    groups = {i: parser.add_argument_group(i) for i in groups}
+    groups = {i: parser.add_argument_group(i) for i in groups[1]}
 
     groups["cpu"].add_argument("-cls", "--cpu-load-short",
                                action="store_true", default=False)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=invalid-name
 
 """ sys-line initialization """
 
@@ -30,8 +31,8 @@ def main():
     options = parse()
     system = init_system(options)
 
-    if options.all:
-        for k, v in system.return_all():
+    if options.all is not None:
+        for k, v in system.return_all(options.all):
             print("{}: {}".format(k, v))
     elif options.format:
         print(StringBuilder().build(system, options.format))
