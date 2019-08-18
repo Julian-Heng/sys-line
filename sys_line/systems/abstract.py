@@ -267,11 +267,10 @@ class AbstractDisk(AbstractGetter):
             reg = r"^({})".format(self.options.disk)
         else:
             self.df_flags.append(self.options.mount)
-            reg = r"({})$".format(self.options.mount)
-            reg = r"^([^\s]+)(\s+\d+%?){4}\s+" + reg
+            reg = r"^([^\s]+)(\s+\d+%?){{4}}\s+({})$".format(self.options.mount)
 
         self.df_out = run(self.df_flags).strip().split("\n")[1:]
-        match = ([re.match(reg, line), line] for line in self.df_out)
+        match = ((re.match(reg, line), line) for line in self.df_out)
 
         entry = next((i for i in match if i[0]), None)
         if entry is not None:
@@ -295,13 +294,9 @@ class AbstractDisk(AbstractGetter):
 
     def get_mount(self):
         """ Returns the mount point of the disk as a string """
-        mount = None
         if self.df_out is None or self.get("dev") is None:
             self.call("dev")
-        if self.df_out is not None:
-            mount = self.df_out[5]
-
-        return mount
+        return self.df_out[5] if self.df_out else None
 
 
     @abstractmethod
@@ -396,7 +391,7 @@ class AbstractBattery(AbstractGetter):
     def get_time(self):
         """ Formats battery time remaining """
         secs = self._get_time()
-        secs = unix_epoch_to_str(secs) if secs != 0 else None
+        secs = unix_epoch_to_str(secs) if secs else None
         return secs
 
 
@@ -444,6 +439,8 @@ class AbstractNetwork(AbstractGetter):
         if dev is None:
             self.call("dev")
             dev = self.get("dev")
+        if dev is None:
+            return None
 
         reg = re.compile(r"^inet\s+((?:[0-9]{1,3}\.){3}[0-9]{1,3})")
         ip_out = run(self.local_ip_cmd + [dev]).strip().split("\n")
@@ -470,8 +467,8 @@ class AbstractNetwork(AbstractGetter):
         if dev is None:
             self.call("dev")
             dev = self.get("dev")
-            if dev is None:
-                return 0.0
+        if dev is None:
+            return 0.0
 
         start = self._get_bytes_delta(dev, mode)
         start_time = time.time()
@@ -497,7 +494,6 @@ class AbstractNetwork(AbstractGetter):
         Method to calculate network download speed
         Returns a Storage class
         """
-
         download = Storage(value=self.__calc_bytes_delta_rate("down"),
                            rounding=self.options.net_download_round)
         download.set_prefix(self.options.net_download_prefix)
