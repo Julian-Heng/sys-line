@@ -5,6 +5,7 @@
 import os
 import re
 import subprocess
+import sys
 
 
 def percent(num_1, num_2):
@@ -12,11 +13,22 @@ def percent(num_1, num_2):
     return None if num_2 == 0 else (num_1 / num_2) * 100
 
 
-def open_read(filename):
-    """ Wrapper for opening and reading a file """
-    with open(filename) as _file:
-        contents = _file.read()
-    return contents
+"""
+Pathlib for python <= 3.5 can't open properly when passed to open(). So an edge
+case is required to convert the pathlib object to string
+"""
+if sys.version_info[1] <= 5:
+    def open_read(filename):
+        """ Wrapper for opening and reading a file """
+        with open(str(filename)) as _file:
+            contents = _file.read()
+        return contents
+else:
+    def open_read(filename):
+        """ Wrapper for opening and reading a file """
+        with open(filename) as _file:
+            contents = _file.read()
+        return contents
 
 
 def run(cmd):
