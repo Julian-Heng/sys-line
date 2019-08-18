@@ -41,18 +41,18 @@ def run(cmd):
 
 def unix_epoch_to_str(secs):
     """ Convert unix time to human readable output """
-    days = int(secs / 60 / 60 / 24)
-    hours = int(secs / 60 / 60 % 24)
-    mins = int(secs / 60 % 60)
+    days = int(secs / 86400)
+    hours = int((secs / 3600) % 24)
+    mins = int((secs / 60) % 60)
     secs = (secs % 60) % 60
-    string = "{} {} {} {}s".format(
-        "{}d".format(days) if days != 0 else "",
-        "{}h".format(hours) if hours != 0 else "",
-        "{}m".format(mins) if mins != 0 else "",
-        secs)
+    string = "{} {} {} {}".format(
+        "{}d".format(days) if days else "",
+        "{}h".format(hours) if hours else "",
+        "{}m".format(mins) if mins else "",
+        "{}s".format(secs) if secs else ""
+    )
 
-    string = re.sub(r"\s+", " ", string.strip())
-    return string
+    return re.sub(r"\s+", " ", string.strip())
 
 
 def _round(num, rnd):
