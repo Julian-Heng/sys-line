@@ -10,8 +10,7 @@ import sys
 
 def percent(num_1, num_2):
     """ Calculate percentage """
-    return None if num_2 == 0 else (num_1 / num_2) * 100
-
+    return (num_1 / num_2) * 100 if num_2 else None
 
 """
 Pathlib for python <= 3.5 can't open properly when passed to open(). So an edge
