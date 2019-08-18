@@ -31,7 +31,7 @@ def main():
     system = init_system(options)
 
     if options.all:
-        for k, v in system.return_all().items():
+        for k, v in system.return_all():
             print("{}: {}".format(k, v))
     elif options.format:
         print(StringBuilder().build(system, options.format))

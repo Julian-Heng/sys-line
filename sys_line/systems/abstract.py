@@ -47,15 +47,11 @@ class System(metaclass=ABCMeta):
 
     def return_all(self):
         """ Return all available info as a single dictionary """
-        info = dict()
-
         for domain in self.domains:
             self.domains[domain] = self.domains[domain](self.options)
             self.loaded[domain] = True
-            for k, v in self.domains[domain].return_all().items():
-                info["{}.{}".format(domain, k)] = v
-
-        return info
+            for k, v in self.domains[domain].return_all():
+                yield ("{}.{}".format(domain, k), v)
 
 
 class AbstractGetter(metaclass=ABCMeta):
@@ -92,14 +88,11 @@ class AbstractGetter(metaclass=ABCMeta):
 
     def return_all(self):
         """ Return all available info in this getter """
-        info = dict()
         for k, v in self.func.items():
             try:
-                info[k] = v()
+                yield (k, v())
             except NotImplementedError:
-                info[k] = None
-
-        return info
+                yield (k, None)
 
 
 class AbstractCpu(AbstractGetter):
