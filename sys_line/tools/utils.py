@@ -12,6 +12,7 @@ def percent(num_1, num_2):
     """ Calculate percentage """
     return (num_1 / num_2) * 100 if num_2 else None
 
+
 """
 Pathlib for python <= 3.5 can't open properly when passed to open(). So an edge
 case is required to convert the pathlib object to string
