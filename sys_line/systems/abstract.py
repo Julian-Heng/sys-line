@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=no-member,invalid-name
+# pylint: disable=no-member,invalid-name,no-self-use
 
 """ Abstract classes for getting system info """
 
@@ -17,6 +17,7 @@ class System(metaclass=ABCMeta):
     """ Abstract system class for mapping functions """
 
     def __init__(self, domains, os_name, options):
+        super(System, self).__init__()
         self.domains = domains
         self.domains["date"] = Date
 
@@ -24,8 +25,6 @@ class System(metaclass=ABCMeta):
         self.loaded = dict.fromkeys(self.domains.keys(), False)
         self.os_name = os_name
         self.options = options
-
-        super().__init__()
 
 
     def fetch(self, domain, info):
@@ -59,7 +58,7 @@ class AbstractGetter(metaclass=ABCMeta):
     """ Abstract class to map the available functions to names """
 
     def __init__(self, options):
-        super().__init__()
+        super(AbstractGetter, self).__init__()
         check = lambda i: i != "get" and i.startswith("get")
         extract = lambda i: i.split("_", 1)[1]
 
@@ -87,6 +86,18 @@ class AbstractGetter(metaclass=ABCMeta):
             return None
 
 
+    def call_get(self, name):
+        """ Wrapper for retuning info that has not been called yet """
+        ret = None
+        try:
+            if self.info[name] is None:
+                self.info[name] = self.func[name]()
+            ret = self.info[name]
+        except KeyError:
+            pass
+        return ret
+
+
     def return_all(self):
         """ Return all available info in this getter """
         for k, v in self.func.items():
@@ -94,6 +105,43 @@ class AbstractGetter(metaclass=ABCMeta):
                 yield (k, v())
             except NotImplementedError:
                 yield (k, None)
+
+
+class AbstractStorage(AbstractGetter):
+    """
+    Abstract class for info that has a get_used, get_total and get_percent
+    methods
+    """
+
+    def __init__(self, options, rounding=2):
+        super(AbstractStorage, self).__init__(options)
+        self.rounding = rounding
+
+
+    @abstractmethod
+    def get_used(self):
+        """
+        Abstract used method to be implemented by subclass
+        Returns Storage class
+        """
+
+
+    @abstractmethod
+    def get_total(self):
+        """
+        Abstract total method to be implemented by subclass
+        Returns Storage class
+        """
+
+
+    def get_percent(self):
+        """ Returns percentage in the same object type as the values used """
+        perc = percent(self.call_get("used"), self.call_get("total"))
+        if perc is not None:
+            perc = perc.get_value() if isinstance(perc, Storage) else perc
+            perc = _round(perc, self.rounding)
+
+        return perc
 
 
 class AbstractCpu(AbstractGetter):
@@ -120,10 +168,7 @@ class AbstractCpu(AbstractGetter):
         cpu_reg = re.compile(r"\s+@\s+(\d+\.)?\d+GHz")
         trim_reg = re.compile(r"CPU|\((R|TM)\)")
 
-        if self.get("cores") is None:
-            self.call("cores")
-        cores = self.get("cores")
-
+        cores = self.call_get("cores")
         cpu, speed = self._get_cpu_speed()
         cpu = trim_reg.sub("", cpu.strip())
 
@@ -149,10 +194,7 @@ class AbstractCpu(AbstractGetter):
 
     def get_cpu_usage(self):
         """ Returns the cpu usage in the system """
-        if self.get("cores") is None:
-            self.call("cores")
-        cores = self.get("cores")
-
+        cores = self.call_get("cores")
         ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
         cpu_usage = sum([float(i) for i in ps_out]) / cores
         return _round(cpu_usage, self.options.cpu_usage_round)
@@ -187,69 +229,48 @@ class AbstractCpu(AbstractGetter):
         return unix_epoch_to_str(self._get_uptime_sec())
 
 
-class AbstractMemory(AbstractGetter):
+class AbstractMemory(AbstractStorage):
     """ Abstract memory class """
 
+    def __init__(self, options):
+        super(AbstractMemory, self).__init__(options,
+                                             options.mem_percent_round)
+
+
     @abstractmethod
     def get_used(self):
-        """
-        Abstract memory used method to be implemented
-        Returns system used memory as a Storage class
-        """
+        pass
 
 
     @abstractmethod
     def get_total(self):
-        """
-        Abstract memory total method to be implemented
-        Returns system total memory as a Storage class
-        """
+        pass
 
 
-    def get_percent(self):
-        """ Calculate the percentage of memory used """
-        for i in ["used", "total"]:
-            if self.get(i) is None:
-                self.call(i)
-
-        perc = percent(self.get("used"), self.get("total")).get_value()
-        return _round(perc, self.options.mem_percent_round)
-
-
-class AbstractSwap(AbstractGetter):
+class AbstractSwap(AbstractStorage):
     """ Abstract swap class """
 
+    def __init__(self, options):
+        super(AbstractSwap, self).__init__(options,
+                                           options.swap_percent_round)
+
+
     @abstractmethod
     def get_used(self):
-        """
-        Abstract swap used method to be implemented
-        Returns system used swap as a Storage class
-        """
+        pass
 
 
     @abstractmethod
     def get_total(self):
-        """
-        Abstract swap total method to be implemented
-        Returns system total swap as a Storage class
-        """
+        pass
 
 
-    def get_percent(self):
-        """ Calculate the percentage of swap used """
-        for i in ["used", "total"]:
-            if self.get(i) is None:
-                self.call(i)
-
-        perc = percent(self.get("used"), self.get("total")).get_value()
-        return _round(perc, self.options.swap_percent_round)
-
-
-class AbstractDisk(AbstractGetter):
+class AbstractDisk(AbstractStorage):
     """ Abstract disk class """
 
     def __init__(self, options):
-        super().__init__(options)
+        super(AbstractDisk, self).__init__(options,
+                                           options.disk_percent_round)
         self.df_out = None
 
 
@@ -306,9 +327,7 @@ class AbstractDisk(AbstractGetter):
         Abstract disk used method to be implemented
         Returns system used disk as a Storage class
         """
-        if self.df_out is None:
-            self.get_dev()
-
+        self.call_get("dev")
         used = Storage(value=int(self.df_out[2]), prefix="KiB",
                        rounding=self.options.disk_used_round)
         used.set_prefix(self.options.disk_used_prefix)
@@ -320,23 +339,11 @@ class AbstractDisk(AbstractGetter):
         Abstract disk total method to be implemented
         Returns system total disk as a Storage class
         """
-        if self.df_out is None:
-            self.get_dev()
-
+        self.call_get("dev")
         total = Storage(value=int(self.df_out[1]), prefix="KiB",
                         rounding=self.options.disk_total_round)
         total.set_prefix(self.options.disk_total_prefix)
         return total
-
-
-    def get_percent(self):
-        """ Calculate the percentage of swap used """
-        for i in ["used", "total"]:
-            if self.get(i) is None:
-                self.call(i)
-
-        perc = percent(self.get("used"), self.get("total")).get_value()
-        return _round(perc, self.options.disk_percent_round)
 
 
 class AbstractBattery(AbstractGetter):
@@ -429,10 +436,7 @@ class AbstractNetwork(AbstractGetter):
 
     def get_local_ip(self):
         """ Returns the network local ip as a string """
-        dev = self.get("dev")
-        if dev is None:
-            self.call("dev")
-            dev = self.get("dev")
+        dev = self.call_get("dev")
         if dev is None:
             return None
 
@@ -457,10 +461,7 @@ class AbstractNetwork(AbstractGetter):
         Private method to calculate the rate of change in bytes
         Returns a float
         """
-        dev = self.get("dev")
-        if dev is None:
-            self.call("dev")
-            dev = self.get("dev")
+        dev = self.call_get("dev")
         if dev is None:
             return 0.0
 
@@ -509,7 +510,7 @@ class Date(AbstractGetter):
     """ Date class to fetch date and time """
 
     def __init__(self, options):
-        super().__init__(options)
+        super(Date, self).__init__(options)
         self.now = datetime.now()
 
 
