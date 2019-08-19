@@ -5,6 +5,9 @@
 import re
 import time
 
+from argparse import Namespace
+from typing import List
+
 from .abstract import (System,
                        AbstractCpu,
                        AbstractMemory,
@@ -13,7 +16,6 @@ from .abstract import (System,
                        AbstractBattery,
                        AbstractNetwork,
                        AbstractMisc)
-
 from ..tools.storage import Storage
 from ..tools.utils import run
 
@@ -24,7 +26,7 @@ class FreeBSD(System):
     System class in abstract.py
     """
 
-    def __init__(self, os_name, options):
+    def __init__(self, os_name: str, options: Namespace) -> None:
         domains = {
             "cpu": Cpu,
             "mem": Memory,
@@ -41,31 +43,31 @@ class FreeBSD(System):
 class Cpu(AbstractCpu):
     """ FreeBSD implementation of AbstractCpu class """
 
-    def get_cores(self):
+    def get_cores(self) -> int:
         return int(run(["sysctl", "-n", "hw.ncpu"]))
 
 
-    def _get_cpu_speed(self):
+    def _get_cpu_speed(self) -> (str, float):
         cpu, speed = run(["sysctl", "-n", "hw.model",
                           "hw.cpuspeed", "hw.clockrate"]).strip().split("\n")
         return cpu, int(speed) / 1000
 
 
-    def get_load_avg(self):
+    def get_load_avg(self) -> str:
         load = run(["sysctl", "-n", "vm.loadavg"]).split()
         return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
 
 
-    def get_fan(self):
+    def get_fan(self) -> int:
         """ Stub """
         raise NotImplementedError
 
 
-    def get_temp(self):
+    def get_temp(self) -> float:
         return float(run(["sysctl", "-n", "dev.cpu.0.temperature"])[:-2])
 
 
-    def _get_uptime_sec(self):
+    def _get_uptime_sec(self) -> int:
         cmd = ["sysctl", "-n", "kern.boottime"]
         regex = r"sec = (\d+),"
         return int(time.time()) - int(re.search(regex, run(cmd)).group(1))
@@ -74,7 +76,7 @@ class Cpu(AbstractCpu):
 class Memory(AbstractMemory):
     """ FreeBSD implementation of AbstractMemory class """
 
-    def get_used(self):
+    def get_used(self) -> Storage:
         total = int(run(["sysctl", "-n", "hw.realmem"]))
         pagesize = int(run(["sysctl", "-n", "hw.pagesize"]))
 
@@ -88,7 +90,7 @@ class Memory(AbstractMemory):
         return used
 
 
-    def get_total(self):
+    def get_total(self) -> Storage:
         total = int(run(["sysctl", "-n", "hw.realmem"]))
         total = Storage(value=total, prefix="B",
                         rounding=self.options.mem_total_round)
@@ -99,7 +101,7 @@ class Memory(AbstractMemory):
 class Swap(AbstractSwap):
     """ FreeBSD implementation of AbstractSwap class """
 
-    def get_used(self):
+    def get_used(self) -> Storage:
         extract = lambda i: int(i.split()[2])
         pstat = run(["pstat", "-s"]).strip().split("\n")[1:]
         pstat = sum([extract(i) for i in pstat])
@@ -109,7 +111,7 @@ class Swap(AbstractSwap):
         return used
 
 
-    def get_total(self):
+    def get_total(self) -> Storage:
         total = int(run(["sysctl", "-n", "vm.swap_total"]))
         total = Storage(value=total, prefix="B",
                         rounding=self.options.swap_total_round)
@@ -120,16 +122,16 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ FreeBSD implementation of AbstractDisk class """
 
-    def __init__(self, options):
+    def __init__(self, options: Namespace) -> None:
         super(Disk, self).__init__(options)
         self.df_flags = ["df", "-P", "-k"]
 
 
-    def get_name(self):
+    def get_name(self) -> str:
         raise NotImplementedError
 
 
-    def get_partition(self):
+    def get_partition(self) -> str:
         partition = None
 
         dev = self.get("dev")
@@ -148,7 +150,7 @@ class Disk(AbstractDisk):
 class Battery(AbstractBattery):
     """ FreeBSD implementation of AbstractBattery class """
 
-    def __init__(self, options):
+    def __init__(self, options: Namespace) -> None:
         super(Battery, self).__init__(options)
 
         bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
@@ -156,23 +158,23 @@ class Battery(AbstractBattery):
         self.bat = dict(i.split(":", 1) for i in bat) if len(bat) > 1 else None
 
 
-    def get_is_present(self):
+    def get_is_present(self) -> bool:
         return self.bat is not None
 
 
-    def get_is_charging(self):
+    def get_is_charging(self) -> bool:
         return self.bat["State"] == "charging"
 
 
-    def get_is_full(self):
+    def get_is_full(self) -> bool:
         return self.bat["State"] == "high"
 
 
-    def get_percent(self):
+    def get_percent(self) -> int:
         return int(self.bat["Remaining capacity"][:-1])
 
 
-    def _get_time(self):
+    def _get_time(self) -> int:
         secs = None
         acpi_time = self.bat["Remaining secs"]
         if acpi_time != "unknown":
@@ -184,21 +186,21 @@ class Battery(AbstractBattery):
         return secs
 
 
-    def get_power(self):
+    def get_power(self) -> float:
         return int(self.bat["Present rate"][:-3]) / 1000
 
 
 class Network(AbstractNetwork):
     """ FreeBSD implementation of AbstractNetwork class """
 
-    def get_dev(self):
+    def get_dev(self) -> str:
         active = re.compile(r"^\s+status: associated$", re.M)
         dev_list = run(["ifconfig", "-l"]).split()
         check = lambda i, r=active: r.search(run(["ifconfig", i]))
         return next((i for i in dev_list if check(i)), None)
 
 
-    def _get_ssid(self):
+    def _get_ssid(self) -> (List[str], re.Pattern):
         dev = self.get("dev")
         if dev is None:
             self.call("dev")
@@ -210,7 +212,7 @@ class Network(AbstractNetwork):
         return ssid_exe, ssid_reg
 
 
-    def _get_bytes_delta(self, dev, mode):
+    def _get_bytes_delta(self, dev: str, mode: str) -> int:
         cmd = ["netstat", "-nbiI", dev]
         index = 10 if mode == "up" else 7
         return int(run(cmd).strip().split("\n")[1].split()[index])
@@ -219,9 +221,9 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ FreeBSD implementation of AbstractMisc class """
 
-    def get_vol(self):
+    def get_vol(self) -> float:
         raise NotImplementedError
 
 
-    def get_scr(self):
+    def get_scr(self) -> float:
         raise NotImplementedError

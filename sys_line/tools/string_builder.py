@@ -4,17 +4,21 @@
 """ String builder module to construct a string from a format """
 
 import re
+from typing import List
+
+from ..systems.abstract import System
+
 
 class StringBuilder():
     """ String Builder class """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.extract_reg = re.compile(r"\{((\w+)\.(\w+))(?:\?)?")
         self.trim_reg_1 = re.compile(r"\{\}")
         self.trim_reg_2 = re.compile(r"\{\?|\}$")
 
 
-    def build(self, sys, fmt):
+    def build(self, sys: System, fmt: str) -> str:
         """ Recursive function to build a string from a format """
         out = ""
 
@@ -47,7 +51,7 @@ class StringBuilder():
         return out
 
 
-def tokenize(string):
+def tokenize(string: str) -> List[str]:
     """
     Find tokens within a string
     Returns a string list

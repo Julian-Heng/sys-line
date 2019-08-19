@@ -6,13 +6,15 @@
 import os
 import sys
 
+from argparse import Namespace
 from importlib import import_module
 
 from .tools.options import parse
 from .tools.string_builder import StringBuilder
+from .systems.abstract import System
 
 
-def init_system(options):
+def init_system(options: Namespace) -> System:
     """ Determine what system class this machine should use """
 
     os_name = os.uname().sysname
@@ -26,7 +28,7 @@ def init_system(options):
         sys.exit(1)
 
 
-def main():
+def main() -> None:
     """ Main method """
     options = parse()
     system = init_system(options)

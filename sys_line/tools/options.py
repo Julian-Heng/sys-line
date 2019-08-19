@@ -10,7 +10,7 @@ import textwrap
 from .storage import Storage
 
 
-def parse():
+def parse() -> argparse.Namespace:
     """ Parse the program arguments """
     prefixes = Storage.prefixes
     groups = [["cpu", "mem", "swap", "disk", "bat", "net", "date", "misc"],
