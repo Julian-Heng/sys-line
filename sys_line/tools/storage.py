@@ -89,6 +89,10 @@ class Storage():
         return self.value == other
 
 
+    def __bool__(self):
+        return bool(self.value)
+
+
     def __calc_prefix_delta(self, start, end):
         return self.prefixes.index(end) - self.prefixes.index(start)
 
