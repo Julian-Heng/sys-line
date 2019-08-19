@@ -1,19 +1,13 @@
 CC = cc
-CFLAGS = -Wall -Werror -pedantic -ansi
-PREFIX = /usr
-BUILD = ./build
+CFLAGS = -ansi
+SRC = $(wildcard *.c) \
+	  $(wildcard systems/*.c)
+OBJ = $(SRC:.c=.o)
 EXEC = sys-line
-SOURCES := $(shell printf "%s\n" ./*.c)
 
-build: dir $(EXEC)
+$(EXEC): $(OBJ)
+	$(CC) -o $@ $^
 
+.PHONY: clean
 clean:
-	$(RM) -rv $(BUILD)
-
-
-$(EXEC): $(SOURCES)
-	$(CC) $(CFLAGS) -o $(BUILD)/$@ $?
-
-
-dir:
-	mkdir -p $(BUILD)
+	$(RM) $(OBJ) $(EXEC)
