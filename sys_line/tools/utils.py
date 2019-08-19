@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=pointless-string-statement
 
 """ Utility module to provide common functions """
 
@@ -9,9 +10,8 @@ import sys
 
 
 def percent(num_1, num_2):
-    """ Calculate percentage """
+    """ Returns percent of 2 numbers """
     return (num_1 / num_2) * 100 if num_2 else None
-
 
 """
 Pathlib for python <= 3.5 can't open properly when passed to open(). So an edge
