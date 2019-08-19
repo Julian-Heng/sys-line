@@ -15,7 +15,7 @@ from .abstract import (System,
                        AbstractNetwork,
                        AbstractMisc)
 from ..tools.storage import Storage
-from ..tools.utils import run, percent, _round
+from ..tools.utils import percent, run, _round
 
 
 class Darwin(System):
