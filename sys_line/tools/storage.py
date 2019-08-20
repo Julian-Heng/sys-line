@@ -41,6 +41,7 @@ class Storage():
 
         return self
 
+
     def __sub__(self, other: object) -> None:
         val, other, is_storage = self.__check_storage(other)
         self.set_value(val - other)
@@ -102,9 +103,9 @@ class Storage():
 
 
     def __check_storage(self, other: object) -> (int, int, bool):
-        val = self.get_bytes() if isinstance(other, Storage) else self.value
-        oth = other.get_bytes() if isinstance(other, Storage) else other
-        return val, oth, isinstance(other, Storage)
+        chk = isinstance(other, Storage)
+        return (self.get_bytes() if chk else self.value,
+                other.get_bytes() if chk else other, chk)
 
 
     def set_value(self, value: int) -> None:
