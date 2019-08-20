@@ -8,7 +8,8 @@ import time
 from argparse import Namespace
 from typing import List
 
-from .abstract import (System,
+from .abstract import (RE_COMPILE,
+                       System,
                        AbstractCpu,
                        AbstractMemory,
                        AbstractSwap,
@@ -18,6 +19,8 @@ from .abstract import (System,
                        AbstractMisc)
 from ..tools.storage import Storage
 from ..tools.utils import run
+
+
 
 
 class FreeBSD(System):
@@ -200,7 +203,7 @@ class Network(AbstractNetwork):
         return next((i for i in dev_list if check(i)), None)
 
 
-    def _get_ssid(self) -> (List[str], re.Pattern):
+    def _get_ssid(self) -> (List[str], RE_COMPILE):
         dev = self.get("dev")
         if dev is None:
             self.call("dev")

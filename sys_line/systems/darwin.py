@@ -9,7 +9,8 @@ import time
 from argparse import Namespace
 from typing import List
 
-from .abstract import (System,
+from .abstract import (RE_COMPILE,
+                       System,
                        AbstractCpu,
                        AbstractMemory,
                        AbstractSwap,
@@ -274,7 +275,7 @@ class Network(AbstractNetwork):
         return next((i for i in dev_list if check(i)), None)
 
 
-    def _get_ssid(self) -> (List[str], re.Pattern):
+    def _get_ssid(self) -> (List[str], RE_COMPILE):
         ssid_exe = "/System/Library/PrivateFrameworks/Apple80211.framework"
         ssid_exe = "{}/Versions/Current/Resources/airport".format(ssid_exe)
         ssid_exe = [ssid_exe, "--getinfo"]

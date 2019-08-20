@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-# pylint: disable=no-member,invalid-name,no-self-use
+# pylint: disable=no-member,invalid-name,no-self-use,pointless-string-statement
 
 """ Abstract classes for getting system info """
 
 import re
+import sys
 import time
 
 from abc import ABCMeta, abstractmethod
@@ -13,6 +14,13 @@ from typing import Dict, List
 
 from ..tools.storage import Storage
 from ..tools.utils import percent, run, unix_epoch_to_str, _round
+
+
+""" Python 3.6 and lower does not have re.Pattern class """
+if sys.version_info[0] == 3 and sys.version_info[1] <= 6:
+    RE_COMPILE = type(re.compile(""))
+else:
+    RE_COMPILE = re.Pattern
 
 
 class AbstractGetter(metaclass=ABCMeta):
@@ -421,7 +429,7 @@ class AbstractNetwork(AbstractGetter):
 
 
     @abstractmethod
-    def _get_ssid(self) -> (List[str], re.Pattern):
+    def _get_ssid(self) -> (List[str], RE_COMPILE):
         """
         Abstract network ssid method to be implemented
         """

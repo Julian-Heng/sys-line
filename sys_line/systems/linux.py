@@ -10,7 +10,8 @@ from argparse import Namespace
 from pathlib import Path as p
 from typing import List
 
-from .abstract import (System,
+from .abstract import (RE_COMPILE,
+                       System,
                        AbstractCpu,
                        AbstractMemory,
                        AbstractSwap,
@@ -422,7 +423,7 @@ class Network(AbstractNetwork):
         return next((f.name for f in find("/sys/class/net") if check(f)), None)
 
 
-    def _get_ssid(self) -> (List[str], re.Pattern):
+    def _get_ssid(self) -> (List[str], RE_COMPILE):
         ssid_exe = None
         regex = None
 
