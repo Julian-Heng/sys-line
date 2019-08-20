@@ -18,7 +18,7 @@ from .abstract import (RE_COMPILE,
                        AbstractNetwork,
                        AbstractMisc)
 from ..tools.storage import Storage
-from ..tools.utils import run
+from ..tools.utils import run, _round
 
 
 
@@ -53,7 +53,7 @@ class Cpu(AbstractCpu):
     def _get_cpu_speed(self) -> (str, float):
         cpu, speed = run(["sysctl", "-n", "hw.model",
                           "hw.cpuspeed", "hw.clockrate"]).strip().split("\n")
-        return cpu, int(speed) / 1000
+        return cpu, _round(int(speed) / 1000, 2)
 
 
     def get_load_avg(self) -> str:
@@ -162,39 +162,49 @@ class Battery(AbstractBattery):
 
 
     def get_is_present(self) -> bool:
-        return self.bat is not None
+        return self.bat["State"] != "not present"
 
 
     def get_is_charging(self) -> bool:
-        return self.bat["State"] == "charging"
+        if self.call_get("is_present"):
+            return self.bat["State"] == "charging"
 
 
     def get_is_full(self) -> bool:
-        return self.bat["State"] == "high"
+        if self.call_get("is_present"):
+            return self.bat["State"] == "high"
 
 
     def get_percent(self) -> int:
-        return int(self.bat["Remaining capacity"][:-1])
+        if self.call_get("is_present"):
+            return int(self.bat["Remaining capacity"][:-1])
 
 
     def _get_time(self) -> int:
         secs = None
-        acpi_time = self.bat["Remaining secs"]
-        if acpi_time != "unknown":
-            acpi_time = [int(i) for i in acpi_time.split(":", maxsplit=3)]
-            secs = acpi_time[0] * 3600 + acpi_time[1] * 60
-        else:
-            secs = 0
+        if self.call_get("is_present"):
+            acpi_time = self.bat["Remaining time"]
+            if acpi_time != "unknown":
+                acpi_time = [int(i) for i in acpi_time.split(":", maxsplit=3)]
+                secs = acpi_time[0] * 3600 + acpi_time[1] * 60
+            else:
+                secs = 0
 
         return secs
 
 
     def get_power(self) -> float:
-        return int(self.bat["Present rate"][:-3]) / 1000
+        if self.call_get("is_present"):
+            return int(self.bat["Present rate"][:-3]) / 1000
 
 
 class Network(AbstractNetwork):
     """ FreeBSD implementation of AbstractNetwork class """
+
+    def __init__(self, options: Namespace) -> None:
+        super(Network, self).__init__(options)
+        self.local_ip_cmd = ["ifconfig"]
+
 
     def get_dev(self) -> str:
         active = re.compile(r"^\s+status: associated$", re.M)
