@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <sys/utsname.h>
 
-#ifdef __linux__
-#include "systems/linux.h"
-#endif
+#include "systems/system.h"
 
 int main(void)
 {
-    printf("sys-line\n");
+    struct system_getter *sys = make_system();
+    printf("%p\n", sys);
+    printf("%p\n", sys->cpu_getter);
     return 0;
 }

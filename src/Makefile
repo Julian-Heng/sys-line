@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = -ansi
+CFLAGS = -std=c99
 SRC = $(wildcard *.c) \
 	  $(wildcard systems/*.c)
 OBJ = $(SRC:.c=.o)
