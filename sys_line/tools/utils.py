@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=pointless-string-statement
+# pylint: disable=pointless-string-statement,cyclic-import
 
 """ Utility module to provide common functions """
 

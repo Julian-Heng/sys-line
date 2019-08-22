@@ -47,12 +47,6 @@ class FreeBSD(System):
 class Cpu(AbstractCpu):
     """ FreeBSD implementation of AbstractCpu class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Cpu, self).__init__(options, aux)
-
-
     def get_cores(self) -> int:
         return int(self.aux.sysctl.query("hw.ncpu"))
 
@@ -77,7 +71,7 @@ class Cpu(AbstractCpu):
 
     def get_temp(self) -> float:
         temp = self.aux.sysctl.query("dev.cpu.0.temperature")
-        temp = float(re.search("\d+\.?\d+", temp).group(0))
+        temp = float(re.search(r"\d+\.?\d+", temp).group(0))
         return temp
 
 
@@ -183,18 +177,24 @@ class Battery(AbstractBattery):
 
 
     def get_is_charging(self) -> bool:
+        ret = None
         if self.call_get("is_present"):
-            return self.bat["State"] == "charging"
+            ret = self.bat["State"] == "charging"
+        return ret
 
 
     def get_is_full(self) -> bool:
+        ret = None
         if self.call_get("is_present"):
-            return self.bat["State"] == "high"
+            ret = self.bat["State"] == "high"
+        return ret
 
 
     def get_percent(self) -> int:
+        ret = None
         if self.call_get("is_present"):
-            return int(self.bat["Remaining capacity"][:-1])
+            ret = int(self.bat["Remaining capacity"][:-1])
+        return ret
 
 
     def _get_time(self) -> int:
@@ -211,8 +211,10 @@ class Battery(AbstractBattery):
 
 
     def get_power(self) -> float:
+        ret = None
         if self.call_get("is_present"):
-            return int(self.bat["Present rate"][:-3]) / 1000
+            ret = int(self.bat["Present rate"][:-3]) / 1000
+        return ret
 
 
 class Network(AbstractNetwork):

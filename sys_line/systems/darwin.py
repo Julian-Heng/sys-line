@@ -212,13 +212,17 @@ class Battery(AbstractBattery):
 
 
     def get_is_charging(self) -> bool:
+        ret = None
         if self.call_get("is_present"):
-            return self.bat["IsCharging"] == "Yes"
+            ret = self.bat["IsCharging"] == "Yes"
+        return ret
 
 
     def get_is_full(self) -> bool:
+        ret = None
         if self.call_get("is_present"):
-            return self.bat["FullyCharged"] == "Yes"
+            ret = self.bat["FullyCharged"] == "Yes"
+        return ret
 
 
     def get_percent(self) -> [float, int]:
