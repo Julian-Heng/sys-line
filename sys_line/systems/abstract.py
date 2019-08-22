@@ -10,6 +10,7 @@ import time
 from abc import ABCMeta, abstractmethod
 from argparse import Namespace
 from datetime import datetime
+from types import SimpleNamespace
 from typing import Dict, List
 
 from ..tools.storage import Storage
@@ -22,11 +23,12 @@ if sys.version_info[0] == 3 and sys.version_info[1] <= 6:
 else:
     RE_COMPILE = re.Pattern
 
-
 class AbstractGetter(metaclass=ABCMeta):
     """ Abstract class to map the available functions to names """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
         super(AbstractGetter, self).__init__()
         check = lambda i: i != "get" and i.startswith("get")
         extract = lambda i: i.split("_", 1)[1]
@@ -84,7 +86,7 @@ class System(metaclass=ABCMeta):
                  domains: Dict[str, AbstractGetter],
                  os_name: str,
                  options: Namespace,
-                 aux: object) -> None:
+                 aux: SimpleNamespace = None) -> None:
         super(System, self).__init__()
 
         self.domains = domains
@@ -101,7 +103,7 @@ class System(metaclass=ABCMeta):
         """ Fetch the info from the system """
         if not self.loaded[domain]:
             self.domains[domain] = self.domains[domain](self.options,
-                                                        self.aux)
+                                                        aux=self.aux)
             self.loaded[domain] = True
 
         try:
@@ -120,7 +122,7 @@ class System(metaclass=ABCMeta):
         for domain in domains if domains else self.domains.keys():
             if not self.loaded[domain]:
                 self.domains[domain] = self.domains[domain](self.options,
-                                                            self.aux)
+                                                            aux=self.aux)
                 self.loaded[domain] = True
             for k, v in self.domains[domain].return_all():
                 yield ("{}.{}".format(domain, k), v)
@@ -134,9 +136,9 @@ class AbstractStorage(AbstractGetter):
 
     def __init__(self,
                  options: Namespace,
-                 aux: object,
+                 aux: SimpleNamespace = None,
                  rounding: int = 2) -> None:
-        super(AbstractStorage, self).__init__(options, aux)
+        super(AbstractStorage, self).__init__(options, aux=aux)
         self.rounding = rounding
 
 
@@ -254,7 +256,9 @@ class AbstractCpu(AbstractGetter):
 class AbstractMemory(AbstractStorage):
     """ Abstract memory class """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
         super(AbstractMemory, self).__init__(options,
                                              aux,
                                              options.mem_percent_round)
@@ -273,10 +277,12 @@ class AbstractMemory(AbstractStorage):
 class AbstractSwap(AbstractStorage):
     """ Abstract swap class """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
         super(AbstractSwap, self).__init__(options,
-                                           aux,
-                                           options.swap_percent_round)
+                                           aux=aux,
+                                           rounding=options.swap_percent_round)
 
 
     @abstractmethod
@@ -292,10 +298,12 @@ class AbstractSwap(AbstractStorage):
 class AbstractDisk(AbstractStorage):
     """ Abstract disk class """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
         super(AbstractDisk, self).__init__(options,
-                                           aux,
-                                           options.disk_percent_round)
+                                           aux=aux,
+                                           rounding=options.disk_percent_round)
         self.df_out = None
 
 
@@ -533,8 +541,10 @@ class AbstractNetwork(AbstractGetter):
 class Date(AbstractGetter):
     """ Date class to fetch date and time """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
-        super(Date, self).__init__(options, aux)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Date, self).__init__(options, aux=aux)
         self.now = datetime.now()
 
 
