@@ -8,6 +8,7 @@ import shutil
 
 from argparse import Namespace
 from pathlib import Path as p
+from types import SimpleNamespace
 from typing import List
 
 from .abstract import (RE_COMPILE,
@@ -46,8 +47,10 @@ class Linux(System):
 class Cpu(AbstractCpu):
     """ Linux implementation of AbstractCpu class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Cpu, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Cpu, self).__init__(options, aux)
         self.cpu_file = None
 
 
@@ -117,8 +120,10 @@ class Cpu(AbstractCpu):
 class Memory(AbstractMemory):
     """ Linux implementation of AbstractMemory class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Memory, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Memory, self).__init__(options, aux)
         reg = re.compile(r"\s+|kB")
         mem_file = open_read("/proc/meminfo").strip().split("\n")
         self.mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
@@ -145,8 +150,10 @@ class Memory(AbstractMemory):
 class Swap(AbstractSwap):
     """ Linux implementation of AbstractSwap class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Swap, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Swap, self).__init__(options, aux)
         reg = re.compile(r"\s+|kB")
         mem_file = open_read("/proc/meminfo").strip().split("\n")
         self.mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
@@ -171,8 +178,10 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ Linux implementation of AbstractDisk class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Disk, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Disk, self).__init__(options, aux)
         self.df_flags = ["df", "-P"]
         self.lsblk = None
 
@@ -250,8 +259,10 @@ def _get_battery_dir() -> str:
 class Battery(AbstractBattery):
     """ Linux implementation of AbstractBattery class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Battery, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Battery, self).__init__(options, aux)
         self.bat_dir = _get_battery_dir()
         self.status = None
         self.current_charge = None
@@ -341,8 +352,10 @@ class Battery(AbstractBattery):
 class BatteryAmp(Battery):
     """ Stores filenames for batteries using amps """
 
-    def __init__(self, options: Namespace) -> None:
-        super(BatteryAmp, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(BatteryAmp, self).__init__(options, aux)
         self.files = {
             "current": "{}/charge_now".format(self.bat_dir),
             "full": "{}/charge_full".format(self.bat_dir),
@@ -366,8 +379,10 @@ class BatteryAmp(Battery):
 class BatteryWatt(Battery):
     """ Stores filenames for batteries using watts """
 
-    def __init__(self, options: Namespace) -> None:
-        super(BatteryWatt, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(BatteryWatt, self).__init__(options, aux)
         self.files = {
             "current": "{}/energy_now".format(self.bat_dir),
             "full": "{}/energy_full".format(self.bat_dir),
@@ -412,8 +427,10 @@ class BatteryStub(AbstractBattery):
 class Network(AbstractNetwork):
     """ Linux implementation of AbstractNetwork class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Network, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Network, self).__init__(options, aux)
         self.local_ip_cmd = ["ip", "address", "show", "dev"]
 
 
