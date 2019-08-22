@@ -23,6 +23,7 @@ if sys.version_info[0] == 3 and sys.version_info[1] <= 6:
 else:
     RE_COMPILE = re.Pattern
 
+
 class AbstractGetter(metaclass=ABCMeta):
     """ Abstract class to map the available functions to names """
 
