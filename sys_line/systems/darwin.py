@@ -20,8 +20,8 @@ from .abstract import (RE_COMPILE,
                        AbstractNetwork,
                        AbstractMisc)
 from ..tools.storage import Storage
-from ..tools.utils import percent, run, _round
 from ..tools.sysctl import Sysctl
+from ..tools.utils import percent, run, _round
 
 
 class Darwin(System):
