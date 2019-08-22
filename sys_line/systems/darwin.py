@@ -7,6 +7,7 @@ import shutil
 import time
 
 from argparse import Namespace
+from types import SimpleNamespace
 from typing import List
 
 from .abstract import (RE_COMPILE,
@@ -40,7 +41,7 @@ class Darwin(System):
             "misc": Misc
         }
 
-        aux = type("Auxilary", (), {"sysctl": Sysctl()})
+        aux = SimpleNamespace(sysctl=Sysctl())
         super(Darwin, self).__init__(domains, os_name, options, aux)
 
 
@@ -115,7 +116,9 @@ class Memory(AbstractMemory):
 class Swap(AbstractSwap):
     """ Darwin implementation of AbstractSwap class """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
         super(Swap, self).__init__(options, aux)
         self.swapusage = None
 
@@ -154,7 +157,9 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ Darwin implementation of AbstractDisk class """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
         super(Disk, self).__init__(options, aux)
         self.df_flags = ["df", "-P", "-k"]
         self.diskutil = None
@@ -189,7 +194,9 @@ class Disk(AbstractDisk):
 class Battery(AbstractBattery):
     """ Darwin implementation of AbstractBattery class """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
         super(Battery, self).__init__(options, aux)
 
         bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
@@ -274,7 +281,9 @@ class Battery(AbstractBattery):
 class Network(AbstractNetwork):
     """ Darwin implementation of AbstractNetwork class """
 
-    def __init__(self, options: Namespace, aux: object) -> None:
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
         super(Network, self).__init__(options, aux)
         self.local_ip_cmd = ["ifconfig"]
 
