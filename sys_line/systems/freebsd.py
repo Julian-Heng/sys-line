@@ -6,6 +6,7 @@ import re
 import time
 
 from argparse import Namespace
+from types import SimpleNamespace
 from typing import List
 
 from .abstract import (RE_COMPILE,
@@ -18,6 +19,7 @@ from .abstract import (RE_COMPILE,
                        AbstractNetwork,
                        AbstractMisc)
 from ..tools.storage import Storage
+from ..tools.sysctl import Sysctl
 from ..tools.utils import run, _round
 
 
@@ -38,24 +40,33 @@ class FreeBSD(System):
             "misc": Misc
         }
 
-        super(FreeBSD, self).__init__(domains, os_name, options)
+        aux = SimpleNamespace(sysctl=Sysctl())
+        super(FreeBSD, self).__init__(domains, os_name, options, aux)
 
 
 class Cpu(AbstractCpu):
     """ FreeBSD implementation of AbstractCpu class """
 
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Cpu, self).__init__(options, aux)
+
+
     def get_cores(self) -> int:
-        return int(run(["sysctl", "-n", "hw.ncpu"]))
+        return int(self.aux.sysctl.query("hw.ncpu"))
 
 
     def _get_cpu_speed(self) -> (str, [float, int]):
-        cpu, speed = run(["sysctl", "-n", "hw.model",
-                          "hw.cpuspeed", "hw.clockrate"]).strip().split("\n")
+        cpu = self.aux.sysctl.query("hw.model")
+        speed = self.aux.sysctl.query("hw.cpuspeed")
+        if speed is None:
+            speed = self.aux.sysctl.query("hw.clockrate")
         return cpu, _round(int(speed) / 1000, 2)
 
 
     def get_load_avg(self) -> str:
-        load = run(["sysctl", "-n", "vm.loadavg"]).split()
+        load = self.aux.sysctl.query("vm.loadavg").split()
         return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
 
 
@@ -65,26 +76,30 @@ class Cpu(AbstractCpu):
 
 
     def get_temp(self) -> float:
-        return float(run(["sysctl", "-n", "dev.cpu.0.temperature"])[:-2])
+        temp = self.aux.sysctl.query("dev.cpu.0.temperature")
+        temp = float(re.search("\d+\.?\d+", temp).group(0))
+        return temp
 
 
     def _get_uptime_sec(self) -> int:
-        cmd = ["sysctl", "-n", "kern.boottime"]
-        regex = r"sec = (\d+),"
-        return int(time.time()) - int(re.search(regex, run(cmd)).group(1))
+        reg = re.compile(r"sec = (\d+),")
+        sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
+        sec = int(time.time()) - int(sec)
+
+        return sec
 
 
 class Memory(AbstractMemory):
     """ FreeBSD implementation of AbstractMemory class """
 
     def get_used(self) -> Storage:
-        total = int(run(["sysctl", "-n", "hw.realmem"]))
-        pagesize = int(run(["sysctl", "-n", "hw.pagesize"]))
+        total = int(self.aux.sysctl.query("hw.realmem"))
+        pagesize = int(self.aux.sysctl.query("hw.pagesize"))
 
-        keys = [["sysctl", "-n", "vm.stats.vm.v_{}_count".format(i)]
+        keys = [int(self.aux.sysctl.query("vm.stats.vm.v_{}_count".format(i)))
                 for i in ["inactive", "free", "cache"]]
 
-        used = total - sum([int(run(i)) * pagesize for i in keys])
+        used = total - sum([i * pagesize for i in keys])
         used = Storage(value=used, prefix="B",
                        rounding=self.options.mem_used_round)
         used.set_prefix(self.options.mem_used_prefix)
@@ -92,7 +107,7 @@ class Memory(AbstractMemory):
 
 
     def get_total(self) -> Storage:
-        total = int(run(["sysctl", "-n", "hw.realmem"]))
+        total = int(self.aux.sysctl.query("hw.realmem"))
         total = Storage(value=total, prefix="B",
                         rounding=self.options.mem_total_round)
         total.set_prefix(self.options.mem_total_prefix)
@@ -113,7 +128,7 @@ class Swap(AbstractSwap):
 
 
     def get_total(self) -> Storage:
-        total = int(run(["sysctl", "-n", "vm.swap_total"]))
+        total = int(self.aux.sysctl.query("vm.swap_total"))
         total = Storage(value=total, prefix="B",
                         rounding=self.options.swap_total_round)
         total.set_prefix(self.options.mem_total_prefix)
@@ -123,8 +138,10 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ FreeBSD implementation of AbstractDisk class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Disk, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Disk, self).__init__(options, aux)
         self.df_flags = ["df", "-P", "-k"]
 
 
@@ -151,8 +168,10 @@ class Disk(AbstractDisk):
 class Battery(AbstractBattery):
     """ FreeBSD implementation of AbstractBattery class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Battery, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Battery, self).__init__(options, aux)
 
         bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
         bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in bat]
@@ -199,8 +218,10 @@ class Battery(AbstractBattery):
 class Network(AbstractNetwork):
     """ FreeBSD implementation of AbstractNetwork class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Network, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None) -> None:
+        super(Network, self).__init__(options, aux)
         self.local_ip_cmd = ["ifconfig"]
 
 
