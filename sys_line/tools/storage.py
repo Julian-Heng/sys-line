@@ -3,7 +3,6 @@
 """ Storage module """
 
 
-
 class Storage():
     """ Storage class for storing values with data prefixes """
     prefixes = ("B", "KiB", "MiB", "GiB", "TiB", "auto")
