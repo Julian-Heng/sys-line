@@ -20,6 +20,7 @@ from .abstract import (RE_COMPILE,
                        AbstractMisc)
 from ..tools.storage import Storage
 from ..tools.utils import percent, run, _round
+from ..tools.sysctl import Sysctl
 
 
 class Darwin(System):
@@ -39,22 +40,23 @@ class Darwin(System):
             "misc": Misc
         }
 
-        super(Darwin, self).__init__(domains, os_name, options)
+        aux = type("Auxilary", (), {"sysctl": Sysctl()})
+        super(Darwin, self).__init__(domains, os_name, options, aux)
 
 
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
 
     def get_cores(self) -> int:
-        return int(run(["sysctl", "-n", "hw.logicalcpu_max"]))
+        return int(self.aux.sysctl.query("hw.logicalcpu_max"))
 
 
     def _get_cpu_speed(self) -> (str, float):
-        return run(["sysctl", "-n", "machdep.cpu.brand_string"]), None
+        return self.aux.sysctl.query("machdep.cpu.brand_string"), None
 
 
     def get_load_avg(self) -> str:
-        load = run(["sysctl", "-n", "vm.loadavg"]).split()
+        load = self.aux.sysctl.query("vm.loadavg").split()
         return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
 
 
@@ -80,11 +82,11 @@ class Cpu(AbstractCpu):
 
 
     def _get_uptime_sec(self) -> int:
-        cmd = ["sysctl", "-n", "kern.boottime"]
-        regex = r"sec = (\d+),"
-        sec = int(re.search(regex, run(cmd)).group(1))
+        reg = re.compile(r"sec = (\d+),")
+        sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
+        sec = int(time.time()) - int(sec)
 
-        return int(time.time()) - sec
+        return sec
 
 
 class Memory(AbstractMemory):
@@ -103,7 +105,7 @@ class Memory(AbstractMemory):
 
 
     def get_total(self) -> Storage:
-        mem_total = Storage(value=int(run(["sysctl", "-n", "hw.memsize"])),
+        mem_total = Storage(value=int(self.aux.sysctl.query("hw.memsize")),
                             rounding=self.options.mem_total_round)
         mem_total.set_prefix(self.options.mem_total_prefix)
 
@@ -113,8 +115,8 @@ class Memory(AbstractMemory):
 class Swap(AbstractSwap):
     """ Darwin implementation of AbstractSwap class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Swap, self).__init__(options)
+    def __init__(self, options: Namespace, aux: object) -> None:
+        super(Swap, self).__init__(options, aux)
         self.swapusage = None
 
 
@@ -122,7 +124,7 @@ class Swap(AbstractSwap):
         value = 0
 
         if self.swapusage is None:
-            self.swapusage = run(["sysctl", "-n", "vm.swapusage"]).strip()
+            self.swapusage = self.aux.sysctl.query("vm.swapusage").strip()
 
         regex = r"{} = (\d+\.\d+)M".format(search)
         match = re.search(regex, self.swapusage)
@@ -152,8 +154,8 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ Darwin implementation of AbstractDisk class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Disk, self).__init__(options)
+    def __init__(self, options: Namespace, aux: object) -> None:
+        super(Disk, self).__init__(options, aux)
         self.df_flags = ["df", "-P", "-k"]
         self.diskutil = None
 
@@ -187,8 +189,8 @@ class Disk(AbstractDisk):
 class Battery(AbstractBattery):
     """ Darwin implementation of AbstractBattery class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Battery, self).__init__(options)
+    def __init__(self, options: Namespace, aux: object) -> None:
+        super(Battery, self).__init__(options, aux)
 
         bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
         bat = (re.sub("[\"{}]", "", i.strip()) for i in bat)
@@ -272,8 +274,8 @@ class Battery(AbstractBattery):
 class Network(AbstractNetwork):
     """ Darwin implementation of AbstractNetwork class """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Network, self).__init__(options)
+    def __init__(self, options: Namespace, aux: object) -> None:
+        super(Network, self).__init__(options, aux)
         self.local_ip_cmd = ["ifconfig"]
 
 

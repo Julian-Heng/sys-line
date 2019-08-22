@@ -26,7 +26,7 @@ else:
 class AbstractGetter(metaclass=ABCMeta):
     """ Abstract class to map the available functions to names """
 
-    def __init__(self, options: Namespace) -> None:
+    def __init__(self, options: Namespace, aux: object) -> None:
         super(AbstractGetter, self).__init__()
         check = lambda i: i != "get" and i.startswith("get")
         extract = lambda i: i.split("_", 1)[1]
@@ -37,6 +37,7 @@ class AbstractGetter(metaclass=ABCMeta):
         self.info = {extract(i): None for i in dir(self) if check(i)}
         self.func = {i: getattr(self, "get_{}".format(i)) for i in self.info}
         self.options = options
+        self.aux = aux
 
 
     def call(self, name: str) -> None:
@@ -82,8 +83,10 @@ class System(metaclass=ABCMeta):
     def __init__(self,
                  domains: Dict[str, AbstractGetter],
                  os_name: str,
-                 options: Namespace) -> None:
+                 options: Namespace,
+                 aux: object) -> None:
         super(System, self).__init__()
+
         self.domains = domains
         self.domains["date"] = Date
 
@@ -91,12 +94,14 @@ class System(metaclass=ABCMeta):
         self.loaded = dict.fromkeys(self.domains.keys(), False)
         self.os_name = os_name
         self.options = options
+        self.aux = aux
 
 
     def fetch(self, domain: Dict[str, AbstractGetter], info: str) -> None:
         """ Fetch the info from the system """
         if not self.loaded[domain]:
-            self.domains[domain] = self.domains[domain](self.options)
+            self.domains[domain] = self.domains[domain](self.options,
+                                                        self.aux)
             self.loaded[domain] = True
 
         try:
@@ -114,7 +119,8 @@ class System(metaclass=ABCMeta):
         """ Return all available info from domains """
         for domain in domains if domains else self.domains.keys():
             if not self.loaded[domain]:
-                self.domains[domain] = self.domains[domain](self.options)
+                self.domains[domain] = self.domains[domain](self.options,
+                                                            self.aux)
                 self.loaded[domain] = True
             for k, v in self.domains[domain].return_all():
                 yield ("{}.{}".format(domain, k), v)
@@ -126,8 +132,11 @@ class AbstractStorage(AbstractGetter):
     methods
     """
 
-    def __init__(self, options: Namespace, rounding: int = 2) -> None:
-        super(AbstractStorage, self).__init__(options)
+    def __init__(self,
+                 options: Namespace,
+                 aux: object,
+                 rounding: int = 2) -> None:
+        super(AbstractStorage, self).__init__(options, aux)
         self.rounding = rounding
 
 
@@ -245,8 +254,9 @@ class AbstractCpu(AbstractGetter):
 class AbstractMemory(AbstractStorage):
     """ Abstract memory class """
 
-    def __init__(self, options: Namespace) -> None:
+    def __init__(self, options: Namespace, aux: object) -> None:
         super(AbstractMemory, self).__init__(options,
+                                             aux,
                                              options.mem_percent_round)
 
 
@@ -263,8 +273,9 @@ class AbstractMemory(AbstractStorage):
 class AbstractSwap(AbstractStorage):
     """ Abstract swap class """
 
-    def __init__(self, options: Namespace) -> None:
+    def __init__(self, options: Namespace, aux: object) -> None:
         super(AbstractSwap, self).__init__(options,
+                                           aux,
                                            options.swap_percent_round)
 
 
@@ -281,8 +292,9 @@ class AbstractSwap(AbstractStorage):
 class AbstractDisk(AbstractStorage):
     """ Abstract disk class """
 
-    def __init__(self, options: Namespace) -> None:
+    def __init__(self, options: Namespace, aux: object) -> None:
         super(AbstractDisk, self).__init__(options,
+                                           aux,
                                            options.disk_percent_round)
         self.df_out = None
 
@@ -521,8 +533,8 @@ class AbstractNetwork(AbstractGetter):
 class Date(AbstractGetter):
     """ Date class to fetch date and time """
 
-    def __init__(self, options: Namespace) -> None:
-        super(Date, self).__init__(options)
+    def __init__(self, options: Namespace, aux: object) -> None:
+        super(Date, self).__init__(options, aux)
         self.now = datetime.now()
 
 
