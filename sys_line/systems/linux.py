@@ -57,7 +57,7 @@ class Cpu(AbstractCpu):
         return len(re.findall(r"^processor", self.cpu_file, re.M))
 
 
-    def _get_cpu_speed(self) -> (str, float):
+    def _get_cpu_speed(self) -> (str, [float, int]):
         if self.cpu_file is None:
             self.cpu_file = open_read("/proc/cpuinfo")
 
@@ -296,7 +296,7 @@ class Battery(AbstractBattery):
         return self.__compare_status("Full")
 
 
-    def get_percent(self) -> float:
+    def get_percent(self) -> [float, int]:
         perc = None
         if self.bat_dir is not None:
             if self.current_charge is None:
@@ -350,7 +350,7 @@ class BatteryAmp(Battery):
         }
 
 
-    def get_power(self) -> float:
+    def get_power(self) -> [float, int]:
         power = None
         if self.bat_dir is not None:
             if self.drain_rate is None:
@@ -375,7 +375,7 @@ class BatteryWatt(Battery):
         }
 
 
-    def get_power(self) -> float:
+    def get_power(self) -> [float, int]:
         if self.drain_rate is None:
             self._get_drain_rate()
 
@@ -451,7 +451,7 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ Linux implementation of AbstractMisc class """
 
-    def get_vol(self) -> float:
+    def get_vol(self) -> [float, int]:
         check = lambda d: d.is_dir() and d.name.isdigit()
         extract = lambda f: open_read("{}/cmdline".format(f))
 
@@ -473,7 +473,7 @@ class Misc(AbstractMisc):
         return vol
 
 
-    def get_scr(self) -> float:
+    def get_scr(self) -> [float, int]:
         check = lambda f: "kbd" not in f and "backlight" in f
 
         scr = None
@@ -489,7 +489,7 @@ class Misc(AbstractMisc):
         return scr
 
 
-def get_vol_pulseaudio() -> float:
+def get_vol_pulseaudio() -> [float, int]:
     """ Return system volume using pulse audio """
     default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
     pac_dump = run(["pacmd", "dump"])

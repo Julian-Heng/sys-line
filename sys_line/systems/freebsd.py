@@ -21,8 +21,6 @@ from ..tools.storage import Storage
 from ..tools.utils import run, _round
 
 
-
-
 class FreeBSD(System):
     """
     A FreeBSD implementation of the abstract
@@ -50,7 +48,7 @@ class Cpu(AbstractCpu):
         return int(run(["sysctl", "-n", "hw.ncpu"]))
 
 
-    def _get_cpu_speed(self) -> (str, float):
+    def _get_cpu_speed(self) -> (str, [float, int]):
         cpu, speed = run(["sysctl", "-n", "hw.model",
                           "hw.cpuspeed", "hw.clockrate"]).strip().split("\n")
         return cpu, _round(int(speed) / 1000, 2)
@@ -234,9 +232,9 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ FreeBSD implementation of AbstractMisc class """
 
-    def get_vol(self) -> float:
+    def get_vol(self) -> [float, int]:
         raise NotImplementedError
 
 
-    def get_scr(self) -> float:
+    def get_scr(self) -> [float, int]:
         raise NotImplementedError

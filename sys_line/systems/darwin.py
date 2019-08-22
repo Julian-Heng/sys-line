@@ -68,7 +68,7 @@ class Cpu(AbstractCpu):
         return fan
 
 
-    def get_temp(self) -> int:
+    def get_temp(self) -> [float, int]:
         temp = None
         if shutil.which("osx-cpu-temp"):
             regex = r"CPU: ((\d+\.)?\d+)"
@@ -203,55 +203,70 @@ class Battery(AbstractBattery):
 
 
     def get_is_charging(self) -> bool:
-        return self.bat["IsCharging"] == "Yes"
+        if self.call_get("is_present"):
+            return self.bat["IsCharging"] == "Yes"
 
 
     def get_is_full(self) -> bool:
-        return self.bat["FullyCharged"] == "Yes"
+        if self.call_get("is_present"):
+            return self.bat["FullyCharged"] == "Yes"
 
 
-    def get_percent(self) -> float:
-        if self.current_capacity is None:
-            self.__get_current_capacity()
+    def get_percent(self) -> [float, int]:
+        perc = None
+        if self.call_get("is_present"):
+            if self.current_capacity is None:
+                self.__get_current_capacity()
 
-        perc = percent(self.current_capacity, int(self.bat["MaxCapacity"]))
-        perc = _round(perc, self.options.bat_percent_round)
+            perc = percent(self.current_capacity, int(self.bat["MaxCapacity"]))
+            perc = _round(perc, self.options.bat_percent_round)
 
         return perc
 
 
     def _get_time(self) -> int:
-        if self.current_capacity is None:
-            self.__get_current_capacity()
-        if self.current is None:
-            self.__get_amperage()
-        if self.current == 0:
-            return 0
+        charge = None
 
-        charge = self.current_capacity
-        if self.get_is_charging():
-            charge = int(self.bat["MaxCapacity"]) - charge
+        if self.call_get("is_present"):
+            if self.current_capacity is None:
+                self.__get_current_capacity()
+            if self.current is None:
+                self.__get_amperage()
+            if self.current == 0:
+                return 0
 
-        return int((charge / self.current) * 3600)
+            charge = self.current_capacity
+            if self.get_is_charging():
+                charge = int(self.bat["MaxCapacity"]) - charge
+            charge = int((charge / self.current) * 3600)
+
+        return charge
 
 
-    def get_power(self) -> float:
-        if self.current is None:
-            self.__get_amperage()
+    def get_power(self) -> [float, int]:
+        power = None
 
-        voltage = int(self.bat["Voltage"])
-        power = (self.current * voltage) / 1e6
-        return _round(power, self.options.bat_power_round)
+        if self.call_get("is_present"):
+            if self.current is None:
+                self.__get_amperage()
+
+            voltage = int(self.bat["Voltage"])
+            power = (self.current * voltage) / 1e6
+            power = _round(power, self.options.bat_power_round)
+
+        return power
 
 
     def __get_current_capacity(self) -> None:
-        self.current_capacity = int(self.bat["CurrentCapacity"])
+        if self.call_get("is_present"):
+            self.current_capacity = int(self.bat["CurrentCapacity"])
 
 
     def __get_amperage(self) -> None:
-        current = int(self.bat["InstantAmperage"])
-        current -= pow(2, 64) if len(str(current)) >= 20 else 0
-        self.current = abs(current)
+        if self.call_get("is_present"):
+            current = int(self.bat["InstantAmperage"])
+            current -= pow(2, 64) if len(str(current)) >= 20 else 0
+            self.current = abs(current)
 
 
 class Network(AbstractNetwork):
@@ -297,14 +312,14 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ Darwin implementation of AbstractMisc class """
 
-    def get_vol(self) -> float:
+    def get_vol(self) -> [float, int]:
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
         return _round(vol, self.options.misc_volume_round)
 
 
-    def get_scr(self) -> float:
+    def get_scr(self) -> [float, int]:
         scr = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
         scr = next((i for i in scr if "IODisplayParameters" in i), None)
         if scr is not None:

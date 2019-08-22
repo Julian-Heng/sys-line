@@ -147,7 +147,7 @@ class AbstractStorage(AbstractGetter):
         """
 
 
-    def get_percent(self) -> float:
+    def get_percent(self) -> [float, int]:
         """ Returns percentage in the same object type as the values used """
         perc = percent(self.call_get("used"), self.call_get("total"))
         if perc is not None:
@@ -169,7 +169,7 @@ class AbstractCpu(AbstractGetter):
 
 
     @abstractmethod
-    def _get_cpu_speed(self) -> (str, float):
+    def _get_cpu_speed(self) -> (str, [float, int]):
         """
         Abstract cpu method to be implemented
         Returns the cpu and the cpu speed
@@ -205,7 +205,7 @@ class AbstractCpu(AbstractGetter):
         """
 
 
-    def get_cpu_usage(self) -> float:
+    def get_cpu_usage(self) -> [float, int]:
         """ Returns the cpu usage in the system """
         cores = self.call_get("cores")
         ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
@@ -387,7 +387,7 @@ class AbstractBattery(AbstractGetter):
 
 
     @abstractmethod
-    def get_percent(self) -> float:
+    def get_percent(self) -> [float, int]:
         """
         Abstract method to calculate the battery percentage
         Returns a float
@@ -410,7 +410,7 @@ class AbstractBattery(AbstractGetter):
 
 
     @abstractmethod
-    def get_power(self) -> float:
+    def get_power(self) -> [float, int]:
         """
         Abstract method to calculate system power usage
         Returns a float
@@ -546,7 +546,7 @@ class AbstractMisc(AbstractGetter):
     """ Misc class for fetching miscellaneous information """
 
     @abstractmethod
-    def get_vol(self) -> float:
+    def get_vol(self) -> [float, int]:
         """
         Abstract volume method to be implemented
         Returns a float
@@ -554,7 +554,7 @@ class AbstractMisc(AbstractGetter):
 
 
     @abstractmethod
-    def get_scr(self) -> float:
+    def get_scr(self) -> [float, int]:
         """
         Abstract screen brightness method to be implemented
         Returns a float
