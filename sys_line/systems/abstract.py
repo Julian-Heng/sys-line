@@ -163,7 +163,7 @@ class AbstractStorage(AbstractGetter):
         """ Returns percentage in the same object type as the values used """
         perc = percent(self.call_get("used"), self.call_get("total"))
         if perc is not None:
-            perc = perc.get_value() if isinstance(perc, Storage) else perc
+            perc = perc.value if isinstance(perc, Storage) else perc
             perc = _round(perc, self.rounding)
 
         return perc
@@ -364,7 +364,7 @@ class AbstractDisk(AbstractStorage):
         self.call_get("dev")
         used = Storage(value=int(self.df_out[2]), prefix="KiB",
                        rounding=self.options.disk_used_round)
-        used.set_prefix(self.options.disk_used_prefix)
+        used.prefix = self.options.disk_used_prefix
         return used
 
 
@@ -376,7 +376,7 @@ class AbstractDisk(AbstractStorage):
         self.call_get("dev")
         total = Storage(value=int(self.df_out[1]), prefix="KiB",
                         rounding=self.options.disk_total_round)
-        total.set_prefix(self.options.disk_total_prefix)
+        total.prefix = self.options.disk_total_prefix
         return total
 
 
@@ -524,7 +524,7 @@ class AbstractNetwork(AbstractGetter):
         """
         download = Storage(value=self.__calc_bytes_delta_rate("down"),
                            rounding=self.options.net_download_round)
-        download.set_prefix(self.options.net_download_prefix)
+        download.prefix = self.options.net_download_prefix
         return download
 
 
@@ -535,7 +535,7 @@ class AbstractNetwork(AbstractGetter):
         """
         upload = Storage(value=self.__calc_bytes_delta_rate("up"),
                          rounding=self.options.net_upload_round)
-        upload.set_prefix(self.options.net_upload_prefix)
+        upload.prefix = self.options.net_upload_prefix
         return upload
 
 
