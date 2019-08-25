@@ -8,15 +8,11 @@ import platform
 import textwrap
 
 from .storage import Storage
+from ..systems.abstract import System
 
 
 def parse() -> argparse.Namespace:
     """ Parse the program arguments """
-    prefixes = Storage.PREFIXES
-    groups = [["cpu", "mem", "swap", "disk", "bat", "net", "date", "misc"],
-              ["cpu", "memory", "swap", "disk", "battery",
-               "network", "date", "misc"]]
-
     fmt = argparse.RawDescriptionHelpFormatter
     desc = "a simple status line generator"
     epilog = textwrap.dedent("""
@@ -25,7 +21,7 @@ def parse() -> argparse.Namespace:
 
         list of prefixes:
             {}
-    """.format(", ".join(groups[0]), ", ".join(prefixes)))
+    """.format(", ".join(System.SHORT_DOMAINS), ", ".join(Storage.PREFIXES)))
 
     usage_msg = "%(prog)s [options] format..."
     ver = "%(prog)s ("
@@ -48,10 +44,10 @@ def parse() -> argparse.Namespace:
 
     parser.add_argument("format", nargs="?", type=str, default="")
     parser.add_argument("-v", "--version", action="version", version=ver)
-    parser.add_argument("-a", "--all", nargs="*", choices=groups[0],
+    parser.add_argument("-a", "--all", nargs="*", choices=System.SHORT_DOMAINS,
                         default=None, metavar="domain")
 
-    groups = {i: parser.add_argument_group(i) for i in groups[1]}
+    groups = {i: parser.add_argument_group(i) for i in System.DOMAINS}
 
     groups["cpu"].add_argument("-cls", "--cpu-load-short",
                                action="store_true", default=False)
@@ -65,10 +61,10 @@ def parse() -> argparse.Namespace:
 
     groups["memory"].add_argument("-mup", "--mem-used-prefix",
                                   action="store", default="MiB",
-                                  choices=prefixes, metavar="prefix")
+                                  choices=Storage.PREFIXES, metavar="prefix")
     groups["memory"].add_argument("-mtp", "--mem-total-prefix",
                                   action="store", default="MiB",
-                                  choices=prefixes, metavar="prefix")
+                                  choices=Storage.PREFIXES, metavar="prefix")
     groups["memory"].add_argument("-mur", "--mem-used-round",
                                   action="store", type=int, default=0,
                                   metavar="int")
@@ -82,10 +78,10 @@ def parse() -> argparse.Namespace:
 
     groups["swap"].add_argument("-sup", "--swap-used-prefix",
                                 action="store", default="MiB",
-                                choices=prefixes, metavar="prefix")
+                                choices=Storage.PREFIXES, metavar="prefix")
     groups["swap"].add_argument("-stp", "--swap-total-prefix",
                                 action="store", default="MiB",
-                                choices=prefixes, metavar="prefix")
+                                choices=Storage.PREFIXES, metavar="prefix")
     groups["swap"].add_argument("-sur", "--swap-used-round",
                                 action="store", type=int, default=0,
                                 metavar="int")
@@ -108,10 +104,10 @@ def parse() -> argparse.Namespace:
                                 action="store_true", default=False)
     groups["disk"].add_argument("-dup", "--disk-used-prefix",
                                 action="store", default="GiB",
-                                choices=prefixes, metavar="prefix")
+                                choices=Storage.PREFIXES, metavar="prefix")
     groups["disk"].add_argument("-dtp", "--disk-total-prefix",
                                 action="store", default="GiB",
-                                choices=prefixes, metavar="prefix")
+                                choices=Storage.PREFIXES, metavar="prefix")
     groups["disk"].add_argument("-dur", "--disk-used-round",
                                 action="store", type=int, default=2,
                                 metavar="int")
@@ -133,10 +129,10 @@ def parse() -> argparse.Namespace:
 
     groups["network"].add_argument("-ndp", "--net-download-prefix",
                                    action="store", default="KiB",
-                                   choices=prefixes, metavar="prefix")
+                                   choices=Storage.PREFIXES, metavar="prefix")
     groups["network"].add_argument("-nup", "--net-upload-prefix",
                                    action="store", default="KiB",
-                                   choices=prefixes, metavar="prefix")
+                                   choices=Storage.PREFIXES, metavar="prefix")
     groups["network"].add_argument("-ndr", "--net-download-round",
                                    action="store", type=int, default=2,
                                    metavar="int")
