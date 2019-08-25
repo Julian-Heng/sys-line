@@ -13,7 +13,7 @@ import time
 from argparse import Namespace
 from functools import lru_cache
 from types import SimpleNamespace
-from typing import List
+from typing import Dict, List
 
 from .abstract import (RE_COMPILE,
                        System,
@@ -124,7 +124,7 @@ class Swap(AbstractSwap):
 
     @property
     @lru_cache(maxsize=1)
-    def swapusage(self):
+    def swapusage(self) -> str:
         """ Returns swapusage from sysctl """
         return self.aux.sysctl.query("vm.swapusage").strip()
 
@@ -166,7 +166,7 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def diskutil(self):
+    def diskutil(self) -> Dict[str, str]:
         """ Returns diskutil program output as a dict """
         dev = self.dev
         _diskutil = None
@@ -200,7 +200,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def bat(self):
+    def bat(self) -> Dict[str, str]:
         """ Returns battery info from ioreg as a dict """
         _bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
         _bat = (re.sub("[\"{}]", "", i.strip()) for i in _bat)
@@ -209,7 +209,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def __current(self) -> None:
+    def __current(self) -> int:
         current = 0
         if self.is_present:
             current = int(self.bat["InstantAmperage"])
@@ -221,7 +221,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def __current_capacity(self) -> None:
+    def __current_capacity(self) -> int:
         return int(self.bat["CurrentCapacity"]) if self.is_present else None
 
 
