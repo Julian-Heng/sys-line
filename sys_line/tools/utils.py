@@ -58,7 +58,8 @@ def unix_epoch_to_str(secs: int) -> str:
         "{}s".format(secs) if secs else ""
     )
 
-    return re.sub(r"\s+", " ", string.strip())
+    _str = re.sub(r"\s+", " ", string.strip())
+    return _str if _str else None
 
 
 def _round(num: float, rnd: int) -> [int, float]:
