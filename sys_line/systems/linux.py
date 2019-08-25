@@ -12,7 +12,7 @@ import shutil
 from argparse import Namespace
 from functools import lru_cache
 from pathlib import Path as p
-from typing import List
+from typing import Dict, List
 
 from .abstract import (RE_COMPILE,
                        System,
@@ -47,7 +47,7 @@ class Cpu(AbstractCpu):
 
     @property
     @lru_cache(maxsize=1)
-    def cpu_file(self):
+    def cpu_file(self) -> str:
         """ Returns cached /proc/cpuinfo """
         return open_read("/proc/cpuinfo")
 
@@ -116,7 +116,7 @@ class Cpu(AbstractCpu):
 
 
 @lru_cache(maxsize=1)
-def mem_file():
+def mem_file() -> Dict[str, str]:
     """ Returns cached /proc/meminfo """
     reg = re.compile(r"\s+|kB")
     _mem_file = open_read("/proc/meminfo").strip().split("\n")
@@ -253,21 +253,21 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def current_charge(self) -> None:
+    def current_charge(self) -> int:
         """ Returns cached battery current charge file """
         return None if bat_dir() is None else int(open_read(self.current))
 
 
     @property
     @lru_cache(maxsize=1)
-    def full_charge(self) -> None:
+    def full_charge(self) -> int:
         """ Returns cached battery full charge file """
         return None if bat_dir() is None else int(open_read(self.full))
 
 
     @property
     @lru_cache(maxsize=1)
-    def drain_rate(self) -> None:
+    def drain_rate(self) -> int:
         """ Returns cached battery drain rate file """
         return None if bat_dir() is None else int(open_read(self.drain))
 
@@ -363,21 +363,21 @@ class BatteryWatt(Battery):
 
     @property
     @lru_cache(maxsize=1)
-    def current(self):
+    def current(self) -> str:
         """ Returns current energy filename """
         return "{}/energy_now".format(bat_dir())
 
 
     @property
     @lru_cache(maxsize=1)
-    def full(self):
+    def full(self) -> str:
         """ Returns full energy filename """
         return "{}/energy_full".format(bat_dir())
 
 
     @property
     @lru_cache(maxsize=1)
-    def drain(self):
+    def drain(self) -> str:
         """ Returns power filename """
         return "{}/power_now".format(bat_dir())
 
