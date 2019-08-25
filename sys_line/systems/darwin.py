@@ -98,19 +98,19 @@ class Memory(AbstractMemory):
         vm_stat = run(["vm_stat"]).strip().split("\n")[1:]
         vm_stat = (re.sub(r"Pages |\.", r"", i) for i in vm_stat)
         vm_stat = dict(i.split(":", 1) for i in vm_stat)
-        mem_used = Storage(value=sum([int(vm_stat[i]) for i in words]) * 4096,
-                           rounding=self.options.mem_used_round)
-        mem_used.set_prefix(self.options.mem_used_prefix)
+        used = Storage(value=sum([int(vm_stat[i]) for i in words]) * 4096,
+                       rounding=self.options.mem_used_round)
+        used.prefix = self.options.mem_used_prefix
 
-        return mem_used
+        return used
 
 
     def get_total(self) -> Storage:
-        mem_total = Storage(value=int(self.aux.sysctl.query("hw.memsize")),
-                            rounding=self.options.mem_total_round)
-        mem_total.set_prefix(self.options.mem_total_prefix)
+        total = Storage(value=int(self.aux.sysctl.query("hw.memsize")),
+                        rounding=self.options.mem_total_round)
+        total.prefix = self.options.mem_total_prefix
 
-        return mem_total
+        return total
 
 
 class Swap(AbstractSwap):
@@ -141,7 +141,7 @@ class Swap(AbstractSwap):
     def get_used(self) -> Storage:
         used = Storage(value=self.__lookup_swap("used"),
                        rounding=self.options.swap_used_round)
-        used.set_prefix(self.options.swap_used_prefix)
+        used.prefix = self.options.swap_used_prefix
 
         return used
 
@@ -149,7 +149,7 @@ class Swap(AbstractSwap):
     def get_total(self) -> Storage:
         total = Storage(value=self.__lookup_swap("total"),
                         rounding=self.options.swap_total_round)
-        total.set_prefix(self.options.swap_total_prefix)
+        total.prefix = self.options.swap_total_prefix
 
         return total
 
