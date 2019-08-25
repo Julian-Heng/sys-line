@@ -96,7 +96,7 @@ class Memory(AbstractMemory):
         used = total - sum([i * pagesize for i in keys])
         used = Storage(value=used, prefix="B",
                        rounding=self.options.mem_used_round)
-        used.set_prefix(self.options.mem_used_prefix)
+        used.prefix = self.options.mem_used_prefix
         return used
 
 
@@ -104,7 +104,7 @@ class Memory(AbstractMemory):
         total = int(self.aux.sysctl.query("hw.realmem"))
         total = Storage(value=total, prefix="B",
                         rounding=self.options.mem_total_round)
-        total.set_prefix(self.options.mem_total_prefix)
+        total.prefix = self.options.mem_total_prefix
         return total
 
 
@@ -117,7 +117,7 @@ class Swap(AbstractSwap):
         pstat = sum([extract(i) for i in pstat])
         used = Storage(value=pstat, prefix="KiB",
                        rounding=self.options.swap_used_round)
-        used.set_prefix(self.options.swap_used_prefix)
+        used.prefix = self.options.swap_used_prefix
         return used
 
 
@@ -125,7 +125,7 @@ class Swap(AbstractSwap):
         total = int(self.aux.sysctl.query("vm.swap_total"))
         total = Storage(value=total, prefix="B",
                         rounding=self.options.swap_total_round)
-        total.set_prefix(self.options.mem_total_prefix)
+        total.prefix = self.options.swap_total_prefix
         return total
 
 
