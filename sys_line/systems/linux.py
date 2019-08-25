@@ -175,17 +175,17 @@ class Disk(AbstractDisk):
     @property
     @lru_cache(maxsize=1)
     def __lsblk(self) -> None:
-        dev = self.dev
         columns = ["KNAME", "NAME", "LABEL", "PARTLABEL",
                    "FSTYPE", "MOUNTPOINT"]
 
-        if dev is not None:
+        if self.dev is not None:
             cmd = ["lsblk", "--output", ",".join(columns),
-                   "--paths", "--pairs", dev]
+                   "--paths", "--pairs", self.dev]
 
             lsblk = re.findall(r"[^\"\s]\S*|\".+?", run(cmd))
             lsblk = dict(re.sub("\"", "", i).split("=", 1) for i in lsblk)
-        else:
+
+        if not lsblk:
             lsblk = {i: None for i in columns}
 
         return lsblk
@@ -470,8 +470,7 @@ class Misc(AbstractMisc):
 
         vol = None
         pids = (extract(i) for i in p("/proc").iterdir() if check(i))
-        pids = (reg.search(i) for i in pids if i and reg.search(i))
-        audio = next(pids, None)
+        audio = next((reg.search(i) for i in pids if i and reg.search(i)), None)
 
         if audio is not None:
             vol = systems[audio.group(0)]()
