@@ -254,13 +254,13 @@ class Battery(AbstractBattery):
 
     @property
     def _AbstractBattery__time(self) -> int:
-        charge = None
+        charge = 0
 
-        if self.is_present and self.current is not None:
-            charge = self.current_capacity
+        if self.is_present and self.__current != 0:
+            charge = self.__current_capacity
             if self.is_charging:
                 charge = int(self.bat["MaxCapacity"]) - charge
-            charge = int((charge / self.current) * 3600)
+            charge = int((charge / self.__current) * 3600)
 
         return charge
 
