@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+# pylint: disable=abstract-method
+# pylint: disable=invalid-name
 # pylint: disable=no-member
+# pylint: disable=no-self-use
 
 """ Linux specific module """
 
@@ -7,8 +10,8 @@ import re
 import shutil
 
 from argparse import Namespace
+from functools import lru_cache
 from pathlib import Path as p
-from types import SimpleNamespace
 from typing import List
 
 from .abstract import (RE_COMPILE,
@@ -25,45 +28,37 @@ from ..tools.utils import open_read, run, percent, _round
 
 
 class Linux(System):
-    """
-    A Linux implementation of the abstract
-    System class in abstract.py
-    """
+    """ A Linux implementation of the abstract System class """
 
-    def __init__(self, os_name: str, options: Namespace) -> None:
-        domains = {
-            "cpu": Cpu,
-            "mem": Memory,
-            "swap": Swap,
-            "disk": Disk,
-            "bat": detect_battery(),
-            "net": Network,
-            "misc": Misc
-        }
-
-        super(Linux, self).__init__(domains, os_name, options)
+    def __init__(self, options: Namespace) -> None:
+        super(Linux, self).__init__(options,
+                                    aux=None,
+                                    cpu=Cpu,
+                                    mem=Memory,
+                                    swap=Swap,
+                                    disk=Disk,
+                                    bat=detect_battery(),
+                                    net=Network,
+                                    misc=Misc)
 
 
 class Cpu(AbstractCpu):
-    """ Linux implementation of AbstractCpu class """
+    """ A Linux implementation of the AbstractCpu class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Cpu, self).__init__(options, aux)
-        self.cpu_file = None
+    @property
+    @lru_cache(maxsize=1)
+    def cpu_file(self):
+        """ Returns cached /proc/cpuinfo """
+        return open_read("/proc/cpuinfo")
 
 
-    def get_cores(self) -> int:
-        if self.cpu_file is None:
-            self.cpu_file = open_read("/proc/cpuinfo")
+    @property
+    @lru_cache(maxsize=1)
+    def cores(self) -> int:
         return len(re.findall(r"^processor", self.cpu_file, re.M))
 
 
-    def _get_cpu_speed(self) -> (str, [float, int]):
-        if self.cpu_file is None:
-            self.cpu_file = open_read("/proc/cpuinfo")
-
+    def _AbstractCpu__cpu_speed(self) -> (str, [float, int]):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
@@ -79,12 +74,14 @@ class Cpu(AbstractCpu):
         return cpu, speed
 
 
-    def get_load_avg(self) -> str:
+    @property
+    def load_avg(self) -> str:
         load = open_read("/proc/loadavg").split(" ")
         return load[0] if self.options.cpu_load_short else " ".join(load[:3])
 
 
-    def get_fan(self) -> int:
+    @property
+    def fan(self) -> int:
         fan = None
         fan_dir = "/sys/devices/platform"
         glob = "fan1_input"
@@ -97,7 +94,8 @@ class Cpu(AbstractCpu):
         return fan
 
 
-    def get_temp(self) -> float:
+    @property
+    def temp(self) -> float:
         check = lambda f: p.exists(p(f)) and "temp" in open_read(f)
         glob = lambda d: p(d).glob("*")
 
@@ -113,110 +111,95 @@ class Cpu(AbstractCpu):
         return temp
 
 
-    def _get_uptime_sec(self) -> int:
+    def _AbstractCpu__uptime(self) -> int:
         return int(float(open_read("/proc/uptime").strip().split(" ")[0]))
 
 
+@lru_cache(maxsize=1)
+def mem_file():
+    """ Returns cached /proc/meminfo """
+    reg = re.compile(r"\s+|kB")
+    _mem_file = open_read("/proc/meminfo").strip().split("\n")
+    return dict(reg.sub("", i).split(":", 1) for i in _mem_file)
+
+
 class Memory(AbstractMemory):
-    """ Linux implementation of AbstractMemory class """
+    """ A Linux implementation of the AbstractMemory class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Memory, self).__init__(options, aux)
-        reg = re.compile(r"\s+|kB")
-        mem_file = open_read("/proc/meminfo").strip().split("\n")
-        self.mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
-
-
-    def get_used(self) -> Storage:
+    @property
+    def used(self) -> Storage:
         keys = [["MemTotal", "Shmem"],
                 ["MemFree", "Buffers", "Cached", "SReclaimable"]]
-        used = sum([int(self.mem_file[i]) for i in keys[0]])
-        used -= sum([int(self.mem_file[i]) for i in keys[1]])
+        used = sum([int(mem_file()[i]) for i in keys[0]])
+        used -= sum([int(mem_file()[i]) for i in keys[1]])
         used = Storage(value=used, prefix="KiB",
                        rounding=self.options.mem_used_round)
-        #used.set_prefix(self.options.mem_used_prefix)
         used.prefix = self.options.mem_used_prefix
         return used
 
 
-    def get_total(self) -> Storage:
-        total = Storage(value=int(self.mem_file["MemTotal"]), prefix="KiB",
+    @property
+    def total(self) -> Storage:
+        total = Storage(value=int(mem_file()["MemTotal"]), prefix="KiB",
                         rounding=self.options.mem_total_round)
-        #total.set_prefix(self.options.mem_total_prefix)
         total.prefix = self.options.mem_total_prefix
         return total
 
 
 class Swap(AbstractSwap):
-    """ Linux implementation of AbstractSwap class """
+    """ A Linux implementation of the AbstractSwap class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Swap, self).__init__(options, aux)
-        reg = re.compile(r"\s+|kB")
-        mem_file = open_read("/proc/meminfo").strip().split("\n")
-        self.mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
-
-
-    def get_used(self) -> Storage:
-        used = int(self.mem_file["SwapTotal"])
-        used -= int(self.mem_file["SwapFree"])
+    @property
+    def used(self) -> Storage:
+        used = int(mem_file()["SwapTotal"])
+        used -= int(mem_file()["SwapFree"])
         used = Storage(value=used, prefix="KiB",
                        rounding=self.options.swap_used_round)
         used.prefix = self.options.swap_used_prefix
         return used
 
 
-    def get_total(self) -> Storage:
-        total = Storage(value=int(self.mem_file["SwapTotal"]), prefix="KiB",
+    @property
+    def total(self) -> Storage:
+        total = Storage(value=int(mem_file()["SwapTotal"]), prefix="KiB",
                         rounding=self.options.swap_total_round)
         total.prefix = self.options.swap_total_prefix
         return total
 
 
 class Disk(AbstractDisk):
-    """ Linux implementation of AbstractDisk class """
+    """ A Linux implementation of the AbstractDisk class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Disk, self).__init__(options, aux)
-        self.df_flags = ["df", "-P"]
-        self.lsblk = None
+    DF_FLAGS = ["df", "-P"]
 
-
-    def __set_lsblk(self) -> None:
-        if self.get("dev") is None:
-            self.call("dev")
-
+    @property
+    @lru_cache(maxsize=1)
+    def __lsblk(self) -> None:
+        dev = self.dev
         columns = ["KNAME", "NAME", "LABEL", "PARTLABEL",
                    "FSTYPE", "MOUNTPOINT"]
-        cmd = ["lsblk", "--output", ",".join(columns),
-               "--paths", "--pairs", self.get("dev")]
 
-        lsblk = re.findall(r"[^\"\s]\S*|\".+?", run(cmd))
-        self.lsblk = dict(re.sub("\"", "", i).split("=", 1) for i in lsblk)
+        if dev is not None:
+            cmd = ["lsblk", "--output", ",".join(columns),
+                   "--paths", "--pairs", dev]
 
+            lsblk = re.findall(r"[^\"\s]\S*|\".+?", run(cmd))
+            lsblk = dict(re.sub("\"", "", i).split("=", 1) for i in lsblk)
+        else:
+            lsblk = {i: None for i in columns}
 
-    def __lookup_lsblk(self, key: str) -> str:
-        if self.lsblk is None:
-            self.__set_lsblk()
-
-        return self.lsblk[key]
-
-
-    def get_name(self) -> str:
-        name = self.__lookup_lsblk("LABEL")
-        if not name:
-            name = self.__lookup_lsblk("PARTLABEL") 
-        return name
+        return lsblk
 
 
-    def get_partition(self) -> str:
-        return self.__lookup_lsblk("FSTYPE")
+    @property
+    def name(self) -> str:
+        labels = ["LABEL", "PARTLABEL"]
+        return next((self.__lsblk[i] for i in labels if self.__lsblk[i]), None)
+
+
+    @property
+    def partition(self) -> str:
+        return self.__lsblk["FSTYPE"]
 
 
 def detect_battery() -> AbstractBattery:
@@ -239,138 +222,136 @@ def detect_battery() -> AbstractBattery:
     So the purpose of this method is to determine which implementation it
     should use
     """
-    bat_dir = _get_battery_dir()
     check = lambda d: p(d).exists()
 
     avail = {
-        "{}/charge_now".format(bat_dir): BatteryAmp,
-        "{}/energy_now".format(bat_dir): BatteryWatt
+        "{}/charge_now".format(bat_dir()): BatteryAmp,
+        "{}/energy_now".format(bat_dir()): BatteryWatt
     }
 
     return next((v for k, v in avail.items() if check(k)), BatteryStub)
 
 
-def _get_battery_dir() -> str:
+@lru_cache(maxsize=1)
+def bat_dir() -> str:
+    """ Returns the path for the battery directory """
     check = lambda f: p(f).exists() and bool(int(open_read(f)))
-    bat_dir = p("/sys/class/power_supply").glob("*BAT*")
-    bat_dir = (d for d in bat_dir if check("{}/present".format(d)))
-    return next(bat_dir, None)
+    _bat_dir = p("/sys/class/power_supply").glob("*BAT*")
+    _bat_dir = (d for d in _bat_dir if check("{}/present".format(d)))
+    return next(_bat_dir, None)
 
 
 class Battery(AbstractBattery):
-    """ Linux implementation of AbstractBattery class """
+    """ A Linux implementation of the AbstractBattery class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Battery, self).__init__(options, aux)
-        self.bat_dir = _get_battery_dir()
-        self.status = None
-        self.current_charge = None
-        self.full_charge = None
-        self.drain_rate = None
+    @property
+    @lru_cache(maxsize=1)
+    def status(self) -> str:
+        """ Returns cached battery status file """
+        return open_read("{}/status".format(bat_dir())).strip()
 
 
-    def __get_status(self) -> str:
-        self.status = open_read("{}/status".format(self.bat_dir)).strip()
+    @property
+    @lru_cache(maxsize=1)
+    def current_charge(self) -> None:
+        """ Returns cached battery current charge file """
+        return None if bat_dir() is None else int(open_read(self.current))
 
 
-    def _get_current_charge(self) -> None:
-        if self.bat_dir is not None:
-            self.current_charge = int(open_read(self.files["current"]))
+    @property
+    @lru_cache(maxsize=1)
+    def full_charge(self) -> None:
+        """ Returns cached battery full charge file """
+        return None if bat_dir() is None else int(open_read(self.full))
 
 
-    def _get_full_charge(self) -> None:
-        if self.bat_dir is not None:
-            self.full_charge = int(open_read(self.files["full"]))
+    @property
+    @lru_cache(maxsize=1)
+    def drain_rate(self) -> None:
+        """ Returns cached battery drain rate file """
+        return None if bat_dir() is None else int(open_read(self.drain))
 
 
-    def _get_drain_rate(self) -> None:
-        if self.bat_dir is not None:
-            self.drain_rate = int(open_read(self.files["drain"]))
-
-
+    @lru_cache(maxsize=1)
     def __compare_status(self, query) -> bool:
-        if self.status is None:
-            self.__get_status()
-        return None if self.bat_dir is None else self.status == query
+        """ Compares status to query """
+        return None if bat_dir() is None else self.status == query
 
 
-    def get_is_present(self) -> bool:
-        return self.bat_dir is not None
+    @property
+    def is_present(self) -> bool:
+        return bat_dir() is not None
 
 
-    def get_is_charging(self) -> bool:
+    @property
+    def is_charging(self) -> bool:
         return self.__compare_status("Charging")
 
 
-    def get_is_full(self) -> bool:
+    @property
+    def is_full(self) -> bool:
         return self.__compare_status("Full")
 
 
-    def get_percent(self) -> [float, int]:
+    @property
+    def percent(self) -> [float, int]:
         perc = None
-        if self.bat_dir is not None:
-            if self.current_charge is None:
-                self._get_current_charge()
-            if self.full_charge is None:
-                self._get_full_charge()
+        if bat_dir() is not None:
+            current_charge = self.current_charge
+            full_charge = self.full_charge
 
-            perc = percent(self.current_charge, self.full_charge)
+            perc = percent(current_charge, full_charge)
             perc = _round(perc, self.options.bat_percent_round)
 
         return perc
 
 
-    def _get_time(self) -> int:
-        time = None
-        if self.bat_dir is not None:
-            if self.get("is_charging") is None:
-                self.call("is_charging")
-            if self.current_charge is None:
-                self._get_current_charge()
-            if self.full_charge is None:
-                self._get_full_charge()
-            if self.drain_rate is None:
-                self._get_drain_rate()
-                if self.drain_rate == 0:
-                    return 0
-
+    @property
+    def _AbstractBattery__time(self) -> int:
+        remaining = 0
+        if bat_dir() is not None and self.drain_rate:
             charge = self.current_charge
-
-            if self.get("is_charging"):
+            if self.is_charging:
                 charge = self.full_charge - charge
+            remaining = int((charge / self.drain_rate) * 3600)
 
-            time = int((charge / self.drain_rate) * 3600)
-
-        return time
+        return remaining
 
 
-    def get_power(self) -> float:
-        """ To be implemented by BatteryAmp or BatteryWatt """
+    @property
+    def power(self) -> float:
+        pass
 
 
 class BatteryAmp(Battery):
-    """ Stores filenames for batteries using amps """
+    """ Sub-Battery class for systems that stores battery info in amps """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(BatteryAmp, self).__init__(options, aux)
-        self.files = {
-            "current": "{}/charge_now".format(self.bat_dir),
-            "full": "{}/charge_full".format(self.bat_dir),
-            "drain": "{}/current_now".format(self.bat_dir)
-        }
+    @property
+    @lru_cache(maxsize=1)
+    def current(self) -> str:
+        """ Returns current charge filename """
+        return "{}/charge_now".format(bat_dir())
 
 
-    def get_power(self) -> [float, int]:
+    @property
+    @lru_cache(maxsize=1)
+    def full(self) -> str:
+        """ Returns full charge filename """
+        return "{}/charge_full".format(bat_dir())
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def drain(self) -> str:
+        """ Returns current filename """
+        return "{}/current_now".format(bat_dir())
+
+
+    @property
+    def power(self) -> [float, int]:
         power = None
-        if self.bat_dir is not None:
-            if self.drain_rate is None:
-                self._get_drain_rate()
-
-            voltage = int(open_read("{}/voltage_now".format(self.bat_dir)))
+        if bat_dir() is not None:
+            voltage = int(open_read("{}/voltage_now".format(bat_dir())))
             power = (self.drain_rate * voltage) / 1e12
             power = _round(power, self.options.bat_power_round)
 
@@ -378,77 +359,84 @@ class BatteryAmp(Battery):
 
 
 class BatteryWatt(Battery):
-    """ Stores filenames for batteries using watts """
+    """ Sub-Battery class for systems that stores battery info in watt """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(BatteryWatt, self).__init__(options, aux)
-        self.files = {
-            "current": "{}/energy_now".format(self.bat_dir),
-            "full": "{}/energy_full".format(self.bat_dir),
-            "drain": "{}/power_now".format(self.bat_dir)
-        }
+    @property
+    @lru_cache(maxsize=1)
+    def current(self):
+        """ Returns current energy filename """
+        return "{}/energy_now".format(bat_dir())
 
 
-    def get_power(self) -> [float, int]:
-        if self.drain_rate is None:
-            self._get_drain_rate()
+    @property
+    @lru_cache(maxsize=1)
+    def full(self):
+        """ Returns full energy filename """
+        return "{}/energy_full".format(bat_dir())
 
+
+    @property
+    @lru_cache(maxsize=1)
+    def drain(self):
+        """ Returns power filename """
+        return "{}/power_now".format(bat_dir())
+
+
+    @property
+    def power(self) -> [float, int]:
         return _round(self.drain_rate / 1e6, self.options.bat_power_round)
 
 
 class BatteryStub(AbstractBattery):
-    """ Battery stub class for desktop machines """
+    """ Sub-Battery class for systems has no battery """
 
-    def get_is_present(self) -> bool:
+    @property
+    def is_present(self) -> bool:
         return False
 
 
-    def get_is_charging(self) -> bool:
-        raise NotImplementedError
+    @property
+    def is_charging(self) -> bool:
+        return None
 
 
-    def get_is_full(self) -> bool:
-        raise NotImplementedError
+    @property
+    def is_full(self) -> bool:
+        return None
 
 
-    def get_percent(self) -> float:
-        raise NotImplementedError
+    @property
+    def percent(self) -> float:
+        return None
 
 
-    def _get_time(self) -> int:
+    @property
+    def _AbstractBattery__time(self) -> int:
         return 0
 
 
-    def get_power(self) -> float:
-        raise NotImplementedError
+    @property
+    def power(self) -> float:
+        return None
 
 
 class Network(AbstractNetwork):
-    """ Linux implementation of AbstractNetwork class """
+    """ A Linux implementation of the AbstractNetwork class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Network, self).__init__(options, aux)
-        self.local_ip_cmd = ["ip", "address", "show", "dev"]
+    LOCAL_IP_CMD = ["ip", "address", "show", "dev"]
 
-
-    def get_dev(self) -> str:
+    @property
+    def dev(self) -> str:
         check = lambda f: open_read("{}/operstate".format(f)).strip() == "up"
         find = lambda d: p(d).glob("[!v]*")
         return next((f.name for f in find("/sys/class/net") if check(f)), None)
 
 
-    def _get_ssid(self) -> (List[str], RE_COMPILE):
+    @property
+    def _AbstractNetwork__ssid(self) -> (List[str], RE_COMPILE):
         ssid_exe = None
         regex = None
-
-        dev = self.get("dev")
-        if dev is None:
-            self.call("dev")
-            dev = self.get("dev")
+        dev = self.dev
 
         if dev is not None:
             wifi = "/proc/net/wireless"
@@ -460,16 +448,17 @@ class Network(AbstractNetwork):
         return ssid_exe, regex
 
 
-    def _get_bytes_delta(self, dev: str, mode: str) -> int:
+    def _AbstractNetwork__bytes_delta(self, dev: str, mode: str) -> int:
         net = "/sys/class/net/{}/statistics/{{}}_bytes".format(dev)
         stat_file = net.format("tx" if mode == "up" else "rx")
         return int(open_read(stat_file))
 
 
 class Misc(AbstractMisc):
-    """ Linux implementation of AbstractMisc class """
+    """ A Linux implementation of the AbstractMisc class """
 
-    def get_vol(self) -> [float, int]:
+    @property
+    def vol(self) -> [float, int]:
         check = lambda d: d.is_dir() and d.name.isdigit()
         extract = lambda f: open_read("{}/cmdline".format(f))
 
@@ -491,7 +480,8 @@ class Misc(AbstractMisc):
         return vol
 
 
-    def get_scr(self) -> [float, int]:
+    @property
+    def scr(self) -> [float, int]:
         check = lambda f: "kbd" not in f and "backlight" in f
 
         scr = None
