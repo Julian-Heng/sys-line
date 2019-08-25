@@ -27,8 +27,7 @@ class StringBuilder():
             if extract is not None:
                 domain = extract.group(2)
                 info = extract.group(3)
-                sys.fetch(domain, info)
-                replace = sys.get(domain, info)
+                replace = getattr(getattr(sys, domain), info)
 
                 parse = re.sub(extract.group(1), "", i)
 
