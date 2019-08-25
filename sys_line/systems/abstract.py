@@ -425,15 +425,16 @@ class AbstractBattery(AbstractGetter):
 
     @property
     @abstractmethod
-    def __time(self) -> bool:
+    def __time(self) -> int:
         """
         Abstract battery time remaining method to be implemented by subclass
         """
 
 
     @property
-    def time(self) -> bool:
+    def time(self) -> str:
         """ Battery time method """
+        return unix_epoch_to_str(self.__time)
 
 
     @property
