@@ -12,7 +12,7 @@ from .storage import Storage
 
 def parse() -> argparse.Namespace:
     """ Parse the program arguments """
-    prefixes = Storage.prefixes
+    prefixes = Storage.PREFIXES
     groups = [["cpu", "mem", "swap", "disk", "bat", "net", "date", "misc"],
               ["cpu", "memory", "swap", "disk", "battery",
                "network", "date", "misc"]]
