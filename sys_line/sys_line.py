@@ -21,7 +21,7 @@ def init_system(options: Namespace) -> System:
     mod = ".systems.{}".format(os_name.lower())
     try:
         mod = import_module(mod, package=__name__.split(".")[0])
-        return getattr(mod, os_name)(os_name, options)
+        return getattr(mod, os_name)(options)
     except (KeyError, ModuleNotFoundError):
         print("Unknown system: {}\nExiting...".format(os_name),
               file=sys.stderr)
@@ -34,8 +34,8 @@ def main() -> None:
     system = init_system(options)
 
     if options.all is not None:
-        for k, v in system.return_all(options.all):
-            print("{}: {}".format(k, v))
+        for domain in options.all if options.all else system.SHORT_DOMAINS:
+            print(getattr(system, domain))
     elif options.format:
         print(StringBuilder().build(system, options.format))
     else:
