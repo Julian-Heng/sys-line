@@ -136,14 +136,16 @@ class Memory(AbstractMemory):
         used -= sum([int(self.mem_file[i]) for i in keys[1]])
         used = Storage(value=used, prefix="KiB",
                        rounding=self.options.mem_used_round)
-        used.set_prefix(self.options.mem_used_prefix)
+        #used.set_prefix(self.options.mem_used_prefix)
+        used.prefix = self.options.mem_used_prefix
         return used
 
 
     def get_total(self) -> Storage:
         total = Storage(value=int(self.mem_file["MemTotal"]), prefix="KiB",
                         rounding=self.options.mem_total_round)
-        total.set_prefix(self.options.mem_total_prefix)
+        #total.set_prefix(self.options.mem_total_prefix)
+        total.prefix = self.options.mem_total_prefix
         return total
 
 
@@ -164,14 +166,14 @@ class Swap(AbstractSwap):
         used -= int(self.mem_file["SwapFree"])
         used = Storage(value=used, prefix="KiB",
                        rounding=self.options.swap_used_round)
-        used.set_prefix(self.options.swap_used_prefix)
+        used.prefix = self.options.swap_used_prefix
         return used
 
 
     def get_total(self) -> Storage:
         total = Storage(value=int(self.mem_file["SwapTotal"]), prefix="KiB",
                         rounding=self.options.swap_total_round)
-        total.set_prefix(self.options.swap_total_prefix)
+        total.prefix = self.options.swap_total_prefix
         return total
 
 
@@ -209,8 +211,7 @@ class Disk(AbstractDisk):
     def get_name(self) -> str:
         name = self.__lookup_lsblk("LABEL")
         if not name:
-            name = self.__lookup_lsblk("PARTLABEL")
-
+            name = self.__lookup_lsblk("PARTLABEL") 
         return name
 
 
