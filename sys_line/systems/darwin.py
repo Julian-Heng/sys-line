@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# pylint: disable=abstract-method
+# pylint: disable=invalid-name
+# pylint: disable=no-member
+# pylint: disable=no-self-use
 
 """ Darwin specific module """
 
@@ -7,6 +11,7 @@ import shutil
 import time
 
 from argparse import Namespace
+from functools import lru_cache
 from types import SimpleNamespace
 from typing import List
 
@@ -25,43 +30,41 @@ from ..tools.utils import percent, run, _round
 
 
 class Darwin(System):
-    """
-    A Darwin implementation of the abstract
-    System class in abstract.py
-    """
+    """ A Darwin implementation of the abstract System class """
 
-    def __init__(self, os_name: str, options: Namespace) -> None:
-        domains = {
-            "cpu": Cpu,
-            "mem": Memory,
-            "swap": Swap,
-            "disk": Disk,
-            "bat": Battery,
-            "net": Network,
-            "misc": Misc
-        }
-
-        aux = SimpleNamespace(sysctl=Sysctl())
-        super(Darwin, self).__init__(domains, os_name, options, aux)
+    def __init__(self, options: Namespace) -> None:
+        super(Darwin, self).__init__(options,
+                                     aux=SimpleNamespace(sysctl=Sysctl()),
+                                     cpu=Cpu,
+                                     mem=Memory,
+                                     swap=Swap,
+                                     disk=Disk,
+                                     bat=Battery,
+                                     net=Network,
+                                     misc=Misc)
 
 
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
 
-    def get_cores(self) -> int:
+    @property
+    @lru_cache(maxsize=1)
+    def cores(self) -> int:
         return int(self.aux.sysctl.query("hw.logicalcpu_max"))
 
 
-    def _get_cpu_speed(self) -> (str, float):
+    def _AbstractCpu__cpu_speed(self) -> (str, [float, int]):
         return self.aux.sysctl.query("machdep.cpu.brand_string"), None
 
 
-    def get_load_avg(self) -> str:
+    @property
+    def load_avg(self) -> str:
         load = self.aux.sysctl.query("vm.loadavg").split()
         return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
 
 
-    def get_fan(self) -> int:
+    @property
+    def fan(self) -> int:
         fan = None
         if shutil.which("osx-cpu-temp"):
             regex = r"(\d+) RPM"
@@ -71,7 +74,8 @@ class Cpu(AbstractCpu):
         return fan
 
 
-    def get_temp(self) -> [float, int]:
+    @property
+    def temp(self) -> [float, int]:
         temp = None
         if shutil.which("osx-cpu-temp"):
             regex = r"CPU: ((\d+\.)?\d+)"
@@ -82,7 +86,7 @@ class Cpu(AbstractCpu):
         return temp
 
 
-    def _get_uptime_sec(self) -> int:
+    def _AbstractCpu__uptime(self) -> int:
         reg = re.compile(r"sec = (\d+),")
         sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
         sec = int(time.time()) - int(sec)
@@ -93,7 +97,8 @@ class Cpu(AbstractCpu):
 class Memory(AbstractMemory):
     """ Darwin implementation of AbstractMemory class """
 
-    def get_used(self) -> Storage:
+    @property
+    def used(self) -> Storage:
         words = ["active", "wired down", "occupied by compressor"]
         vm_stat = run(["vm_stat"]).strip().split("\n")[1:]
         vm_stat = (re.sub(r"Pages |\.", r"", i) for i in vm_stat)
@@ -105,7 +110,8 @@ class Memory(AbstractMemory):
         return used
 
 
-    def get_total(self) -> Storage:
+    @property
+    def total(self) -> Storage:
         total = Storage(value=int(self.aux.sysctl.query("hw.memsize")),
                         rounding=self.options.mem_total_round)
         total.prefix = self.options.mem_total_prefix
@@ -116,18 +122,15 @@ class Memory(AbstractMemory):
 class Swap(AbstractSwap):
     """ Darwin implementation of AbstractSwap class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Swap, self).__init__(options, aux)
-        self.swapusage = None
+    @property
+    @lru_cache(maxsize=1)
+    def swapusage(self):
+        """ Returns swapusage from sysctl """
+        return self.aux.sysctl.query("vm.swapusage").strip()
 
 
     def __lookup_swap(self, search: str) -> int:
         value = 0
-
-        if self.swapusage is None:
-            self.swapusage = self.aux.sysctl.query("vm.swapusage").strip()
 
         regex = r"{} = (\d+\.\d+)M".format(search)
         match = re.search(regex, self.swapusage)
@@ -138,7 +141,8 @@ class Swap(AbstractSwap):
         return value
 
 
-    def get_used(self) -> Storage:
+    @property
+    def used(self) -> Storage:
         used = Storage(value=self.__lookup_swap("used"),
                        rounding=self.options.swap_used_round)
         used.prefix = self.options.swap_used_prefix
@@ -146,7 +150,8 @@ class Swap(AbstractSwap):
         return used
 
 
-    def get_total(self) -> Storage:
+    @property
+    def total(self) -> Storage:
         total = Storage(value=self.__lookup_swap("total"),
                         rounding=self.options.swap_total_round)
         total.prefix = self.options.swap_total_prefix
@@ -157,142 +162,128 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ Darwin implementation of AbstractDisk class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Disk, self).__init__(options, aux)
-        self.df_flags = ["df", "-P", "-k"]
-        self.diskutil = None
+    DF_FLAGS = ["df", "-P", "-k"]
 
+    @property
+    @lru_cache(maxsize=1)
+    def diskutil(self):
+        """ Returns diskutil program output as a dict """
+        dev = self.dev
+        _diskutil = None
+        if dev is not None:
+            _diskutil = run(["diskutil", "info", self.dev]).split("\n")
+            _diskutil = (re.sub(r"\s+", " ", i).strip() for i in _diskutil)
+            _diskutil = dict(i.split(": ", 1) for i in _diskutil if i)
 
-    def __set_diskutil(self) -> None:
-        dev = self.get("dev")
-        if dev is None:
-            self.call("dev")
-            dev = self.get("dev")
-
-        diskutil = run(["diskutil", "info", self.get("dev")]).split("\n")
-        diskutil = (re.sub(r"\s+", " ", i).strip() for i in diskutil)
-        self.diskutil = dict(i.split(": ", 1) for i in diskutil if i)
+        return _diskutil
 
 
     def __lookup_diskutil(self, key: str) -> str:
-        if not self.diskutil:
-            self.__set_diskutil()
+        try:
+            return self.diskutil[key]
+        except KeyError:
+            return None
 
-        return self.diskutil[key]
 
-
-    def get_name(self) -> str:
+    @property
+    def name(self) -> str:
         return self.__lookup_diskutil("Volume Name")
 
 
-    def get_partition(self) -> str:
+    @property
+    def partition(self) -> str:
         return self.__lookup_diskutil("File System Personality")
 
 
 class Battery(AbstractBattery):
     """ Darwin implementation of AbstractBattery class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Battery, self).__init__(options, aux)
-
-        bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
-        bat = (re.sub("[\"{}]", "", i.strip()) for i in bat)
-        self.bat = dict(i.split(" = ", 1) for i in bat if i.strip())
-
-        self.current = None
-        self.current_capacity = None
+    @property
+    @lru_cache(maxsize=1)
+    def bat(self):
+        """ Returns battery info from ioreg as a dict """
+        _bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
+        _bat = (re.sub("[\"{}]", "", i.strip()) for i in _bat)
+        return dict(i.split(" = ", 1) for i in _bat if i.strip())
 
 
-    def get_is_present(self) -> bool:
+    @property
+    @lru_cache(maxsize=1)
+    def __current(self) -> None:
+        current = 0
+        if self.is_present:
+            current = int(self.bat["InstantAmperage"])
+            current -= pow(2, 64) if len(str(current)) >= 20 else 0
+            current = abs(current)
+
+        return current
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def __current_capacity(self) -> None:
+        return int(self.bat["CurrentCapacity"]) if self.is_present else None
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def is_present(self) -> bool:
         return self.bat["BatteryInstalled"] == "Yes"
 
 
-    def get_is_charging(self) -> bool:
-        ret = None
-        if self.call_get("is_present"):
-            ret = self.bat["IsCharging"] == "Yes"
-        return ret
+    @property
+    def is_charging(self) -> bool:
+        return self.bat["IsCharging"] == "Yes" if self.is_present else None
 
 
-    def get_is_full(self) -> bool:
-        ret = None
-        if self.call_get("is_present"):
-            ret = self.bat["FullyCharged"] == "Yes"
-        return ret
+    @property
+    def is_full(self) -> bool:
+        return self.bat["FullyCharged"] == "Yes" if self.is_present else None
 
 
-    def get_percent(self) -> [float, int]:
+    @property
+    def percent(self) -> [float, int]:
         perc = None
-        if self.call_get("is_present"):
-            if self.current_capacity is None:
-                self.__get_current_capacity()
 
-            perc = percent(self.current_capacity, int(self.bat["MaxCapacity"]))
+        if self.is_present:
+            perc = percent(self.__current_capacity, int(self.bat["MaxCapacity"]))
             perc = _round(perc, self.options.bat_percent_round)
 
         return perc
 
 
-    def _get_time(self) -> int:
+    @property
+    def _AbstractBattery__time(self) -> int:
         charge = None
 
-        if self.call_get("is_present"):
-            if self.current_capacity is None:
-                self.__get_current_capacity()
-            if self.current is None:
-                self.__get_amperage()
-            if self.current == 0:
-                return 0
-
+        if self.is_present and self.current is not None:
             charge = self.current_capacity
-            if self.get_is_charging():
+            if self.is_charging:
                 charge = int(self.bat["MaxCapacity"]) - charge
             charge = int((charge / self.current) * 3600)
 
         return charge
 
 
-    def get_power(self) -> [float, int]:
+    @property
+    def power(self) -> [float, int]:
         power = None
 
-        if self.call_get("is_present"):
-            if self.current is None:
-                self.__get_amperage()
-
+        if self.is_present:
             voltage = int(self.bat["Voltage"])
-            power = (self.current * voltage) / 1e6
+            power = (self.__current * voltage) / 1e6
             power = _round(power, self.options.bat_power_round)
 
         return power
 
 
-    def __get_current_capacity(self) -> None:
-        if self.call_get("is_present"):
-            self.current_capacity = int(self.bat["CurrentCapacity"])
-
-
-    def __get_amperage(self) -> None:
-        if self.call_get("is_present"):
-            current = int(self.bat["InstantAmperage"])
-            current -= pow(2, 64) if len(str(current)) >= 20 else 0
-            self.current = abs(current)
-
-
 class Network(AbstractNetwork):
     """ Darwin implementation of AbstractNetwork class """
 
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None) -> None:
-        super(Network, self).__init__(options, aux)
-        self.local_ip_cmd = ["ifconfig"]
+    LOCAL_IP_CMD = ["ifconfig"]
 
-
-    def get_dev(self) -> str:
+    @property
+    def dev(self) -> str:
         active = re.compile(r"status: active")
         dev_reg = re.compile(r"Device: (.*)$")
         check = lambda i, r=active: r.search(run(["ifconfig", i]))
@@ -305,16 +296,18 @@ class Network(AbstractNetwork):
         return next((i for i in dev_list if check(i)), None)
 
 
-    def _get_ssid(self) -> (List[str], RE_COMPILE):
-        ssid_exe = "/System/Library/PrivateFrameworks/Apple80211.framework"
-        ssid_exe = "{}/Versions/Current/Resources/airport".format(ssid_exe)
-        ssid_exe = [ssid_exe, "--getinfo"]
+    @property
+    def _AbstractNetwork__ssid(self) -> (List[str], RE_COMPILE):
+        ssid_exe_path = ["System", "Library", "PrivateFrameworks",
+                         "Apple80211.framework", "Versions", "Current",
+                         "Resources", "airport"]
+        ssid_exe = ["/{}".format("/".join(ssid_exe_path)), "--getinfo"]
         ssid_reg = re.compile("^SSID: (.*)$")
 
         return ssid_exe, ssid_reg
 
 
-    def _get_bytes_delta(self, dev: str, mode: str) -> int:
+    def _AbstractNetwork__bytes_delta(self, dev: str, mode: str) -> int:
         cmd = ["netstat", "-nbiI", dev]
         reg = r"^({})(\s+[^\s]+){{{}}}\s+(\d+)"
         reg = reg.format(dev, 8 if mode == "up" else 5)
@@ -327,14 +320,16 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ Darwin implementation of AbstractMisc class """
 
-    def get_vol(self) -> [float, int]:
+    @property
+    def vol(self) -> [float, int]:
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
         return _round(vol, self.options.misc_volume_round)
 
 
-    def get_scr(self) -> [float, int]:
+    @property
+    def scr(self) -> [float, int]:
         scr = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
         scr = next((i for i in scr if "IODisplayParameters" in i), None)
         if scr is not None:
