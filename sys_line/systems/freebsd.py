@@ -225,7 +225,7 @@ class Network(AbstractNetwork):
     def dev(self) -> str:
         active = re.compile(r"^\s+status: associated$", re.M)
         dev_list = run(["ifconfig", "-l"]).split()
-        check = lambda i, r=active: r.search(run(["ifconfig", i]))
+        check = lambda i: active.search(run(["ifconfig", i]))
         return next((i for i in dev_list if check(i)), None)
 
 
