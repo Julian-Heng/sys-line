@@ -62,7 +62,7 @@ class Cpu(AbstractCpu):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
-        check = lambda f, r=speed_reg: r.search(str(f))
+        check = lambda f: speed_reg.search(str(f))
         speed_dir = "/sys/devices/system/cpu"
         speed_files = (f for f in p(speed_dir).rglob("*") if check(f))
 
@@ -151,8 +151,7 @@ class Swap(AbstractSwap):
 
     @property
     def used(self) -> Storage:
-        used = int(mem_file()["SwapTotal"])
-        used -= int(mem_file()["SwapFree"])
+        used = int(mem_file()["SwapTotal"]) - int(mem_file()["SwapFree"])
         used = Storage(value=used, prefix="KiB",
                        rounding=self.options.swap_used_round)
         used.prefix = self.options.swap_used_prefix
@@ -181,14 +180,10 @@ class Disk(AbstractDisk):
         if self.dev is not None:
             cmd = ["lsblk", "--output", ",".join(columns),
                    "--paths", "--pairs", self.dev]
-
             lsblk = re.findall(r"[^\"\s]\S*|\".+?", run(cmd))
             lsblk = dict(re.sub("\"", "", i).split("=", 1) for i in lsblk)
 
-        if not lsblk:
-            lsblk = {i: None for i in columns}
-
-        return lsblk
+        return lsblk if lsblk else {i: None for i in columns}
 
 
     @property
@@ -202,6 +197,7 @@ class Disk(AbstractDisk):
         return self.__lsblk["FSTYPE"]
 
 
+@lru_cache(maxsize=1)
 def detect_battery() -> AbstractBattery:
     """
     Linux stores battery information in /sys/class/power_supply However,
@@ -473,8 +469,11 @@ class Misc(AbstractMisc):
         audio = next((reg.search(i) for i in pids if i and reg.search(i)), None)
 
         if audio is not None:
-            vol = systems[audio.group(0)]()
-            vol = _round(vol, self.options.misc_volume_round)
+            try:
+                vol = systems[audio.group(0)]()
+                vol = _round(vol, self.options.misc_volume_round)
+            except KeyError:
+                vol = None
 
         return vol
 
