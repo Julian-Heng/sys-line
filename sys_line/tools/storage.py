@@ -11,9 +11,9 @@ class Storage():
                  value: int = 0,
                  prefix: str = "B",
                  rounding: int = -1) -> None:
-        self.__value = value
+        self.value = value
         self.__prefix = prefix
-        self.__rounding = rounding
+        self.rounding = rounding
 
 
     def __repr__(self) -> str:
@@ -109,26 +109,18 @@ class Storage():
 
 
     @property
-    def value(self) -> [int, float]:
-        return self.__value
-
-
-    @value.setter
-    def value(self, value: int) -> None:
-        self.__value = value
-
-
-    @property
     def prefix(self) -> str:
+        """ Returns prefix """
         return self.__prefix
 
 
     @prefix.setter
     def prefix(self, prefix: str) -> None:
+        """ Sets prefix and changes value """
         if prefix == "auto":
             count = 0
-            while self.__value > 1024:
-                self.__value /= 1024
+            while self.value > 1024:
+                self.value /= 1024
                 count += 1
             curr_index = self.PREFIXES.index(self.__prefix) + count
             self.__prefix = self.PREFIXES[curr_index]
@@ -137,20 +129,10 @@ class Storage():
                 delta = self.__calc_prefix_delta(self.__prefix, prefix)
                 if delta != 0:
                     # Convert the value
-                    self.__value = self.__value / pow(1024, delta)
+                    self.value = self.value / pow(1024, delta)
                     self.__prefix = prefix
             except ValueError:
                 pass
-
-
-    @property
-    def rounding(self) -> int:
-        return self.__rounding
-
-
-    @rounding.setter
-    def rounding(self, rounding) -> None:
-        self.__rounding = rounding
 
 
     def set_prefix_without_value(self, prefix: str) -> None:
