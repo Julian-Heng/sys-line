@@ -471,7 +471,8 @@ class Misc(AbstractMisc):
         if audio is not None:
             try:
                 vol = systems[audio.group(0)]()
-                vol = _round(vol, self.options.misc_volume_round)
+                if vol is not None:
+                    vol = _round(vol, self.options.misc_volume_round)
             except KeyError:
                 vol = None
 
