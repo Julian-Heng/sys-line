@@ -372,7 +372,7 @@ class AbstractDisk(AbstractStorage):
     def used(self) -> Storage:
         """ Abstract disk used method to be implemented by subclass """
         used = None
-        if self.df_out is not None and self.dev is not None:
+        if self.df_out is not None:
             used = Storage(value=int(self.df_out[2]), prefix="KiB",
                            rounding=self.options.disk_used_round)
             used.prefix = self.options.disk_used_prefix
@@ -383,7 +383,7 @@ class AbstractDisk(AbstractStorage):
     def total(self) -> Storage:
         """ Abstract disk total method to be implemented by subclass """
         total = None
-        if self.df_out is not None and self.dev is not None:
+        if self.df_out is not None:
             total = Storage(value=int(self.df_out[1]), prefix="KiB",
                             rounding=self.options.disk_total_round)
             total.prefix = self.options.disk_total_prefix
@@ -481,13 +481,13 @@ class AbstractNetwork(AbstractGetter):
     @property
     def local_ip(self) -> str:
         """ Network local ip method """
-        if self.dev is None:
-            return None
-
-        reg = re.compile(r"^inet\s+((?:[0-9]{1,3}\.){3}[0-9]{1,3})")
-        ip_out = run(self.LOCAL_IP_CMD + [self.dev]).strip().split("\n")
-        ip_out = (reg.match(line.strip()) for line in ip_out)
-        return next((i.group(1) for i in ip_out if i), None)
+        ip_out = None
+        if self.dev is not None:
+            reg = re.compile(r"^inet\s+((?:[0-9]{1,3}\.){3}[0-9]{1,3})")
+            ip_out = run(self.LOCAL_IP_CMD + [self.dev]).strip().split("\n")
+            ip_out = (reg.match(line.strip()) for line in ip_out)
+            ip_out = next((i.group(1) for i in ip_out if i), None)
+        return ip_out
 
 
     @abstractmethod
