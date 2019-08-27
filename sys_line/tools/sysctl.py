@@ -13,9 +13,8 @@ class Sysctl():
     @property
     @lru_cache(maxsize=1)
     def sysctl(self):
-        check = lambda i: i and ":" in i
-        sysctl = run(["sysctl", "-A"]).strip().split("\n")
-        return dict(i.split(":", 1) for i in sysctl if check(i))
+        sysctl = run(["sysctl", "-A", "-e"]).strip().split("\n")
+        return dict(i.split("=", 1) for i in sysctl if i and "=" in i)
 
 
     def query(self, key: str) -> str:
