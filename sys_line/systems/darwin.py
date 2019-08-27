@@ -204,7 +204,8 @@ class Battery(AbstractBattery):
         """ Returns battery info from ioreg as a dict """
         _bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
         _bat = (re.sub("[\"{}]", "", i.strip()) for i in _bat)
-        return dict(i.split(" = ", 1) for i in _bat if i.strip())
+        _bat = dict(i.split(" = ", 1) for i in _bat if i.strip())
+        return _bat if _bat else None
 
 
     @property
@@ -228,7 +229,10 @@ class Battery(AbstractBattery):
     @property
     @lru_cache(maxsize=1)
     def is_present(self) -> bool:
-        return self.bat["BatteryInstalled"] == "Yes"
+        is_present = False
+        if self.bat is not None:
+            is_present = self.bat["BatteryInstalled"] == "Yes"
+        return is_present
 
 
     @property
