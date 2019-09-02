@@ -93,8 +93,8 @@ bool get_cpu(struct cpu_info* cpu)
 
 #elif defined(__APPLE__) && defined(__MACH__)
     size_t len = sizeof(cpu->cpu);
-
     ret = ! sysctlbyname("machdep.cpu.brand_string", cpu->cpu, &len, NULL, 0);
+
 #endif
 
     return ret;
@@ -125,6 +125,7 @@ bool get_load(struct cpu_info* cpu)
     ret = ! sysctlbyname("vm.loadavg", &load, &len, NULL, 0);
     for (int i = 0; i < 3; i++)
         cpu->load[i] = (float)load.ldavg[i] / load.fscale;
+
 #endif
 
     return ret;
@@ -140,7 +141,7 @@ bool get_cpu_usage(struct cpu_info* cpu)
 
     if (! cpu->cores)
         get_cores(cpu);
-    if (cpu->cores)
+    if (! cpu->cores)
         return ret;
 
     if ((ret = (ps = popen("ps -e -o %cpu", "r"))))
@@ -180,6 +181,7 @@ bool get_uptime(struct cpu_info* cpu)
 
     ret = ! sysctlbyname("kern.boottime", &uptime, &len, NULL, 0);
     cpu->uptime = (unsigned long)time(NULL) - uptime.tv_sec;
+
 #endif
 
     return ret;

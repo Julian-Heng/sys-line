@@ -8,9 +8,7 @@ int main(void)
 {
     struct system* sys;
 
-    sys = init_system();
-
-    if (sys)
+    if ((sys = init_system()))
     {
         get_cores(sys->cpu);
         get_cpu(sys->cpu);
