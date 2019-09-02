@@ -190,7 +190,9 @@ class AbstractStorage(AbstractGetter):
     def percent(self) -> [float, int]:
         """ Abstract percent property """
         perc = percent(self.used, self.total)
+
         if perc is not None:
+            # Extract value if it's a Storage class
             perc = perc.value if isinstance(perc, Storage) else perc
             perc = _round(perc, self.rounding)
 
