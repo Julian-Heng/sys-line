@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = -std=c99
+CFLAGS = -g -std=c99
 SRC = $(wildcard *.c) \
 	  $(wildcard systems/*.c)
 OBJ = $(SRC:.c=.o)
@@ -10,4 +10,4 @@ $(EXEC): $(OBJ)
 
 .PHONY: clean
 clean:
-	$(RM) $(OBJ) $(EXEC)
+	$(RM) -v $(OBJ) $(EXEC)
