@@ -12,6 +12,7 @@
 #include <stdbool.h>
 
 #include "cpu.h"
+#include "tools.h"
 
 struct cpu_info* init_cpu(void)
 {
@@ -155,6 +156,42 @@ bool get_cpu_usage(struct cpu_info* cpu)
         cpu->cpu_usage /= cpu->cores;
         pclose(ps);
     }
+
+    return ret;
+}
+
+
+bool get_fan(struct cpu_info* cpu)
+{
+    bool ret = false;
+
+#if defined(__linux__)
+    char path[BUFSIZ];
+    char* base = "/sys/devices/platform/";
+    char* file = "fan1_input";
+
+    FILE* fp;
+    char buf[BUFSIZ];
+
+    if (find(base, file, path, BUFSIZ) &&
+        (ret = (fp = fopen(path, "r")) &&
+        fgets(buf, BUFSIZ, fp)))
+    {
+        sscanf(buf, "%d", &(cpu->fan));
+        fclose(fp);
+    }
+#endif
+
+    return ret;
+}
+
+
+bool get_temp(struct cpu_info* cpu)
+{
+    bool ret = false;
+
+#if defined(__linux__)
+#endif
 
     return ret;
 }
