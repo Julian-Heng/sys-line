@@ -1,5 +1,6 @@
-#define _XOPEN_SOURCE 1
-#define _XOPEN_SOURCE_EXTENDED 1
+#if defined(__linux__)
+#   define _DEFAULT_SOURCE
+#endif
 
 #include <errno.h>
 #include <fts.h>
