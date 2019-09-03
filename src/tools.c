@@ -30,9 +30,7 @@ bool find(char* const base, char* const file, char* str, int size)
             if (!(entry = fts_read(ftsp)))
             {
                 if (errno == 0)
-                {
                     end = true;
-                }
                 else
                 {
                     perror("fts_read");
