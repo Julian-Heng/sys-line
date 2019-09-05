@@ -1,9 +1,13 @@
 #if defined(__linux__)
 #   define _DEFAULT_SOURCE
 #   include <regex.h>
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
 #   include <sys/types.h>
 #   include <sys/sysctl.h>
+#endif
+#if defined(__FreeBSD__)
+#   include <sys/resource.h>
+#   include <time.h>
 #endif
 
 #include <stdlib.h>
@@ -61,6 +65,10 @@ bool get_cores(struct cpu_info* cpu)
     size_t len = sizeof(cores);
     ret = ! sysctlbyname("hw.logicalcpu_max", &cores, &len, NULL, 0);
 
+#elif defined(__FreeBSD__)
+    size_t len = sizeof(cores);
+    ret = ! sysctlbyname("hw.ncpu", &cores, &len, NULL, 0);
+
 #endif
 
     if (ret)
@@ -96,6 +104,10 @@ bool get_cpu(struct cpu_info* cpu)
     size_t len = sizeof(cpu->cpu);
     ret = ! sysctlbyname("machdep.cpu.brand_string", cpu->cpu, &len, NULL, 0);
 
+#elif defined(__FreeBSD__)
+    size_t len = sizeof(cpu->cpu);
+    ret = ! sysctlbyname("hw.model", cpu->cpu, &len, NULL, 0);
+
 #endif
 
     return ret;
@@ -119,7 +131,7 @@ bool get_load(struct cpu_info* cpu)
         fclose(fp);
     }
 
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
     struct loadavg load;
     size_t len = sizeof(load);
 
@@ -180,6 +192,8 @@ bool get_fan(struct cpu_info* cpu)
         sscanf(buf, "%d", &(cpu->fan));
         fclose(fp);
     }
+#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(__FreeBSD__)
 #endif
 
     return ret;
@@ -191,6 +205,8 @@ bool get_temp(struct cpu_info* cpu)
     bool ret = false;
 
 #if defined(__linux__)
+#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(__FreeBSD__)
 #endif
 
     return ret;
@@ -212,7 +228,7 @@ bool get_uptime(struct cpu_info* cpu)
         fclose(fp);
     }
 
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
     struct timeval uptime;
     size_t len = sizeof(uptime);
 
