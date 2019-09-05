@@ -75,8 +75,7 @@ class Cpu(AbstractCpu):
     @property
     def temp(self) -> float:
         temp = self.aux.sysctl.query("dev.cpu.0.temperature")
-        temp = float(re.search(r"\d+\.?\d+", temp).group(0))
-        return temp
+        return float(re.search(r"\d+\.?\d+").group(0)) if temp else None
 
 
     def _AbstractCpu__uptime(self) -> int:
@@ -174,7 +173,7 @@ class Battery(AbstractBattery):
 
     @property
     def is_present(self) -> bool:
-        return self.bat["State"] != "not present"
+        return self.bat["State"] != "not present" if self.bat else False
 
 
     @property
@@ -195,9 +194,10 @@ class Battery(AbstractBattery):
         return ret
 
 
+    @property
     def _AbstractBattery__time(self) -> int:
-        secs = None
-        if self.call_get("is_present"):
+        secs = 0
+        if self.is_present:
             acpi_time = self.bat["Remaining time"]
             if acpi_time != "unknown":
                 acpi_time = [int(i) for i in acpi_time.split(":", maxsplit=3)]
@@ -223,7 +223,7 @@ class Network(AbstractNetwork):
 
     @property
     def dev(self) -> str:
-        active = re.compile(r"^\s+status: associated$", re.M)
+        active = re.compile(r"^\s+status: (associated|active)$", re.M)
         dev_list = run(["ifconfig", "-l"]).split()
         check = lambda i: active.search(run(["ifconfig", i]))
         return next((i for i in dev_list if check(i)), None)
