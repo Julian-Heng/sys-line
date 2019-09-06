@@ -15,6 +15,7 @@ int main(void)
         get_load(sys->cpu);
         get_cpu_usage(sys->cpu);
         get_fan(sys->cpu);
+        get_temp(sys->cpu);
 
         get_uptime(sys->cpu);
 

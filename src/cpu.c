@@ -1,6 +1,7 @@
 #if defined(__linux__)
 #   define _DEFAULT_SOURCE
 #   include <regex.h>
+#   include <fts.h>
 #elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
 #   include <sys/types.h>
 #   include <sys/sysctl.h>
@@ -17,6 +18,8 @@
 
 #include "cpu.h"
 #include "tools.h"
+#include "macros.h"
+
 
 struct cpu_info* init_cpu(void)
 {
@@ -57,9 +60,11 @@ bool get_cores(struct cpu_info* cpu)
             if (! regexec(&re, buf, 0, NULL, 0))
                 cores++;
 
-        fclose(fp);
         regfree(&re);
     }
+
+    if (fp)
+        fclose(fp);
 
 #elif defined(__APPLE__) && defined(__MACH__)
     size_t len = sizeof(cores);
@@ -180,12 +185,12 @@ bool get_fan(struct cpu_info* cpu)
 #if defined(__linux__)
     char path[BUFSIZ];
     char* base = "/sys/devices/platform/";
-    char* file = "fan1_input";
+    char* pattern = "fan1_input$";
 
     FILE* fp;
     char buf[BUFSIZ];
 
-    if (find(base, file, path, BUFSIZ) &&
+    if (find(base, pattern, path, BUFSIZ) &&
         (ret = (fp = fopen(path, "r")) &&
         fgets(buf, BUFSIZ, fp)))
     {
@@ -205,6 +210,76 @@ bool get_temp(struct cpu_info* cpu)
     bool ret = false;
 
 #if defined(__linux__)
+    char** paths = NULL;
+    char* path = NULL;
+
+    char* base = "/sys/devices/platform/";
+    char* target_1 = "name";
+    char* target_2 = "temp[0-9]_input";
+
+    int tmp = 0;
+    int count;
+
+    int i = -1;
+    bool cond = false;
+
+    FILE* fp;
+    char buf[BUFSIZ];
+
+    regex_t re;
+
+    if ((paths = find_all(base, target_1, FTS_F, BUFSIZ, &count)) &&
+        ! regcomp(&re, "temp", REG_EXTENDED))
+    {
+        while (! cond && ++i < count)
+        {
+            if ((fp = fopen(paths[i], "r")))
+            {
+                cond = fgets(buf, BUFSIZ, fp) && ! regexec(&re, buf, 0, NULL, 0);
+                fclose(fp);
+            }
+        }
+
+        regfree(&re);
+
+        if (cond)
+        {
+            path = (char*)malloc(BUFSIZ * sizeof(char));
+            strncpy(path, paths[i], BUFSIZ);
+            path[strlen(path) - 4] = '\0';
+
+            for (i = 0; i < count; i++)
+                _free(paths[i]);
+            _free(paths);
+
+            if ((paths = find_all(path, target_2, FTS_F, BUFSIZ, &count)))
+            {
+                i = -1;
+                cond = false;
+
+                while (! cond && ++i < count)
+                    if ((fp = fopen(paths[i], "r")) &&
+                        fgets(buf, BUFSIZ, fp))
+                    {
+                        sscanf(buf, "%d", &tmp);
+                        cond = tmp;
+                        fclose(fp);
+                    }
+
+                if (tmp)
+                {
+                    cpu->temp = (double)tmp / 1000;
+                    ret = true;
+                }
+
+                _free(path);
+                for (i = 0; i < count; i++)
+                    _free(paths[i]);
+                _free(paths);
+            }
+        }
+    }
+
 #elif defined(__APPLE__) && defined(__MACH__)
 #elif defined(__FreeBSD__)
 #endif
