@@ -1,0 +1,7 @@
+{
+    fts.h errors
+    Memcheck:Cond
+    fun:fts_open
+    ...
+    fun:main
+}
