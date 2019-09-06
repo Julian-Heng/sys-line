@@ -86,11 +86,28 @@ bool get_cpu(struct cpu_info* cpu)
 {
     bool ret = false;
 
+    float speed = 0.0;
+    char cpu_regex[BUFSIZ];
+    char cpu_replace[BUFSIZ];
 #if defined(__linux__)
     FILE* fp;
     char buf[BUFSIZ];
+
     regex_t re;
     regmatch_t group[2];
+
+    char** paths = NULL;
+    char* path = NULL;
+
+    char* base = "/sys/devices/system/cpu/";
+    char* target = "(bios_limit|(scaling|cpuinfo)_max_freq)$";
+
+    int tmp = 0;
+    float _speed = 0.0;
+    int count;
+
+    int i = -1;
+    bool cond = false;
 
     if ((fp = fopen("/proc/cpuinfo", "r")) &&
         ! regcomp(&re, "model name\\s+: (.*)", REG_EXTENDED))
@@ -104,15 +121,53 @@ bool get_cpu(struct cpu_info* cpu)
         regfree(&re);
     }
 
+    if ((paths = find_all(base, target, BUFSIZ, &count)))
+    {
+        while (! cond && ++i < count)
+            if ((fp = fopen(paths[i], "r")) &&
+                fgets(buf, BUFSIZ, fp))
+            {
+                sscanf(buf, "%d", &tmp);
+                cond = tmp;
+                fclose(fp);
+            }
+
+        if (tmp)
+            speed = (double)tmp / 1000000;
+    }
+
+    if (paths)
+    {
+        for (i = 0; i < count; i++)
+            _free(paths[i]);
+        _free(paths);
+    }
+
+
 #elif defined(__APPLE__) && defined(__MACH__)
-    size_t len = sizeof(cpu->cpu);
+    size_t len = BUFSIZ;
     ret = ! sysctlbyname("machdep.cpu.brand_string", cpu->cpu, &len, NULL, 0);
 
 #elif defined(__FreeBSD__)
-    size_t len = sizeof(cpu->cpu);
+    size_t len = BUFSIZ;
     ret = ! sysctlbyname("hw.model", cpu->cpu, &len, NULL, 0);
 
 #endif
+
+    if (speed > 0.0)
+    {
+        snprintf(cpu_replace, BUFSIZ, "(%d) @ %0.1fGHz", cpu->cores, speed);
+        snprintf(cpu_regex, BUFSIZ, "@ [0-9]+\\.[0-9]+GHz");
+    }
+    else
+    {
+        snprintf(cpu_replace, BUFSIZ, "(%d) @", cpu->cores);
+        snprintf(cpu_regex, BUFSIZ, "@");
+    }
+
+    re_replace(cpu_regex, cpu_replace, cpu->cpu, BUFSIZ);
+    re_replace_all("CPU|\\((R|TM)\\)", "", cpu->cpu, BUFSIZ);
+    trim(cpu->cpu);
 
     return ret;
 }
