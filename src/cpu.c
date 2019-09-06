@@ -271,13 +271,17 @@ bool get_temp(struct cpu_info* cpu)
                     cpu->temp = (double)tmp / 1000;
                     ret = true;
                 }
-
-                _free(path);
-                for (i = 0; i < count; i++)
-                    _free(paths[i]);
-                _free(paths);
             }
+
+            _free(path);
         }
+    }
+
+    if (paths)
+    {
+        for (i = 0; i < count; i++)
+            _free(paths[i]);
+        _free(paths);
     }
 
 #elif defined(__APPLE__) && defined(__MACH__)
