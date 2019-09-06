@@ -2,6 +2,7 @@
 #   define _DEFAULT_SOURCE
 #endif
 
+#include <ctype.h>
 #include <errno.h>
 #include <fts.h>
 #include <regex.h>
@@ -17,7 +18,18 @@
 #include "tools.h"
 #include "macros.h"
 
-bool find(char* const base, char* const pattern, char* str, int size)
+
+void __free(void** p)
+{
+    if (*p)
+    {
+        free(*p);
+        *p = NULL;
+    }
+}
+
+
+bool find(char* base, char* pattern, char* str, int size)
 {
     char buf[BUFSIZ];
     bool found = false;
@@ -26,9 +38,11 @@ bool find(char* const base, char* const pattern, char* str, int size)
     FTS* ftsp = NULL;
     FTSENT* entry = NULL;
 
+    char* fts_paths[] = {base, NULL};
+
     regex_t re;
 
-    if ((ftsp = fts_open(&base, FTS_PHYSICAL, NULL)) &&
+    if ((ftsp = fts_open(fts_paths, FTS_PHYSICAL, NULL)) &&
         ! regcomp(&re, pattern, REG_EXTENDED))
     {
         while (! found && ! end)
@@ -59,7 +73,7 @@ bool find(char* const base, char* const pattern, char* str, int size)
 }
 
 
-char** find_all(char* const base, char* const pattern, int maxsize, int* count)
+char** find_all(char* base, char* pattern, int maxsize, int* count)
 {
     bool end = false;
     char** paths = NULL;
@@ -70,9 +84,11 @@ char** find_all(char* const base, char* const pattern, int maxsize, int* count)
     FTS* ftsp = NULL;
     FTSENT* entry = NULL;
 
+    char* fts_paths[] = {base, NULL};
+
     regex_t re;
 
-    if ((ftsp = fts_open(&base, FTS_PHYSICAL, NULL)) &&
+    if ((ftsp = fts_open(fts_paths, FTS_PHYSICAL, NULL)) &&
         ! regcomp(&re, pattern, REG_EXTENDED))
     {
         paths = (char**)malloc(maxsize * sizeof(char*));
@@ -112,11 +128,71 @@ char** find_all(char* const base, char* const pattern, int maxsize, int* count)
 }
 
 
-void __free(void** p)
+void re_replace(char* regex, char* sub, char* dest, int size)
 {
-    if (*p)
+    regex_t re;
+
+    if (! regcomp(&re, regex, REG_EXTENDED))
     {
-        free(*p);
-        *p = NULL;
+        __replace(re, sub, dest, size);
+        regfree(&re);
     }
+}
+
+
+void re_replace_all(char* regex, char* sub, char* dest, int size)
+{
+    char* old = NULL;
+    regex_t re;
+
+    if (! regcomp(&re, regex, REG_EXTENDED))
+    {
+        old = (char*)malloc(size * sizeof(char));
+
+        do
+        {
+            strncpy(old, dest, size);
+            __replace(re, sub, dest, size);
+        } while (strncmp(old, dest, size));
+
+        regfree(&re);
+        _free(old);
+    }
+}
+
+
+static void __replace(regex_t re, char* sub, char* dest, int size)
+{
+    char* cpy = NULL;
+
+    int str_size = strlen(dest);
+    int sub_size = strlen(sub);
+    int new_size = 0;
+
+    regmatch_t group[1];
+
+    cpy = (char*)malloc(size * sizeof(char));
+    strncpy(cpy, dest, size);
+
+    if (! regexec(&re, dest, 1, group, 0) &&
+        (str_size + sub_size - (group[0].rm_eo - group[0].rm_so)) < size)
+    {
+        memset(dest, '\0', size);
+        strncpy(dest, cpy, group[0].rm_so);
+        strncpy(dest + group[0].rm_so, sub, sub_size);
+        strncpy(dest + (group[0].rm_so + sub_size), cpy + group[0].rm_eo,
+                str_size - group[0].rm_eo);
+    }
+
+    _free(cpy);
+}
+
+
+void trim(char* str)
+{
+    int i, x;
+    for (i = x = 0; str[i]; ++i)
+        if (! isspace(str[i]) || (i > 0 && ! isspace(str[i - 1])))
+            str[x++] = str[i];
+    str[x] = '\0';
 }
