@@ -1,6 +1,15 @@
 {
-    fts.h errors
+    fts.h errors 1
     Memcheck:Cond
+    fun:fts_open
+    ...
+    fun:main
+}
+
+{
+    fts.h errors 2
+    Memcheck:Cond
+    fun:fts_maxarglen
     fun:fts_open
     ...
     fun:main
