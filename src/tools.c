@@ -42,7 +42,7 @@ bool find(char* const base, char* const pattern, char* str, int size)
                     exit(EXIT_FAILURE);
                 }
             }
-            else if (entry->fts_info & FTS_F &&
+            else if ((entry->fts_info & FTS_F || entry->fts_info & FTS_DP) &&
                      ! regexec(&re, entry->fts_path, 0, NULL, 0))
             {
                 strncpy(str, entry->fts_path, size);
@@ -59,11 +59,7 @@ bool find(char* const base, char* const pattern, char* str, int size)
 }
 
 
-char** find_all(char* const base,
-                char* const pattern,
-                int opt,
-                int maxsize,
-                int* count)
+char** find_all(char* const base, char* const pattern, int maxsize, int* count)
 {
     bool end = false;
     char** paths = NULL;
@@ -99,7 +95,7 @@ char** find_all(char* const base,
                     exit(EXIT_FAILURE);
                 }
             }
-            else if (entry->fts_info & opt &&
+            else if ((entry->fts_info & FTS_F || entry->fts_info & FTS_DP) &&
                      ! regexec(&re, entry->fts_path, 0, NULL, 0))
             {
                 paths[*count] = (char*)malloc(maxsize * sizeof(char));

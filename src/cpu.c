@@ -1,7 +1,6 @@
 #if defined(__linux__)
 #   define _DEFAULT_SOURCE
 #   include <regex.h>
-#   include <fts.h>
 #elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
 #   include <sys/types.h>
 #   include <sys/sysctl.h>
@@ -228,7 +227,7 @@ bool get_temp(struct cpu_info* cpu)
 
     regex_t re;
 
-    if ((paths = find_all(base, target_1, FTS_F, BUFSIZ, &count)) &&
+    if ((paths = find_all(base, target_1, BUFSIZ, &count)) &&
         ! regcomp(&re, "temp", REG_EXTENDED))
     {
         while (! cond && ++i < count)
@@ -252,7 +251,7 @@ bool get_temp(struct cpu_info* cpu)
                 _free(paths[i]);
             _free(paths);
 
-            if ((paths = find_all(path, target_2, FTS_F, BUFSIZ, &count)))
+            if ((paths = find_all(path, target_2, BUFSIZ, &count)))
             {
                 i = -1;
                 cond = false;
