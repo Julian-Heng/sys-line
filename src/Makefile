@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = -g -std=c99
+CFLAGS = -Wall -Werror -pedantic -std=c99 -g
 SRC = $(wildcard *.c) \
 	  $(wildcard systems/*.c)
 OBJ = $(SRC:.c=.o)
