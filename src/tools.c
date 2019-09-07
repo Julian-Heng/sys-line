@@ -37,6 +37,7 @@ bool find(char* base, char* pattern, char* str, int size)
         ! regcomp(&re, pattern, REG_EXTENDED))
     {
         while (! found && ! end)
+        {
             if (!(entry = fts_read(ftsp)))
             {
                 if (errno == 0)
@@ -53,6 +54,7 @@ bool find(char* base, char* pattern, char* str, int size)
                 strncpy(str, entry->fts_path, size);
                 found = true;
             }
+        }
 
         regfree(&re);
     }
@@ -87,6 +89,7 @@ char** find_all(char* base, char* pattern, int maxsize, int* count)
             paths[i] = NULL;
 
         while (! end && *count < maxsize)
+        {
             if (!(entry = fts_read(ftsp)))
             {
                 if (errno == 0)
@@ -108,6 +111,7 @@ char** find_all(char* base, char* pattern, int maxsize, int* count)
                 paths[*count] = (char*)malloc(maxsize * sizeof(char));
                 strncpy(paths[(*count)++], entry->fts_path, maxsize);
             }
+        }
 
         regfree(&re);
     }

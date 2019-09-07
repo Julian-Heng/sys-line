@@ -111,6 +111,7 @@ bool get_cpu(struct cpu_info* cpu)
     if ((paths = find_all(base, target, BUFSIZ, &count)))
     {
         while (! cond && ++i < count)
+        {
             if ((fp = fopen(paths[i], "r")) &&
                 fgets(buf, BUFSIZ, fp))
             {
@@ -119,6 +120,7 @@ bool get_cpu(struct cpu_info* cpu)
                 fclose(fp);
                 fp = NULL;
             }
+        }
 
         if (tmp)
             speed = (double)tmp / 1000000;
@@ -314,6 +316,7 @@ bool get_temp(struct cpu_info* cpu)
                 cond = false;
 
                 while (! cond && ++i < count)
+                {
                     if ((fp = fopen(paths[i], "r")) &&
                         fgets(buf, BUFSIZ, fp))
                     {
@@ -322,6 +325,7 @@ bool get_temp(struct cpu_info* cpu)
                         fclose(fp);
                         fp = NULL;
                     }
+                }
 
                 if (tmp)
                 {
