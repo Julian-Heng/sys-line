@@ -9,9 +9,14 @@
 #include "cpu.h"
 #endif
 
+#ifndef MEM_H
+#include "mem.h"
+#endif
+
 struct system
 {
     struct cpu_info* cpu;
+    struct mem_info* mem;
 };
 
 struct system* init_system(void);
