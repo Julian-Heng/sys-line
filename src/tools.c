@@ -18,20 +18,11 @@
 #include "tools.h"
 #include "macros.h"
 
-
-void __free(void** p)
-{
-    if (*p)
-    {
-        free(*p);
-        *p = NULL;
-    }
-}
+static void __replace(regex_t, char*, char*, int);
 
 
 bool find(char* base, char* pattern, char* str, int size)
 {
-    char buf[BUFSIZ];
     bool found = false;
     bool end = false;
 
@@ -165,9 +156,8 @@ static void __replace(regex_t re, char* sub, char* dest, int size)
 {
     char* cpy = NULL;
 
-    int str_size = strlen(dest);
-    int sub_size = strlen(sub);
-    int new_size = 0;
+    int str_len = strlen(dest);
+    int sub_len = strlen(sub);
 
     regmatch_t group[1];
 
@@ -175,13 +165,13 @@ static void __replace(regex_t re, char* sub, char* dest, int size)
     strncpy(cpy, dest, size);
 
     if (! regexec(&re, dest, 1, group, 0) &&
-        (str_size + sub_size - (group[0].rm_eo - group[0].rm_so)) < size)
+        (str_len + sub_len - (group[0].rm_eo - group[0].rm_so)) < size)
     {
-        memset(dest, '\0', size);
+        memset(dest, 0, size);
         strncpy(dest, cpy, group[0].rm_so);
-        strncpy(dest + group[0].rm_so, sub, sub_size);
-        strncpy(dest + (group[0].rm_so + sub_size), cpy + group[0].rm_eo,
-                str_size - group[0].rm_eo);
+        strncpy(dest + group[0].rm_so, sub, sub_len);
+        strncpy(dest + (group[0].rm_so + sub_len), cpy + group[0].rm_eo,
+                str_len - group[0].rm_eo);
     }
 
     _free(cpy);

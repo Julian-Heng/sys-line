@@ -25,18 +25,7 @@ struct cpu_info* init_cpu(void)
     struct cpu_info* cpu;
 
     if ((cpu = (struct cpu_info*)malloc(sizeof(struct cpu_info))))
-    {
-        cpu->cores = 0;
-        memset(cpu->cpu, '\0', BUFSIZ);
-
-        for (int i = 0; i < 3; i++)
-            cpu->load[i] = 0.0;
-
-        cpu->cpu_usage = 0.0;
-        cpu->fan = 0;
-        cpu->temp = 0.0;
-        cpu->uptime = 0;
-    }
+        memset(cpu, 0, sizeof(struct cpu_info));
 
     return cpu;
 }
@@ -45,7 +34,6 @@ struct cpu_info* init_cpu(void)
 bool get_cores(struct cpu_info* cpu)
 {
     bool ret = false;
-    int cores = 0;
 
 #if defined(__linux__)
     FILE* fp;
@@ -57,26 +45,25 @@ bool get_cores(struct cpu_info* cpu)
     {
         while (fgets(buf, BUFSIZ, fp))
             if (! regexec(&re, buf, 0, NULL, 0))
-                cores++;
+                (cpu->cores)++;
 
         regfree(&re);
     }
 
-    if (fp)
-        fclose(fp);
+    _fclose(fp);
 
 #elif defined(__APPLE__) && defined(__MACH__)
     size_t len = sizeof(cores);
-    ret = ! sysctlbyname("hw.logicalcpu_max", &cores, &len, NULL, 0);
+    ret = ! sysctlbyname("hw.logicalcpu_max", &(cpu->cores), &len, NULL, 0);
 
 #elif defined(__FreeBSD__)
     size_t len = sizeof(cores);
-    ret = ! sysctlbyname("hw.ncpu", &cores, &len, NULL, 0);
+    ret = ! sysctlbyname("hw.ncpu", &(cpu->cores), &len, NULL, 0);
 
 #endif
 
-    if (ret)
-        cpu->cores = cores;
+    if (! ret)
+        cpu->cores = 0;
 
     return ret;
 }
@@ -89,6 +76,7 @@ bool get_cpu(struct cpu_info* cpu)
     float speed = 0.0;
     char cpu_regex[BUFSIZ];
     char cpu_replace[BUFSIZ];
+
 #if defined(__linux__)
     FILE* fp;
     char buf[BUFSIZ];
@@ -97,13 +85,11 @@ bool get_cpu(struct cpu_info* cpu)
     regmatch_t group[2];
 
     char** paths = NULL;
-    char* path = NULL;
 
     char* base = "/sys/devices/system/cpu/";
     char* target = "(bios_limit|(scaling|cpuinfo)_max_freq)$";
 
     int tmp = 0;
-    float _speed = 0.0;
     int count;
 
     int i = -1;
@@ -118,6 +104,7 @@ bool get_cpu(struct cpu_info* cpu)
                         group[1].rm_eo - group[1].rm_so - 1);
 
         fclose(fp);
+        fp = NULL;
         regfree(&re);
     }
 
@@ -130,6 +117,7 @@ bool get_cpu(struct cpu_info* cpu)
                 sscanf(buf, "%d", &tmp);
                 cond = tmp;
                 fclose(fp);
+                fp = NULL;
             }
 
         if (tmp)
@@ -143,7 +131,6 @@ bool get_cpu(struct cpu_info* cpu)
         _free(paths);
     }
 
-
 #elif defined(__APPLE__) && defined(__MACH__)
     size_t len = BUFSIZ;
     ret = ! sysctlbyname("machdep.cpu.brand_string", cpu->cpu, &len, NULL, 0);
@@ -154,20 +141,25 @@ bool get_cpu(struct cpu_info* cpu)
 
 #endif
 
-    if (speed > 0.0)
+    if (ret)
     {
-        snprintf(cpu_replace, BUFSIZ, "(%d) @ %0.1fGHz", cpu->cores, speed);
-        snprintf(cpu_regex, BUFSIZ, "@ [0-9]+\\.[0-9]+GHz");
+        if (speed > 0.0)
+        {
+            snprintf(cpu_replace, BUFSIZ, "(%d) @ %0.1fGHz", cpu->cores, speed);
+            snprintf(cpu_regex, BUFSIZ, "@ ([0-9]+\\.)?[0-9]+GHz");
+        }
+        else
+        {
+            snprintf(cpu_replace, BUFSIZ, "(%d) @", cpu->cores);
+            snprintf(cpu_regex, BUFSIZ, "@");
+        }
+
+        re_replace(cpu_regex, cpu_replace, cpu->cpu, BUFSIZ);
+        re_replace_all("CPU|\\((R|TM)\\)", "", cpu->cpu, BUFSIZ);
+        trim(cpu->cpu);
     }
     else
-    {
-        snprintf(cpu_replace, BUFSIZ, "(%d) @", cpu->cores);
-        snprintf(cpu_regex, BUFSIZ, "@");
-    }
-
-    re_replace(cpu_regex, cpu_replace, cpu->cpu, BUFSIZ);
-    re_replace_all("CPU|\\((R|TM)\\)", "", cpu->cpu, BUFSIZ);
-    trim(cpu->cpu);
+        memset(cpu->cpu, 0, BUFSIZ);
 
     return ret;
 }
@@ -188,6 +180,7 @@ bool get_load(struct cpu_info* cpu)
                                 &(cpu->load[1]),
                                 &(cpu->load[2]));
         fclose(fp);
+        fp = NULL;
     }
 
 #elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
@@ -200,6 +193,9 @@ bool get_load(struct cpu_info* cpu)
 
 #endif
 
+    if (! ret)
+        memset(cpu->load, 0, 3 * sizeof(float));
+
     return ret;
 }
 
@@ -207,6 +203,7 @@ bool get_load(struct cpu_info* cpu)
 bool get_cpu_usage(struct cpu_info* cpu)
 {
     bool ret = false;
+
     FILE* ps;
     char buf[BUFSIZ];
     float val = 0.0;
@@ -218,7 +215,7 @@ bool get_cpu_usage(struct cpu_info* cpu)
 
     if ((ret = (ps = popen("ps -e -o %cpu", "r"))))
     {
-        memset(buf, '\0', BUFSIZ);
+        memset(buf, 0, BUFSIZ);
 
         while (fgets(buf, BUFSIZ, ps))
             if (sscanf(buf, "%f", &val) == 1)
@@ -250,10 +247,14 @@ bool get_fan(struct cpu_info* cpu)
     {
         sscanf(buf, "%d", &(cpu->fan));
         fclose(fp);
+        fp = NULL;
     }
 #elif defined(__APPLE__) && defined(__MACH__)
 #elif defined(__FreeBSD__)
 #endif
+
+    if (! ret)
+        cpu->fan = 0;
 
     return ret;
 }
@@ -291,6 +292,7 @@ bool get_temp(struct cpu_info* cpu)
             {
                 cond = fgets(buf, BUFSIZ, fp) && ! regexec(&re, buf, 0, NULL, 0);
                 fclose(fp);
+                fp = NULL;
             }
         }
 
@@ -318,6 +320,7 @@ bool get_temp(struct cpu_info* cpu)
                         sscanf(buf, "%d", &tmp);
                         cond = tmp;
                         fclose(fp);
+                        fp = NULL;
                     }
 
                 if (tmp)
@@ -331,6 +334,8 @@ bool get_temp(struct cpu_info* cpu)
         }
     }
 
+    _fclose(fp);
+
     if (paths)
     {
         for (i = 0; i < count; i++)
@@ -341,6 +346,9 @@ bool get_temp(struct cpu_info* cpu)
 #elif defined(__APPLE__) && defined(__MACH__)
 #elif defined(__FreeBSD__)
 #endif
+
+    if (! ret)
+        cpu->temp = 0.0;
 
     return ret;
 }
@@ -359,6 +367,7 @@ bool get_uptime(struct cpu_info* cpu)
     {
         sscanf(buf, "%d", &(cpu->uptime));
         fclose(fp);
+        fp = NULL;
     }
 
 #elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
@@ -369,6 +378,9 @@ bool get_uptime(struct cpu_info* cpu)
     cpu->uptime = (unsigned long)time(NULL) - uptime.tv_sec;
 
 #endif
+
+    if (! ret)
+        cpu->uptime = 0;
 
     return ret;
 }

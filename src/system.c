@@ -7,7 +7,6 @@
 struct system* init_system(void)
 {
     struct system* sys;
-    struct cpu_info* cpu;
 
     if ((sys = (struct system*)malloc(sizeof(struct system))))
     {
