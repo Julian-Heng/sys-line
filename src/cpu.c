@@ -53,11 +53,11 @@ bool get_cores(struct cpu_info* cpu)
     _fclose(fp);
 
 #elif defined(__APPLE__) && defined(__MACH__)
-    size_t len = sizeof(cores);
+    size_t len = sizeof(cpu->cores);
     ret = ! sysctlbyname("hw.logicalcpu_max", &(cpu->cores), &len, NULL, 0);
 
 #elif defined(__FreeBSD__)
-    size_t len = sizeof(cores);
+    size_t len = sizeof(cpu->cores);
     ret = ! sysctlbyname("hw.ncpu", &(cpu->cores), &len, NULL, 0);
 
 #endif
