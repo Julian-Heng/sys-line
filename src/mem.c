@@ -58,18 +58,16 @@ bool get_mem_used(struct mem_info* mem)
                 memset(tmp, 0, BUFSIZ);
                 strncpy(tmp, buf + group[2].rm_so,
                         group[2].rm_eo - group[2].rm_so);
-                used += atoi(tmp);
+                used += atoll(tmp) << 10;
             }
             else if (! regexec(&re_free, buf, 3, group, 0))
             {
                 memset(tmp, 0, BUFSIZ);
                 strncpy(tmp, buf + group[2].rm_so,
                         group[2].rm_eo - group[2].rm_so);
-                used -= atoi(tmp);
+                used -= atoll(tmp) << 10;
             }
         }
-
-        used <<= 10;
     }
 
     _fclose(fp);
@@ -141,9 +139,9 @@ bool get_mem_total(struct mem_info* mem)
         while (! cond && fgets(buf, BUFSIZ, fp))
             if ((cond = ! regexec(&re, buf, 2, group, 0)))
                 strncpy(tmp, buf + group[1].rm_so,
-                        group[1].rm_eo - group[1].rm_so - 1);
+                        group[1].rm_eo - group[1].rm_so);
 
-        total = atoi(tmp) * 1024;
+        total = atoll(tmp) << 10;
         regfree(&re);
     }
 
