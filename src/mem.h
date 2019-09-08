@@ -7,8 +7,8 @@
 
 struct mem_info
 {
-    int used;
-    int total;
+    long long used;
+    long long total;
     float percent;
 };
 

@@ -1,16 +1,21 @@
 #if defined(__linux__)
-#   include <regex.h>
 #   define TOTAL_REG "^MemTotal:\\s+([0-9]+)"
 #   define USED_TOTAL_REG "^(MemTotal|Shmem):\\s+([0-9]+)"
 #   define USED_FREE_REG "^(MemFree|Buffers|Cached|SReclaimable):\\s+([0-9]+)"
+#elif defined(__APPLE__) && defined(__MACH__)
+#   define USED_REG " (wired|active|occupied)[^0-9]+([0-9]+)"
+#   include <sys/types.h>
+#   include <sys/sysctl.h>
 #endif
 
+#include <regex.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mem.h"
+#include "tools.h"
 #include "macros.h"
 
 struct mem_info* init_mem()
@@ -28,7 +33,7 @@ bool get_mem_used(struct mem_info* mem)
 {
     bool ret = false;
 
-    int used = 0;
+    long long used = 0;
 #if defined(__linux__)
     FILE* fp;
 
@@ -52,17 +57,19 @@ bool get_mem_used(struct mem_info* mem)
             {
                 memset(tmp, 0, BUFSIZ);
                 strncpy(tmp, buf + group[2].rm_so,
-                        group[2].rm_eo - group[2].rm_so - 1);
-                used += atoi(tmp) * 1024;
+                        group[2].rm_eo - group[2].rm_so);
+                used += atoi(tmp);
             }
             else if (! regexec(&re_free, buf, 3, group, 0))
             {
                 memset(tmp, 0, BUFSIZ);
                 strncpy(tmp, buf + group[2].rm_so,
-                        group[2].rm_eo - group[2].rm_so - 1);
-                used -= atoi(tmp) * 1024;
+                        group[2].rm_eo - group[2].rm_so);
+                used -= atoi(tmp);
             }
         }
+
+        used <<= 10;
     }
 
     _fclose(fp);
@@ -70,6 +77,36 @@ bool get_mem_used(struct mem_info* mem)
     regfree(&re_free);
 
 #elif defined(__APPLE__) && defined(__MACH__)
+    char buf[BUFSIZ];
+    char tmp[BUFSIZ];
+
+    FILE* ps = NULL;
+    regex_t re;
+    regmatch_t group[3];
+
+    if ((ret = (ps = popen("vm_stat", "r"))) &&
+        ! regcomp(&re, USED_REG, REG_EXTENDED))
+    {
+        memset(buf, 0, BUFSIZ);
+        memset(tmp, 0, BUFSIZ);
+
+        while (fgets(buf, BUFSIZ, ps))
+        {
+            if (! regexec(&re, buf, 3, group, 0))
+            {
+                memset(tmp, 0, BUFSIZ);
+                strncpy(tmp, buf + group[2].rm_so,
+                        group[2].rm_eo - group[2].rm_so);
+                used += atoll(tmp);
+            }
+        }
+
+        used <<= 12;
+        regfree(&re);
+    }
+
+    _pclose(ps);
+
 #elif defined(__FreeBSD__)
 #endif
 
@@ -84,7 +121,7 @@ bool get_mem_total(struct mem_info* mem)
 {
     bool ret = false;
 
-    int total = 0;
+    long long total = 0;
 #if defined(__linux__)
     FILE* fp;
 
@@ -113,6 +150,9 @@ bool get_mem_total(struct mem_info* mem)
     _fclose(fp);
 
 #elif defined(__APPLE__) && defined(__MACH__)
+    size_t len = sizeof(total);
+    ret = ! sysctlbyname("hw.memsize", &total, &len, NULL, 0);
+
 #elif defined(__FreeBSD__)
 #endif
 
@@ -125,20 +165,16 @@ bool get_mem_total(struct mem_info* mem)
 
 bool get_mem_percent(struct mem_info* mem)
 {
-    bool ret = false;
-
     if (! mem->used)
         get_mem_used(mem);
     if (! mem->used)
-        return ret;
+        return false;
 
     if (! mem->total)
         get_mem_total(mem);
     if (! mem->total)
-        return ret;
+        return false;
 
-    ret = true;
     mem->percent = percent(mem->used, mem->total);
-
-    return ret;
+    return true;
 }

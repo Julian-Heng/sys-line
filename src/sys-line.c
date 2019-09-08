@@ -37,10 +37,10 @@ int main(void)
         printf("cpu.uptime:\t%d\n", sys->cpu->uptime);
 
         get_mem_used(sys->mem);
-        printf("mem.used:\t%d\n", sys->mem->used);
+        printf("mem.used:\t%lld\n", sys->mem->used);
 
         get_mem_total(sys->mem);
-        printf("mem.total:\t%d\n", sys->mem->total);
+        printf("mem.total:\t%lld\n", sys->mem->total);
 
         get_mem_percent(sys->mem);
         printf("mem.percent:\t%f\n", sys->mem->percent);
