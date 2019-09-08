@@ -1,5 +1,8 @@
 #if defined(__linux__)
 #   include <regex.h>
+#   define TOTAL_REG "^MemTotal:\\s+([0-9]+)"
+#   define USED_TOTAL_REG "^(MemTotal|Shmem):\\s+([0-9]+)"
+#   define USED_FREE_REG "^(MemFree|Buffers|Cached|SReclaimable):\\s+([0-9]+)"
 #endif
 
 #include <stdbool.h>
@@ -37,9 +40,8 @@ bool get_mem_used(struct mem_info* mem)
     regmatch_t group[3];
 
     if ((ret = (fp = fopen("/proc/meminfo", "r"))) &&
-        ! regcomp(&re_used, "^(MemTotal|Shmem):\\s+([0-9]+)", REG_EXTENDED) &&
-        ! regcomp(&re_free, "^(MemFree|Buffers|Cached|SReclaimable):\\s+([0-9]+)",
-                  REG_EXTENDED))
+        ! regcomp(&re_used, USED_TOTAL_REG, REG_EXTENDED) &&
+        ! regcomp(&re_free, USED_FREE_REG, REG_EXTENDED))
     {
         memset(buf, 0, BUFSIZ);
         memset(tmp, 0, BUFSIZ);
@@ -60,14 +62,12 @@ bool get_mem_used(struct mem_info* mem)
                         group[2].rm_eo - group[2].rm_so - 1);
                 used -= atoi(tmp) * 1024;
             }
-
         }
     }
 
     _fclose(fp);
     regfree(&re_used);
     regfree(&re_free);
-
 
 #elif defined(__APPLE__) && defined(__MACH__)
 #elif defined(__FreeBSD__)
@@ -96,7 +96,7 @@ bool get_mem_total(struct mem_info* mem)
     regmatch_t group[2];
 
     if ((ret = (fp = fopen("/proc/meminfo", "r"))) &&
-        ! regcomp(&re, "^MemTotal:\\s+([0-9]+)", REG_EXTENDED))
+        ! regcomp(&re, TOTAL_REG, REG_EXTENDED))
     {
         memset(buf, 0, BUFSIZ);
         memset(tmp, 0, BUFSIZ);

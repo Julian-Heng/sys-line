@@ -15,6 +15,6 @@
         (f) = NULL; \
     }
 
-#define percent(a, b) ((double)(a) / (double)(b)) * 100
+#define percent(a, b) (((double)(a) / (double)(b)) * 100)
 
 #endif
