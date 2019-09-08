@@ -12,6 +12,7 @@ int main(void)
     {
         printf("sys:\t%p\n", (void*)sys);
         printf("cpu:\t%p\n", (void*)sys->cpu);
+        printf("mem:\t%p\n", (void*)sys->mem);
 
         get_cores(sys->cpu);
         printf("cpu.cores:\t%d\n", sys->cpu->cores);
