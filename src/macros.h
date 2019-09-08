@@ -15,6 +15,13 @@
         (f) = NULL; \
     }
 
+#define _pclose(p) \
+    if ((p)) \
+    { \
+        pclose((p)); \
+        (p) = NULL; \
+    }
+
 #define percent(a, b) (((double)(a) / (double)(b)) * 100)
 
 #endif
