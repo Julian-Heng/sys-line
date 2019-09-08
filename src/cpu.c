@@ -96,12 +96,12 @@ bool get_cpu(struct cpu_info* cpu)
     bool cond = false;
 
     if ((fp = fopen("/proc/cpuinfo", "r")) &&
-        ! regcomp(&re, "model name\\s+: (.*)", REG_EXTENDED))
+        ! regcomp(&re, "model name\\s+: (.*)\n", REG_EXTENDED))
     {
         while (! ret && fgets(buf, BUFSIZ, fp))
             if ((ret = ! regexec(&re, buf, 2, group, 0)))
                 strncpy(cpu->cpu, buf + group[1].rm_so,
-                        group[1].rm_eo - group[1].rm_so - 1);
+                        group[1].rm_eo - group[1].rm_so);
 
         fclose(fp);
         fp = NULL;
