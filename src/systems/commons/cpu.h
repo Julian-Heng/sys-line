@@ -1,8 +1,9 @@
-#ifndef CPU_H
-#define CPU_H
+#ifndef COMMON_CPU_H
+#define COMMON_CPU_H
 
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 struct cpu_info
 {

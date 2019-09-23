@@ -1,41 +1,15 @@
-#if defined(__linux__)
-#   define _DEFAULT_SOURCE
-#   include <regex.h>
-#elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
-#   include <sys/types.h>
-#   include <sys/sysctl.h>
-#endif
-#if defined(__FreeBSD__)
-#   include <sys/resource.h>
-#   include <time.h>
-#endif
-
-#include <stdlib.h>
-#include <stdio.h>
+#include <regex.h>
 #include <string.h>
-#include <stdbool.h>
+
+#include "../../utils/macros.h"
+#include "../../utils/tools.h"
+#include "../commons/cpu.h"
 
 #include "cpu.h"
-#include "tools.h"
-#include "macros.h"
 
-
-struct cpu_info* init_cpu(void)
-{
-    struct cpu_info* cpu;
-
-    if ((cpu = (struct cpu_info*)malloc(sizeof(struct cpu_info))))
-        memset(cpu, 0, sizeof(struct cpu_info));
-
-    return cpu;
-}
-
-
-bool get_cores(struct cpu_info* cpu)
+bool __get_cores(struct cpu_info* cpu)
 {
     bool ret = false;
-
-#if defined(__linux__)
     FILE* fp;
     char buf[BUFSIZ];
     regex_t re;
@@ -51,33 +25,14 @@ bool get_cores(struct cpu_info* cpu)
     }
 
     _fclose(fp);
-
-#elif defined(__APPLE__) && defined(__MACH__)
-    size_t len = sizeof(cpu->cores);
-    ret = ! sysctlbyname("hw.logicalcpu_max", &(cpu->cores), &len, NULL, 0);
-
-#elif defined(__FreeBSD__)
-    size_t len = sizeof(cpu->cores);
-    ret = ! sysctlbyname("hw.ncpu", &(cpu->cores), &len, NULL, 0);
-
-#endif
-
-    if (! ret)
-        cpu->cores = 0;
-
     return ret;
 }
 
 
-bool get_cpu(struct cpu_info* cpu)
+bool __get_cpu(struct cpu_info* cpu, float* speed)
 {
     bool ret = false;
 
-    float speed = 0.0;
-    char cpu_regex[BUFSIZ];
-    char cpu_replace[BUFSIZ];
-
-#if defined(__linux__)
     FILE* fp;
     char buf[BUFSIZ];
 
@@ -103,10 +58,10 @@ bool get_cpu(struct cpu_info* cpu)
                 strncpy(cpu->cpu, buf + group[1].rm_so,
                         group[1].rm_eo - group[1].rm_so);
 
-        fclose(fp);
-        fp = NULL;
         regfree(&re);
     }
+
+    _fclose(fp);
 
     if ((paths = find_all(base, target, BUFSIZ, &count)))
     {
@@ -117,14 +72,14 @@ bool get_cpu(struct cpu_info* cpu)
             {
                 sscanf(buf, "%d", &tmp);
                 cond = tmp;
-                fclose(fp);
-                fp = NULL;
             }
         }
 
         if (tmp)
-            speed = (double)tmp / 1000000;
+            *speed = (double)tmp / 1000000;
     }
+
+    _fclose(fp);
 
     if (paths)
     {
@@ -133,45 +88,14 @@ bool get_cpu(struct cpu_info* cpu)
         _free(paths);
     }
 
-#elif defined(__APPLE__) && defined(__MACH__)
-    size_t len = BUFSIZ;
-    ret = ! sysctlbyname("machdep.cpu.brand_string", cpu->cpu, &len, NULL, 0);
-
-#elif defined(__FreeBSD__)
-    size_t len = BUFSIZ;
-    ret = ! sysctlbyname("hw.model", cpu->cpu, &len, NULL, 0);
-
-#endif
-
-    if (ret)
-    {
-        if (speed > 0.0)
-        {
-            snprintf(cpu_replace, BUFSIZ, "(%d) @ %0.1fGHz", cpu->cores, speed);
-            snprintf(cpu_regex, BUFSIZ, "@ ([0-9]+\\.)?[0-9]+GHz");
-        }
-        else
-        {
-            snprintf(cpu_replace, BUFSIZ, "(%d) @", cpu->cores);
-            snprintf(cpu_regex, BUFSIZ, "@");
-        }
-
-        re_replace(cpu_regex, cpu_replace, cpu->cpu, BUFSIZ);
-        re_replace_all("CPU|\\((R|TM)\\)", "", cpu->cpu, BUFSIZ);
-        trim(cpu->cpu);
-    }
-    else
-        memset(cpu->cpu, 0, BUFSIZ);
-
     return ret;
 }
 
 
-bool get_load(struct cpu_info* cpu)
+bool __get_load(struct cpu_info* cpu)
 {
     bool ret = false;
 
-#if defined(__linux__)
     FILE* fp;
     char buf[BUFSIZ];
 
@@ -181,61 +105,18 @@ bool get_load(struct cpu_info* cpu)
         sscanf(buf, "%f %f %f", &(cpu->load[0]),
                                 &(cpu->load[1]),
                                 &(cpu->load[2]));
-        fclose(fp);
-        fp = NULL;
     }
 
-#elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
-    struct loadavg load;
-    size_t len = sizeof(load);
-
-    ret = ! sysctlbyname("vm.loadavg", &load, &len, NULL, 0);
-    for (int i = 0; i < 3; i++)
-        cpu->load[i] = (float)load.ldavg[i] / load.fscale;
-
-#endif
-
-    if (! ret)
-        memset(cpu->load, 0, 3 * sizeof(float));
+    _fclose(fp);
 
     return ret;
 }
 
 
-bool get_cpu_usage(struct cpu_info* cpu)
+bool __get_fan(struct cpu_info* cpu)
 {
     bool ret = false;
 
-    FILE* ps;
-    char buf[BUFSIZ];
-    float val = 0.0;
-
-    if (! cpu->cores)
-        get_cores(cpu);
-    if (! cpu->cores)
-        return ret;
-
-    if ((ret = (ps = popen("ps -e -o %cpu", "r"))))
-    {
-        memset(buf, 0, BUFSIZ);
-
-        while (fgets(buf, BUFSIZ, ps))
-            if (sscanf(buf, "%f", &val) == 1)
-                cpu->cpu_usage += val;
-
-        cpu->cpu_usage /= cpu->cores;
-        pclose(ps);
-    }
-
-    return ret;
-}
-
-
-bool get_fan(struct cpu_info* cpu)
-{
-    bool ret = false;
-
-#if defined(__linux__)
     char path[BUFSIZ];
     char* base = "/sys/devices/platform/";
     char* pattern = "fan1_input$";
@@ -248,26 +129,18 @@ bool get_fan(struct cpu_info* cpu)
         fgets(buf, BUFSIZ, fp)))
     {
         sscanf(buf, "%d", &(cpu->fan));
-        fclose(fp);
-        fp = NULL;
     }
 
-#elif defined(__APPLE__) && defined(__MACH__)
-#elif defined(__FreeBSD__)
-#endif
-
-    if (! ret)
-        cpu->fan = 0;
+    _fclose(fp);
 
     return ret;
 }
 
 
-bool get_temp(struct cpu_info* cpu)
+bool __get_temp(struct cpu_info* cpu)
 {
     bool ret = false;
 
-#if defined(__linux__)
     char** paths = NULL;
     char* path = NULL;
 
@@ -323,8 +196,6 @@ bool get_temp(struct cpu_info* cpu)
                     {
                         sscanf(buf, "%d", &tmp);
                         cond = tmp;
-                        fclose(fp);
-                        fp = NULL;
                     }
                 }
 
@@ -348,22 +219,14 @@ bool get_temp(struct cpu_info* cpu)
         _free(paths);
     }
 
-#elif defined(__APPLE__) && defined(__MACH__)
-#elif defined(__FreeBSD__)
-#endif
-
-    if (! ret)
-        cpu->temp = 0.0;
-
     return ret;
 }
 
 
-bool get_uptime(struct cpu_info* cpu)
+bool __get_uptime(struct cpu_info* cpu)
 {
     bool ret = false;
 
-#if defined(__linux__)
     FILE* fp;
     char buf[BUFSIZ];
 
@@ -371,21 +234,9 @@ bool get_uptime(struct cpu_info* cpu)
                 fgets(buf, BUFSIZ, fp)))
     {
         sscanf(buf, "%d", &(cpu->uptime));
-        fclose(fp);
-        fp = NULL;
     }
 
-#elif defined(__APPLE__) && defined(__MACH__) || defined(__FreeBSD__)
-    struct timeval uptime;
-    size_t len = sizeof(uptime);
-
-    ret = ! sysctlbyname("kern.boottime", &uptime, &len, NULL, 0);
-    cpu->uptime = (unsigned long)time(NULL) - uptime.tv_sec;
-
-#endif
-
-    if (! ret)
-        cpu->uptime = 0;
+    _fclose(fp);
 
     return ret;
 }
