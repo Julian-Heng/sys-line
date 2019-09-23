@@ -251,6 +251,7 @@ bool get_fan(struct cpu_info* cpu)
         fclose(fp);
         fp = NULL;
     }
+
 #elif defined(__APPLE__) && defined(__MACH__)
 #elif defined(__FreeBSD__)
 #endif
