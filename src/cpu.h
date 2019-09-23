@@ -1,13 +1,8 @@
 #ifndef CPU_H
 #define CPU_H
 
-#ifndef STDIO_H
 #include <stdio.h>
-#endif
-
-#ifndef STDBOOL_H
 #include <stdbool.h>
-#endif
 
 struct cpu_info
 {

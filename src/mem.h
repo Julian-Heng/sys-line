@@ -1,9 +1,7 @@
 #ifndef MEM_H
 #define MEM_H
 
-#ifndef STDBOOL_H
 #include <stdbool.h>
-#endif
 
 struct mem_info
 {
