@@ -12,6 +12,7 @@ int main()
     {
         printf("sys:\t%p\n", (void*)sys);
         printf("cpu:\t%p\n", (void*)sys->cpu);
+        printf("mem:\t%p\n", (void*)sys->mem);
 
         get_cores(sys->cpu);
         printf("cpu.cores:\t%d\n", sys->cpu->cores);
@@ -36,8 +37,20 @@ int main()
         get_uptime(sys->cpu);
         printf("cpu.uptime:\t%d\n", sys->cpu->uptime);
 
+        get_mem_used(sys->mem);
+        printf("mem.used:\t%lld\n", sys->mem->used);
+
+        get_mem_total(sys->mem);
+        printf("mem.total:\t%lld\n", sys->mem->total);
+
+        get_mem_percent(sys->mem);
+        printf("mem.percent:\t%f\n", sys->mem->percent);
+
         free(sys->cpu);
         sys->cpu = NULL;
+
+        free(sys->mem);
+        sys->mem = NULL;
 
         free(sys);
         sys = NULL;

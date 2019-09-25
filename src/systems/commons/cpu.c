@@ -1,3 +1,8 @@
+#if defined(__linux__)
+#   define _DEFAULT_SOURCE
+#   include "../linux/cpu.h"
+#endif
+
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -6,10 +11,6 @@
 #include "../../utils/tools.h"
 
 #include "cpu.h"
-
-#if defined(__linux__)
-#   include "../linux/cpu.h"
-#endif
 
 
 struct cpu_info* init_cpu(void)

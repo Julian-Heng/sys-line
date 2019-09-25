@@ -2,6 +2,8 @@
 #define LINUX_CPU_H
 #if defined(__linux__)
 
+#include "../commons/cpu.h"
+
 bool __get_cores(struct cpu_info*);
 bool __get_cpu(struct cpu_info*, float*);
 bool __get_load(struct cpu_info*);

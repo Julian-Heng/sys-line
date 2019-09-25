@@ -1,3 +1,5 @@
+#if defined(__linux__)
+
 #include <regex.h>
 #include <string.h>
 
@@ -240,3 +242,5 @@ bool __get_uptime(struct cpu_info* cpu)
 
     return ret;
 }
+
+#endif
