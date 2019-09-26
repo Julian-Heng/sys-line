@@ -1,7 +1,10 @@
 #if defined(__linux__)
 #   define _DEFAULT_SOURCE
 #   include "../linux/cpu.h"
+#elif defined(__APPLE__) && defined(__MACH__)
+#   include "../darwin/cpu.h"
 #endif
+
 
 #include <stdbool.h>
 #include <string.h>

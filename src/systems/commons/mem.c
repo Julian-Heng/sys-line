@@ -1,5 +1,7 @@
 #if defined(__linux__)
 #   include "../linux/mem.h"
+#elif defined(__APPLE__) && defined(__MACH__)
+#   include "../darwin/mem.h"
 #endif
 
 #include <stdbool.h>

@@ -13,6 +13,7 @@ endif
 
 ifeq ($(UNAME_S),Darwin)
 	SRC += $(wildcard systems/darwin/*.c)
+	INC = -framework Cocoa -framework CoreAudio
 endif
 
 ifeq ($(UNAME_S),FreeBSD)
@@ -23,7 +24,7 @@ OBJ = $(SRC:.c=.o)
 EXEC = sys-line
 
 $(EXEC): $(OBJ)
-	$(CC) -o $@ $^
+	$(CC) $(INC) -o $@ $^
 
 .PHONY: clean
 clean:
