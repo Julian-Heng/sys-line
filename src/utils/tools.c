@@ -15,8 +15,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "tools.h"
 #include "macros.h"
+#include "tools.h"
 
 static void __replace(regex_t, char*, char*, int);
 
@@ -38,7 +38,7 @@ bool find(char* base, char* pattern, char* str, int size)
     {
         while (! found && ! end)
         {
-            if (!(entry = fts_read(ftsp)))
+            if (! (entry = fts_read(ftsp)))
             {
                 if (errno == 0)
                     end = true;
