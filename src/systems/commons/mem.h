@@ -2,8 +2,6 @@
 #define COMMON_MEM_H
 
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 struct mem_info
 {
