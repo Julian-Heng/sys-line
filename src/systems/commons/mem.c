@@ -51,14 +51,18 @@ bool get_mem_total(struct mem_info* mem)
 bool get_mem_percent(struct mem_info* mem)
 {
     if (! mem->used)
+    {
         get_mem_used(mem);
-    if (! mem->used)
-        return false;
+        if (! mem->used)
+            return false;
+    }
 
     if (! mem->total)
+    {
         get_mem_total(mem);
-    if (! mem->total)
-        return false;
+        if (! mem->total)
+            return false;
+    }
 
     mem->percent = percent(mem->used, mem->total);
     return true;

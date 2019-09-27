@@ -3,10 +3,11 @@
 #include <regex.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "../../utils/macros.h"
+#include "../commons/swap.h"
 
 #include "swap.h"
 

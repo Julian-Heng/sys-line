@@ -1,5 +1,7 @@
 #if defined(__linux__)
 #   include "../linux/swap.h"
+#elif defined(__APPLE__) && defined(__MACH__)
+#   include "../darwin/swap.h"
 #endif
 
 #include <stdbool.h>
@@ -7,7 +9,6 @@
 #include <string.h>
 
 #include "../../utils/macros.h"
-
 #include "swap.h"
 
 
@@ -47,14 +48,18 @@ bool get_swap_total(struct swap_info* swap)
 bool get_swap_percent(struct swap_info* swap)
 {
     if (! swap->used)
+    {
         get_swap_used(swap);
-    if (! swap->used)
-        return false;
+        if (! swap->used)
+            return false;
+    }
 
     if (! swap->total)
+    {
         get_swap_total(swap);
-    if (! swap->total)
-        return false;
+        if (! swap->total)
+            return false;
+    }
 
     swap->percent = percent(swap->used, swap->total);
     return true;

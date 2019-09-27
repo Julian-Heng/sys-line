@@ -5,14 +5,12 @@
 #   include "../darwin/cpu.h"
 #endif
 
-
 #include <stdbool.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "../../utils/tools.h"
-
 #include "cpu.h"
 
 
