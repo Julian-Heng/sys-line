@@ -1,6 +1,7 @@
 #if defined(__linux__)
 
 #include <regex.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "../../utils/macros.h"

@@ -2,6 +2,7 @@
 #define LINUX_MEM_H
 #if defined(__linux__)
 
+#include <stdbool.h>
 #include "../commons/mem.h"
 
 #define TOTAL_REG "^MemTotal:\\s+([0-9]+)"
