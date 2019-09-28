@@ -22,6 +22,7 @@
         (p) = NULL; \
     }
 
+#define file_exist(f) access((f), F_OK) != -1
 #define percent(a, b) ((b) ? (((double)(a) / (double)(b)) * 100) : 0)
 
 #endif
