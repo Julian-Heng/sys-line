@@ -2,6 +2,7 @@
 #define LINUX_SWAP_H
 #if defined(__linux__)
 
+#include <stdbool.h>
 #include "../commons/swap.h"
 
 #define TOTAL_REG "^SwapTotal:\\s+([0-9]+)"
