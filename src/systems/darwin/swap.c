@@ -13,9 +13,9 @@
 
 
 static bool is_sysctl_set = false;
-static void set_sysctl_out(void);
-
 static struct xsw_usage sysctl_out;
+
+static void set_sysctl_out(void);
 
 bool __get_swap_used(struct swap_info* swap)
 {
