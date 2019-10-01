@@ -19,9 +19,15 @@ struct cpu_info* init_cpu(void)
     struct cpu_info* cpu;
 
     if ((cpu = (struct cpu_info*)malloc(sizeof(struct cpu_info))))
-        memset(cpu, 0, sizeof(struct cpu_info));
+        clear_cpu(cpu);
 
     return cpu;
+}
+
+
+void clear_cpu(struct cpu_info* cpu)
+{
+    memset(cpu, 0, sizeof(struct cpu_info));
 }
 
 

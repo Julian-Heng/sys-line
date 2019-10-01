@@ -18,6 +18,7 @@ struct cpu_info
 
 
 struct cpu_info* init_cpu(void);
+void clear_cpu(struct cpu_info*);
 bool get_cores(struct cpu_info*);
 bool get_cpu(struct cpu_info*);
 bool get_load(struct cpu_info*);

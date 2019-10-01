@@ -17,9 +17,15 @@ struct disk_info* init_disk()
     struct disk_info* disk;
 
     if ((disk = (struct disk_info*)malloc(sizeof(struct disk_info))))
-        memset(disk, 0, sizeof(struct disk_info));
+        clear_disk(disk);
 
     return disk;
+}
+
+
+void clear_disk(struct disk_info* disk)
+{
+    memset(disk, 0, sizeof(struct disk_info));
 }
 
 

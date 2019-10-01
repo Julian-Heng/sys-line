@@ -22,3 +22,12 @@ struct system* init_system(void)
 
     return sys;
 }
+
+
+void clear_system(struct system* sys)
+{
+    clear_cpu(sys->cpu);
+    clear_mem(sys->mem);
+    clear_swap(sys->swap);
+    clear_disk(sys->disk);
+}

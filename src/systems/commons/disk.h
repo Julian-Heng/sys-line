@@ -17,6 +17,7 @@ struct disk_info
 
 
 struct disk_info* init_disk(void);
+void clear_disk(struct disk_info*);
 bool get_disk_dev(struct disk_info*);
 bool get_disk_name(struct disk_info*);
 bool get_disk_mount(struct disk_info*);

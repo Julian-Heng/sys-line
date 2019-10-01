@@ -12,6 +12,7 @@ struct mem_info
 
 
 struct mem_info* init_mem(void);
+void clear_mem(struct mem_info*);
 bool get_mem_used(struct mem_info*);
 bool get_mem_total(struct mem_info*);
 bool get_mem_percent(struct mem_info*);

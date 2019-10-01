@@ -12,6 +12,7 @@ struct swap_info
 
 
 struct swap_info* init_swap(void);
+void clear_swap(struct swap_info*);
 bool get_swap_used(struct swap_info*);
 bool get_swap_total(struct swap_info*);
 bool get_swap_percent(struct swap_info*);

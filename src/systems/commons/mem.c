@@ -20,9 +20,15 @@ struct mem_info* init_mem()
     struct mem_info* mem;
 
     if ((mem = (struct mem_info*)malloc(sizeof(struct mem_info))))
-        memset(mem, 0, sizeof(struct mem_info));
+        clear_mem(mem);
 
     return mem;
+}
+
+
+void clear_mem(struct mem_info* mem)
+{
+    memset(mem, 0, sizeof(struct mem_info));
 }
 
 

@@ -17,9 +17,15 @@ struct swap_info* init_swap()
     struct swap_info* swap;
 
     if ((swap = (struct swap_info*)malloc(sizeof(struct swap_info))))
-        memset(swap, 0, sizeof(struct swap_info));
+        clear_swap(swap);
 
     return swap;
+}
+
+
+void clear_swap(struct swap_info* swap)
+{
+    memset(swap, 0, sizeof(struct swap_info));
 }
 
 

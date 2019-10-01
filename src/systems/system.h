@@ -18,5 +18,6 @@ struct system
 };
 
 struct system* init_system(void);
+void clear_system(struct system*);
 
 #endif
