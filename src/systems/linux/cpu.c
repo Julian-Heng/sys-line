@@ -105,9 +105,9 @@ bool __get_load(struct cpu_info* cpu)
     if ((ret = (fp = fopen("/proc/loadavg", "r")) &&
                 fgets(buf, BUFSIZ, fp)))
     {
-        sscanf(buf, "%f %f %f", &(cpu->load[0]),
-                                &(cpu->load[1]),
-                                &(cpu->load[2]));
+        sscanf(buf, "%lf %lf %lf", &(cpu->load[0]),
+                                   &(cpu->load[1]),
+                                   &(cpu->load[2]));
     }
 
     _fclose(fp);

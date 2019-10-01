@@ -27,9 +27,9 @@ int main()
         printf("cpu.cpu:\t\"%s\"\n", sys->cpu->cpu);
 
         get_load(sys->cpu);
-        printf("cpu.load:\t%f %f %f\n", sys->cpu->load[0],
-                                        sys->cpu->load[1],
-                                        sys->cpu->load[2]);
+        printf("cpu.load:\t%lf %lf %lf\n", sys->cpu->load[0],
+                                           sys->cpu->load[1],
+                                           sys->cpu->load[2]);
 
         get_cpu_usage(sys->cpu);
         printf("cpu.cpu_usage:\t%f\n", sys->cpu->cpu_usage);

@@ -9,7 +9,7 @@ struct cpu_info
 {
     int cores;
     char cpu[BUFSIZ];
-    float load[3];
+    double load[3];
     float cpu_usage;
     int fan;
     float temp;

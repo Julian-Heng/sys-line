@@ -42,7 +42,7 @@ bool __get_load(struct cpu_info* cpu)
 
     ret = ! sysctlbyname("vm.loadavg", &load, &len, NULL, 0);
     for (int i = 0; i < 3; i++)
-        cpu->load[i] = (float)load.ldavg[i] / load.fscale;
+        cpu->load[i] = load.ldavg[i] / load.fscale;
 
     return ret;
 }
