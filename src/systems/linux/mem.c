@@ -18,7 +18,7 @@ bool __get_mem_used(struct mem_info* mem)
     bool ret = false;
     long long used = 0;
 
-    FILE* fp;
+    FILE* fp = NULL;
 
     char buf[BUFSIZ];
     char tmp[BUFSIZ];
@@ -69,7 +69,7 @@ bool __get_mem_total(struct mem_info* mem)
     bool ret = false;
     long long total = 0;
 
-    FILE* fp;
+    FILE* fp = NULL;
 
     bool cond = false;
     char buf[BUFSIZ];

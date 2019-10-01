@@ -13,7 +13,7 @@
 bool __get_cores(struct cpu_info* cpu)
 {
     bool ret = false;
-    FILE* fp;
+    FILE* fp = NULL;
     char buf[BUFSIZ];
     regex_t re;
 
@@ -36,7 +36,7 @@ bool __get_cpu(struct cpu_info* cpu, float* speed)
 {
     bool ret = false;
 
-    FILE* fp;
+    FILE* fp = NULL;
     char buf[BUFSIZ];
 
     regex_t re;
@@ -99,7 +99,7 @@ bool __get_load(struct cpu_info* cpu)
 {
     bool ret = false;
 
-    FILE* fp;
+    FILE* fp = NULL;
     char buf[BUFSIZ];
 
     if ((ret = (fp = fopen("/proc/loadavg", "r")) &&
@@ -124,7 +124,7 @@ bool __get_fan(struct cpu_info* cpu)
     char* base = "/sys/devices/platform/";
     char* pattern = "fan1_input$";
 
-    FILE* fp;
+    FILE* fp = NULL;
     char buf[BUFSIZ];
 
     if (find(base, pattern, path, BUFSIZ) &&
@@ -157,7 +157,7 @@ bool __get_temp(struct cpu_info* cpu)
     int i = -1;
     bool cond = false;
 
-    FILE* fp;
+    FILE* fp = NULL;
     char buf[BUFSIZ];
 
     regex_t re;
@@ -230,7 +230,7 @@ bool __get_uptime(struct cpu_info* cpu)
 {
     bool ret = false;
 
-    FILE* fp;
+    FILE* fp = NULL;
     char buf[BUFSIZ];
 
     if ((ret = (fp = fopen("/proc/uptime", "r")) &&

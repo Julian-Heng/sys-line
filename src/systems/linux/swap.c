@@ -17,7 +17,7 @@ bool __get_swap_used(struct swap_info* swap)
     bool ret = false;
     long long free = 0;
 
-    FILE* fp;
+    FILE* fp = NULL;
 
     bool cond = false;
     char buf[BUFSIZ];
@@ -58,7 +58,7 @@ bool __get_swap_total(struct swap_info* swap)
     bool ret = false;
     long long total = 0;
 
-    FILE* fp;
+    FILE* fp = NULL;
 
     bool cond = false;
     char buf[BUFSIZ];

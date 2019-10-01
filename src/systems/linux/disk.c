@@ -34,7 +34,7 @@ bool __get_disk_name(struct disk_info* disk)
     bool ret = false;
     char uevent_path[BUFSIZ];
 
-    FILE* fp;
+    FILE* fp = NULL;
     char buf[BUFSIZ];
 
     regex_t re;
