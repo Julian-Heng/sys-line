@@ -40,9 +40,8 @@ bool __get_disk_name(struct disk_info* disk)
     regex_t re;
     regmatch_t group[2];
 
-    if (! strncmp(disk->dev, "", BUFSIZ))
-        if (! __get_disk_dev(disk))
-            return false;
+    if (! strncmp(disk->dev, "", BUFSIZ) && ! __get_disk_dev(disk))
+        return false;
 
     snprintf(uevent_path, BUFSIZ, "%s/uevent", get_sysfs_path(disk));
 
@@ -66,9 +65,8 @@ bool __get_disk_name(struct disk_info* disk)
 
 bool __get_disk_mount(struct disk_info* disk)
 {
-    if (! strncmp(disk->dev, "", BUFSIZ))
-        if (! __get_disk_dev(disk))
-            return false;
+    if (! strncmp(disk->dev, "", BUFSIZ) && ! __get_disk_dev(disk))
+        return false;
 
     return query_mntent(disk->dev, DIR, disk->mount, BUFSIZ);
 }
@@ -76,9 +74,8 @@ bool __get_disk_mount(struct disk_info* disk)
 
 bool __get_disk_part(struct disk_info* disk)
 {
-    if (! strncmp(disk->dev, "", BUFSIZ))
-        if (! __get_disk_dev(disk))
-            return false;
+    if (! strncmp(disk->dev, "", BUFSIZ) && ! __get_disk_dev(disk))
+        return false;
 
     return query_mntent(disk->dev, TYPE, disk->part, BUFSIZ);
 }
@@ -88,9 +85,8 @@ bool __get_disk_used(struct disk_info* disk)
 {
     struct statvfs fs;
 
-    if (! strncmp(disk->dev, "", BUFSIZ))
-        if (! __get_disk_dev(disk))
-            return false;
+    if (! strncmp(disk->dev, "", BUFSIZ) && ! __get_disk_dev(disk))
+        return false;
 
     fs = get_fs_stat(disk);
     disk->used = (fs.f_blocks - fs.f_bfree) * fs.f_frsize;
@@ -102,9 +98,8 @@ bool __get_disk_total(struct disk_info* disk)
 {
     struct statvfs fs;
 
-    if (! strncmp(disk->dev, "", BUFSIZ))
-        if (! __get_disk_dev(disk))
-            return false;
+    if (! strncmp(disk->dev, "", BUFSIZ) && ! __get_disk_dev(disk))
+        return false;
 
     fs = get_fs_stat(disk);
     disk->total = fs.f_blocks * fs.f_frsize;
