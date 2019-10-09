@@ -6,6 +6,7 @@ SRC = $(wildcard *.c) \
 	  $(wildcard systems/*.c) \
 	  $(wildcard systems/commons/*.c)
 UNAME_S = $(shell uname -s)
+BUILD = ./build
 
 ifeq ($(UNAME_S),Linux)
 	SRC += $(wildcard systems/linux/*.c)
@@ -24,8 +25,9 @@ OBJ = $(SRC:.c=.o)
 EXEC = sys-line
 
 $(EXEC): $(OBJ)
-	$(CC) $(INC) -o $@ $^
+	mkdir -p $(BUILD)
+	$(CC) $(INC) -o ./build/$@ $^
 
 .PHONY: clean
 clean:
-	$(RM) -v $(OBJ) $(EXEC)
+	$(RM) -v $(OBJ) $(BUILD)/$(EXEC)
