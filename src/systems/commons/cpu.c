@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "../../utils/tools.h"
+#include "../../utils/regtools.h"
 #include "cpu.h"
 
 

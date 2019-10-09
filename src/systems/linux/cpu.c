@@ -6,9 +6,11 @@
 
 #include "../../utils/macros.h"
 #include "../../utils/tools.h"
+#include "../../utils/regtools.h"
 #include "../commons/cpu.h"
 
 #include "cpu.h"
+
 
 bool __get_cores(struct cpu_info* cpu)
 {
