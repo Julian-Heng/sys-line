@@ -90,10 +90,10 @@ bool __get_mem_total(struct mem_info* mem)
                         group[1].rm_eo - group[1].rm_so);
 
         total = atoll(tmp) << 10;
-        regfree(&re);
     }
 
     _fclose(fp);
+    regfree(&re);
 
     if (ret)
         mem->total = total;

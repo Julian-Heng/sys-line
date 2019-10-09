@@ -25,11 +25,11 @@ bool __get_cores(struct cpu_info* cpu)
         while (fgets(buf, BUFSIZ, fp))
             if (! regexec(&re, buf, 0, NULL, 0))
                 (cpu->cores)++;
-
-        regfree(&re);
     }
 
     _fclose(fp);
+    regfree(&re);
+
     return ret;
 }
 
@@ -63,10 +63,10 @@ bool __get_cpu(struct cpu_info* cpu, float* speed)
                 strncpy(cpu->cpu, buf + group[1].rm_so,
                         group[1].rm_eo - group[1].rm_so);
 
-        regfree(&re);
     }
 
     _fclose(fp);
+    regfree(&re);
 
     if ((paths = find_all(base, target, BUFSIZ, &count)))
     {
@@ -177,8 +177,6 @@ bool __get_temp(struct cpu_info* cpu)
             }
         }
 
-        regfree(&re);
-
         if (cond)
         {
             path = (char*)malloc(BUFSIZ * sizeof(char));
@@ -211,11 +209,12 @@ bool __get_temp(struct cpu_info* cpu)
                 }
             }
 
-            _free(path);
         }
     }
 
     _fclose(fp);
+    regfree(&re);
+    _free(path);
 
     if (paths)
     {

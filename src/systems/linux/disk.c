@@ -53,11 +53,10 @@ bool __get_disk_name(struct disk_info* disk)
             if (! regexec(&re, buf, 2, group, 0))
                 strncpy(disk->name, buf + group[1].rm_so,
                                     group[1].rm_eo - group[1].rm_so);
-
-        regfree(&re);
     }
 
     _fclose(fp);
+    regfree(&re);
 
     return ret;
 }

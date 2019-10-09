@@ -41,10 +41,10 @@ bool __get_swap_used(struct swap_info* swap)
                         group[1].rm_eo - group[1].rm_so);
 
         free = atoll(tmp) << 10;
-        regfree(&re);
     }
 
     _fclose(fp);
+    regfree(&re);
 
     if (ret)
         swap->used = swap->total - free;
@@ -79,10 +79,10 @@ bool __get_swap_total(struct swap_info* swap)
                         group[1].rm_eo - group[1].rm_so);
 
         total = atoll(tmp) << 10;
-        regfree(&re);
     }
 
     _fclose(fp);
+    regfree(&re);
 
     if (ret)
         swap->total = total;
