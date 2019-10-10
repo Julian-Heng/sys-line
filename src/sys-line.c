@@ -121,16 +121,13 @@ void parse_args(int argc, char** argv, bool opts[5])
     {
         if (! strcmp(*argv, "-a") || ! strcmp(*argv, "--all"))
             opts[OPTION_ALL] = true;
-        else if (! strcmp(*argv, "cpu"))
+        else if (opts[OPTION_ALL] && ! strcmp(*argv, "cpu"))
             opts[DOMAIN_CPU] = true;
-        else if (! strcmp(*argv, "mem"))
+        else if (opts[OPTION_ALL] && ! strcmp(*argv, "mem"))
             opts[DOMAIN_MEM] = true;
-        else if (! strcmp(*argv, "swap"))
+        else if (opts[OPTION_ALL] && ! strcmp(*argv, "swap"))
             opts[DOMAIN_SWAP] = true;
-        else if (! strcmp(*argv, "disk"))
+        else if (opts[OPTION_ALL] && ! strcmp(*argv, "disk"))
             opts[DOMAIN_DISK] = true;
     } while (*++argv);
-
-    for (int i = 1; i < 5; i++)
-        opts[i] = opts[OPTION_ALL] || opts[i];
 }
