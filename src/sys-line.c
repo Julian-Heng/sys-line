@@ -95,7 +95,19 @@ int main(int argc, char** argv)
             printf("disk.percent:\t%f\n", sys->disk->percent);
         }
 
-        clear_system(sys);
+        free(sys->cpu);
+        sys->cpu = NULL;
+
+        free(sys->mem);
+        sys->mem = NULL;
+
+        free(sys->swap);
+        sys->swap = NULL;
+
+        free(sys->disk);
+        sys->disk = NULL;
+
+        free(sys);
         sys = NULL;
     }
 
