@@ -1,6 +1,12 @@
 #ifndef COMMONS_DISK_H
 #define COMMONS_DISK_H
 
+#if defined(__APPLE__) && defined(__MACH__)
+#   include <sys/mount.h>
+#   include <sys/param.h>
+#   include <sys/ucred.h>
+#endif
+
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -13,6 +19,11 @@ struct disk_info
     long long used;
     long long total;
     float percent;
+
+#if defined(__APPLE__) && defined(__MACH__)
+    struct statfs fs;
+    bool fs_set;
+#endif
 };
 
 
