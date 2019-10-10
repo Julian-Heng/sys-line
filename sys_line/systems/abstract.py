@@ -331,13 +331,30 @@ class AbstractDisk(AbstractStorage):
     def df_out(self):
         """ Return df output """
         df_out = None
+        df_line = None
         df_flags = self.DF_FLAGS
 
         if self.options.disk is None:
             df_flags.append(self.options.mount)
 
-        df_out = run(df_flags)
-        return df_out.strip().split("\n")[1].split() if df_out else None
+        df_out = run(df_flags).strip().split("\n")
+
+        if (len(df_out) <= 1):
+            df_out = run(df_flags[:-1]).split("\n")
+
+        if len(df_out) == 2:
+            df_line = df_out[1].split()
+        else:
+            if self.options.disk is not None:
+                reg = re.compile(self.options.disk)
+            else:
+                reg = re.compile("{}$".format(self.options.mount))
+
+            find_dev = (i.split() for i in df_out if i and reg.search(i))
+            fallback = (i.split() for i in df_out if i.endswith("/"))
+            df_line = next(find_dev, next(fallback, None))
+
+        return df_line
 
 
     @property

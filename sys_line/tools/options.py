@@ -94,7 +94,7 @@ def parse() -> argparse.Namespace:
 
 
     mut_group = groups["disk"].add_mutually_exclusive_group()
-    mut_group.add_argument("-dd", "--disk", action="store",
+    mut_group.add_argument("-dd", "--disk", action="store", default=None,
                            metavar="disk")
     mut_group.add_argument("-dm", "--mount", action="store", default="/",
                            metavar="mount")

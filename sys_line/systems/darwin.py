@@ -168,12 +168,13 @@ class Disk(AbstractDisk):
     @lru_cache(maxsize=1)
     def diskutil(self) -> Dict[str, str]:
         """ Returns diskutil program output as a dict """
+        check = lambda i: i and len(i.split(": ", 1)) == 2
         dev = self.dev
         _diskutil = None
         if dev is not None:
             _diskutil = run(["diskutil", "info", self.dev]).split("\n")
             _diskutil = (re.sub(r"\s+", " ", i).strip() for i in _diskutil)
-            _diskutil = dict(i.split(": ", 1) for i in _diskutil if i)
+            _diskutil = dict(i.split(": ", 1) for i in _diskutil if check(i))
 
         return _diskutil
 
