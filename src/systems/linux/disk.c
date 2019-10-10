@@ -20,7 +20,6 @@ static bool mount_to_device(char*, char*, int);
 //static bool device_to_mount(char*, char*, int);
 static bool query_mntent(char*, int, char*, int);
 static char* get_sysfs_path(struct disk_info*);
-static struct statvfs get_fs_stat(struct disk_info*);
 
 
 bool __get_disk_dev(struct disk_info* disk)
@@ -77,32 +76,6 @@ bool __get_disk_part(struct disk_info* disk)
         return false;
 
     return query_mntent(disk->dev, TYPE, disk->part, BUFSIZ);
-}
-
-
-bool __get_disk_used(struct disk_info* disk)
-{
-    struct statvfs fs;
-
-    if (! strncmp(disk->dev, "", BUFSIZ) && ! __get_disk_dev(disk))
-        return false;
-
-    fs = get_fs_stat(disk);
-    disk->used = (fs.f_blocks - fs.f_bfree) * fs.f_frsize;
-    return true;
-}
-
-
-bool __get_disk_total(struct disk_info* disk)
-{
-    struct statvfs fs;
-
-    if (! strncmp(disk->dev, "", BUFSIZ) && ! __get_disk_dev(disk))
-        return false;
-
-    fs = get_fs_stat(disk);
-    disk->total = fs.f_blocks * fs.f_frsize;
-    return true;
 }
 
 
@@ -213,21 +186,6 @@ static char* get_sysfs_path(struct disk_info* disk)
     }
 
     return path;
-}
-
-
-static struct statvfs get_fs_stat(struct disk_info* disk)
-{
-    static struct statvfs fs_stat;
-    static bool is_set = false;
-
-    if (! is_set)
-    {
-        statvfs(disk->mount, &fs_stat);
-        is_set = true;
-    }
-
-    return fs_stat;
 }
 
 #endif

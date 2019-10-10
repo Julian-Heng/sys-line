@@ -21,8 +21,6 @@ bool __get_disk_dev(struct disk_info*);
 bool __get_disk_name(struct disk_info*);
 bool __get_disk_mount(struct disk_info*);
 bool __get_disk_part(struct disk_info*);
-bool __get_disk_used(struct disk_info*);
-bool __get_disk_total(struct disk_info*);
 
 #endif
 #endif
