@@ -1,11 +1,14 @@
 #if defined(__linux__)
 #   include "../linux/disk.h"
+#elif defined(__APPLE__) && defined(__MACH__)
+#   include "../darwin/disk.h"
 #endif
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/statvfs.h>
 
 #include "../../utils/macros.h"
 
@@ -75,23 +78,27 @@ bool get_disk_part(struct disk_info* disk)
 
 bool get_disk_used(struct disk_info* disk)
 {
-    bool ret = false;
+    if (! strncmp(disk->mount, "", BUFSIZ) && ! __get_disk_mount(disk))
+        return false;
 
-    if (! (ret = __get_disk_used(disk)))
-        disk->used = 0;
+    struct statvfs fs;
+    statvfs(disk->mount, &fs);
+    disk->used = (fs.f_blocks - fs.f_bfree) * fs.f_frsize;
 
-    return ret;
+    return true;
 }
 
 
 bool get_disk_total(struct disk_info* disk)
 {
-    bool ret = false;
+    if (! strncmp(disk->mount, "", BUFSIZ) && ! __get_disk_mount(disk))
+        return false;
 
-    if (! (ret = __get_disk_total(disk)))
-        disk->total = 0;
+    struct statvfs fs;
+    statvfs(disk->mount, &fs);
+    disk->total = fs.f_blocks * fs.f_frsize;
 
-    return ret;
+    return true;
 }
 
 
