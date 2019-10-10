@@ -130,4 +130,15 @@ void parse_args(int argc, char** argv, bool opts[5])
         else if (opts[OPTION_ALL] && ! strcmp(*argv, "disk"))
             opts[DOMAIN_DISK] = true;
     } while (*++argv);
+
+    if (opts[OPTION_ALL])
+    {
+        bool check_all = opts[OPTION_ALL];
+        for (int i = 1; i < 5 && check_all; i++)
+            check_all = check_all && ! opts[i];
+
+        if (check_all)
+            for (int i = 1; i < 5 && check_all; i++)
+                opts[i] = true;
+    }
 }
