@@ -335,10 +335,12 @@ class Misc(AbstractMisc):
 
     @property
     def scr(self) -> [float, int]:
-        scr = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
-        scr = next((i for i in scr if "IODisplayParameters" in i), None)
-        if scr is not None:
-            scr = re.search(r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)", scr)
+        scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
+        scr_out = next((i for i in scr_out if "IODisplayParameters" in i), None)
+        if scr_out is not None:
+            scr = re.search(r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)", scr_out)
+            if (int(scr.group(1)) == 0):
+                scr = re.search(r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)", scr_out)
             scr = percent(int(scr.group(2)), int(scr.group(1)))
             scr = _round(scr, self.options.misc_screen_round)
 
