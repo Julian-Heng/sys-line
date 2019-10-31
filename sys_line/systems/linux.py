@@ -384,7 +384,7 @@ class BatteryWatt(Battery):
 
 
 class BatteryStub(AbstractBattery):
-    """ Sub-Battery class for systems has no battery """
+    """ Sub-Battery class for systems that has no battery """
 
     @property
     def is_present(self) -> bool:
