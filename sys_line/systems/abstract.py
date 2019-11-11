@@ -11,6 +11,7 @@
 
 import re
 import time
+import typing
 
 from abc import ABC, abstractmethod
 from argparse import Namespace
@@ -18,7 +19,7 @@ from datetime import datetime
 from functools import lru_cache
 from sys import version_info
 from types import SimpleNamespace
-from typing import List
+#from typing import typing.List
 
 from ..tools.storage import Storage
 from ..tools.utils import percent, run, unix_epoch_to_str, _round
@@ -57,102 +58,8 @@ class AbstractGetter(ABC):
 
     @property
     @abstractmethod
-    def __info(self) -> List[str]:
+    def __info(self) -> typing.List[str]:
         """ Returns list of info in getter """
-
-
-class System(ABC):
-    """
-    Abstract System class to store all the assigned getters from the sub class
-    that implements this class
-    """
-
-    DOMAINS = ("cpu", "memory", "swap", "disk",
-               "battery", "network", "date", "misc")
-    SHORT_DOMAINS = ("cpu", "mem", "swap", "disk",
-                     "bat", "net", "date", "misc")
-
-    def __init__(self,
-                 options: Namespace,
-                 aux: SimpleNamespace = None,
-                 cpu: AbstractGetter = None,
-                 mem: AbstractGetter = None,
-                 swap: AbstractGetter = None,
-                 disk: AbstractGetter = None,
-                 bat: AbstractGetter = None,
-                 net: AbstractGetter = None,
-                 misc: AbstractGetter = None) -> None:
-        super(System, self).__init__()
-
-        self.options = options
-        self.aux = aux
-
-        self.__getters = {
-            "cpu": cpu,
-            "mem": mem,
-            "swap": swap,
-            "disk": disk,
-            "bat": bat,
-            "net": net,
-            "date": Date,
-            "misc": misc
-        }
-
-
-    @property
-    @lru_cache(maxsize=1)
-    def cpu(self) -> AbstractGetter:
-        """ Return an instance of AbstractCpu """
-        return self.__getters["cpu"]("cpu", self.options, self.aux)
-
-
-    @property
-    @lru_cache(maxsize=1)
-    def mem(self) -> AbstractGetter:
-        """ Return an instance of AbstractMemory """
-        return self.__getters["mem"]("mem", self.options, self.aux)
-
-
-    @property
-    @lru_cache(maxsize=1)
-    def swap(self) -> AbstractGetter:
-        """ Return an instance of AbstractSwap """
-        return self.__getters["swap"]("swap", self.options, self.aux)
-
-
-    @property
-    @lru_cache(maxsize=1)
-    def disk(self) -> AbstractGetter:
-        """ Return an instance of AbstractDisk """
-        return self.__getters["disk"]("disk", self.options, self.aux)
-
-
-    @property
-    @lru_cache(maxsize=1)
-    def bat(self) -> AbstractGetter:
-        """ Return an instance of AbstractBattery """
-        return self.__getters["bat"]("bat", self.options, self.aux)
-
-
-    @property
-    @lru_cache(maxsize=1)
-    def net(self) -> AbstractGetter:
-        """ Return an instance of AbstractNetwork """
-        return self.__getters["net"]("net", self.options, self.aux)
-
-
-    @property
-    @lru_cache(maxsize=1)
-    def date(self) -> AbstractGetter:
-        """ Return an instance of Date """
-        return self.__getters["date"]("date", self.options, self.aux)
-
-
-    @property
-    @lru_cache(maxsize=1)
-    def misc(self) -> AbstractGetter:
-        """ Return an instance of AbstractMisc """
-        return self.__getters["misc"]("misc", self.options, self.aux)
 
 
 class AbstractStorage(AbstractGetter):
@@ -170,7 +77,7 @@ class AbstractStorage(AbstractGetter):
 
 
     @property
-    def _AbstractGetter__info(self) -> List[str]:
+    def _AbstractGetter__info(self) -> typing.List[str]:
         return ["used", "total", "percent"]
 
 
@@ -187,7 +94,7 @@ class AbstractStorage(AbstractGetter):
 
 
     @property
-    def percent(self) -> [float, int]:
+    def percent(self) -> typing.Union[float, int]:
         """ Abstract percent property """
         perc = percent(self.used, self.total)
 
@@ -203,7 +110,7 @@ class AbstractCpu(AbstractGetter):
     """ Abstract cpu class to be implemented by subclass """
 
     @property
-    def _AbstractGetter__info(self) -> List[str]:
+    def _AbstractGetter__info(self) -> typing.List[str]:
         return ["cores", "cpu", "load_avg",
                 "cpu_usage", "fan", "temp", "uptime"]
 
@@ -215,7 +122,7 @@ class AbstractCpu(AbstractGetter):
 
 
     @abstractmethod
-    def __cpu_speed(self) -> (str, [float, int]):
+    def __cpu_speed(self) -> typing.Union[str, typing.Union[float, int]]:
         """
         Private abstract cpu and speed method to be implemented by subclass
         """
@@ -250,7 +157,7 @@ class AbstractCpu(AbstractGetter):
 
 
     @property
-    def cpu_usage(self) -> [float, int]:
+    def cpu_usage(self) -> typing.Union[float, int]:
         """ Cpu usage method """
         cores = self.cores
         ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
@@ -266,7 +173,7 @@ class AbstractCpu(AbstractGetter):
 
     @property
     @abstractmethod
-    def temp(self) -> [float, int]:
+    def temp(self) -> typing.Union[float, int]:
         """ Abstract temperature method to be implemented by subclass """
 
 
@@ -322,7 +229,7 @@ class AbstractDisk(AbstractStorage):
 
 
     @property
-    def __info(self) -> List[str]:
+    def __info(self) -> typing.List[str]:
         return ["dev", "mount", "name", "partition"]
 
 
@@ -413,7 +320,7 @@ class AbstractBattery(AbstractGetter):
     """ Abstract battery class to be implemented by subclass """
 
     @property
-    def _AbstractGetter__info(self) -> List[str]:
+    def _AbstractGetter__info(self) -> typing.List[str]:
         return ["is_present", "is_charging", "is_full", "percent",
                 "time", "power"]
 
@@ -468,7 +375,7 @@ class AbstractNetwork(AbstractGetter):
     """ Abstract network class to be implemented by subclass """
 
     @property
-    def _AbstractGetter__info(self) -> List[str]:
+    def _AbstractGetter__info(self) -> typing.List[str]:
         return ["dev", "ssid", "local_ip", "download", "upload"]
 
 
@@ -481,7 +388,7 @@ class AbstractNetwork(AbstractGetter):
 
     @property
     @abstractmethod
-    def __ssid(self) -> (List[str], RE_COMPILE):
+    def __ssid(self) -> typing.Tuple[typing.List[str], RE_COMPILE]:
         """ Abstract ssid resource method to be implemented by subclass """
 
 
@@ -566,7 +473,7 @@ class Date(AbstractGetter):
     """ Date class to fetch date and time """
 
     @property
-    def _AbstractGetter__info(self) -> List[str]:
+    def _AbstractGetter__info(self) -> typing.List[str]:
         return ["date", "time"]
 
 
@@ -597,17 +504,111 @@ class AbstractMisc(AbstractGetter):
     """ Misc class for fetching miscellaneous information """
 
     @property
-    def _AbstractGetter__info(self) -> List[str]:
+    def _AbstractGetter__info(self) -> typing.List[str]:
         return ["vol", "scr"]
 
 
     @property
     @abstractmethod
-    def vol(self) -> [float, int]:
+    def vol(self) -> typing.Union[float, int]:
         """ Abstract volume method to be implemented by subclass """
 
 
     @property
     @abstractmethod
-    def scr(self) -> [float, int]:
+    def scr(self) -> typing.Union[float, int]:
         """ Abstract screen brightness method to be implemented by subclass """
+
+
+class System(ABC):
+    """
+    Abstract System class to store all the assigned getters from the sub class
+    that implements this class
+    """
+
+    DOMAINS = ("cpu", "memory", "swap", "disk",
+               "battery", "network", "date", "misc")
+    SHORT_DOMAINS = ("cpu", "mem", "swap", "disk",
+                     "bat", "net", "date", "misc")
+
+    def __init__(self,
+                 options: Namespace,
+                 aux: SimpleNamespace = None,
+                 cpu: AbstractGetter = None,
+                 mem: AbstractGetter = None,
+                 swap: AbstractGetter = None,
+                 disk: AbstractGetter = None,
+                 bat: AbstractGetter = None,
+                 net: AbstractGetter = None,
+                 misc: AbstractGetter = None) -> None:
+        super(System, self).__init__()
+
+        self.options = options
+        self.aux = aux
+
+        self.__getters = {
+            "cpu": cpu,
+            "mem": mem,
+            "swap": swap,
+            "disk": disk,
+            "bat": bat,
+            "net": net,
+            "date": Date,
+            "misc": misc
+        }
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def cpu(self) -> AbstractCpu:
+        """ Return an instance of AbstractCpu """
+        return self.__getters["cpu"]("cpu", self.options, self.aux)
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def mem(self) -> AbstractMemory:
+        """ Return an instance of AbstractMemory """
+        return self.__getters["mem"]("mem", self.options, self.aux)
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def swap(self) -> AbstractSwap:
+        """ Return an instance of AbstractSwap """
+        return self.__getters["swap"]("swap", self.options, self.aux)
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def disk(self) -> AbstractDisk:
+        """ Return an instance of AbstractDisk """
+        return self.__getters["disk"]("disk", self.options, self.aux)
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def bat(self) -> AbstractBattery:
+        """ Return an instance of AbstractBattery """
+        return self.__getters["bat"]("bat", self.options, self.aux)
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def net(self) -> AbstractNetwork:
+        """ Return an instance of AbstractNetwork """
+        return self.__getters["net"]("net", self.options, self.aux)
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def date(self) -> Date:
+        """ Return an instance of Date """
+        return self.__getters["date"]("date", self.options, self.aux)
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def misc(self) -> AbstractMisc:
+        """ Return an instance of AbstractMisc """
+        return self.__getters["misc"]("misc", self.options, self.aux)

@@ -8,11 +8,12 @@
 
 import re
 import time
+import typing
 
 from argparse import Namespace
 from functools import lru_cache
 from types import SimpleNamespace
-from typing import Dict, List
+#from typing import typing.Dict, typing.List
 
 from .abstract import (RE_COMPILE,
                        System,
@@ -28,21 +29,6 @@ from ..tools.sysctl import Sysctl
 from ..tools.utils import run, _round
 
 
-class FreeBSD(System):
-    """ A FreeBSD implementation of the abstract System class """
-
-    def __init__(self, options: Namespace) -> None:
-        super(FreeBSD, self).__init__(options,
-                                      aux=SimpleNamespace(sysctl=Sysctl()),
-                                      cpu=Cpu,
-                                      mem=Memory,
-                                      swap=Swap,
-                                      disk=Disk,
-                                      bat=Battery,
-                                      net=Network,
-                                      misc=Misc)
-
-
 class Cpu(AbstractCpu):
     """ FreeBSD implementation of AbstractCpu class """
 
@@ -52,7 +38,8 @@ class Cpu(AbstractCpu):
         return int(self.aux.sysctl.query("hw.ncpu"))
 
 
-    def _AbstractCpu__cpu_speed(self) -> (str, [float, int]):
+    def _AbstractCpu__cpu_speed(self) -> (
+            typing.Tuple[str, typing.Union[float, int]]):
         cpu = self.aux.sysctl.query("hw.model")
         speed = self.aux.sysctl.query("hw.cpuspeed")
         if speed is None:
@@ -164,7 +151,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def bat(self) -> Dict[str, str]:
+    def bat(self) -> typing.Dict[str, str]:
         """ Returns battery info from acpiconf as dict """
         _bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
         _bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in _bat]
@@ -230,7 +217,8 @@ class Network(AbstractNetwork):
 
 
     @property
-    def _AbstractNetwork__ssid(self) -> (List[str], RE_COMPILE):
+    def _AbstractNetwork__ssid(self) -> (
+            typing.Union[typing.List[str], RE_COMPILE]):
         ssid_reg = re.compile(r"ssid (.*) channel")
         ssid_exe = ["ifconfig", self.dev]
         return ssid_exe, ssid_reg
@@ -246,12 +234,27 @@ class Misc(AbstractMisc):
     """ FreeBSD implementation of AbstractMisc class """
 
     @property
-    def vol(self) -> [float, int]:
+    def vol(self) -> typing.Union[float, int]:
         """ Stub """
         return None
 
 
     @property
-    def scr(self) -> [float, int]:
+    def scr(self) -> typing.Union[float, int]:
         """ Stub """
         return None
+
+
+class FreeBSD(System):
+    """ A FreeBSD implementation of the abstract System class """
+
+    def __init__(self, options: Namespace) -> None:
+        super(FreeBSD, self).__init__(options,
+                                      aux=SimpleNamespace(sysctl=Sysctl()),
+                                      cpu=Cpu,
+                                      mem=Memory,
+                                      swap=Swap,
+                                      disk=Disk,
+                                      bat=Battery,
+                                      net=Network,
+                                      misc=Misc)

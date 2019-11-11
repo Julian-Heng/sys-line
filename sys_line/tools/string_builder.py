@@ -4,7 +4,7 @@
 """ String builder module to construct a string from a format """
 
 import re
-from typing import List
+import typing
 
 from ..systems.abstract import System
 
@@ -50,7 +50,7 @@ class StringBuilder():
         return out
 
 
-def tokenize(string: str) -> List[str]:
+def tokenize(string: str) -> typing.List[str]:
     """
     Find tokens within a string
     Returns a string list

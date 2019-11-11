@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=pointless-string-statement,cyclic-import
+# pylint: disable=pointless-string-statement,cyclic-import,invalid-name
 
 """ Utility module to provide common functions """
 
@@ -7,42 +7,37 @@ import os
 import re
 import subprocess
 import sys
+import typing
 
-from typing import List
+from pathlib import Path
 
 from .storage import Storage
 
 
-def percent(num_1: [int, float, Storage],
-            num_2: [int, float, Storage]) -> [float, Storage]:
+def percent(num_1: typing.Union[int, float, Storage],
+            num_2: typing.Union[int, float, Storage]) -> (
+                typing.Union[float, Storage]):
     """ Returns percent of 2 numbers """
     return (num_1 / num_2) * 100 if num_2 else None
 
 
-"""
-Pathlib for python <= 3.5 can't open properly when passed to open(). So an edge
-case is required to convert the pathlib object to string
-"""
-if sys.version_info[1] <= 5:
-    def open_read(filename: str) -> List[str]:
-        """ Wrapper for opening and reading a file """
-        with open(str(filename)) as _file:
-            contents = _file.read()
-        return contents
-else:
-    def open_read(filename: str) -> List[str]:
-        """ Wrapper for opening and reading a file """
-        with open(filename) as _file:
-            contents = _file.read()
-        return contents
+def open_read(filename: typing.Union[Path, str]) -> typing.List[str]:
+    """
+    Wrapper for opening and reading a file
+
+    Pathlib for python <= 3.5 can't open properly when passed to open(). So an
+    edge case is required to convert the pathlib object to string
+    """
+    with open(str(filename) if sys.version_info[1] <= 5 else filename) as f:
+        return f.read()
 
 
-def run(cmd: List[str]) -> str:
+def run(cmd: typing.List[str]) -> str:
     """ Runs cmd and returns output as a string """
     stdout = subprocess.PIPE
     stderr = open(os.devnull, "w")
-    return (subprocess.run(cmd, stdout=stdout, stderr=stderr)
-            .stdout.decode("utf-8"))
+    process = subprocess.run(cmd, stdout=stdout, stderr=stderr)
+    return process.stdout.decode("utf-8")
 
 
 def unix_epoch_to_str(secs: int) -> str:
@@ -62,7 +57,7 @@ def unix_epoch_to_str(secs: int) -> str:
     return _str if _str else None
 
 
-def _round(num: float, rnd: int) -> [int, float]:
+def _round(num: float, rnd: int) -> typing.Union[int, float]:
     """ Wrapper for round method to trim whole float numbers """
     ret = round(num, rnd)
     return int(ret) if rnd == 0 or ret == int(num) else ret

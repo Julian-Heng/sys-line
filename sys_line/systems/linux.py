@@ -8,11 +8,11 @@
 
 import re
 import shutil
+import typing
 
 from argparse import Namespace
 from functools import lru_cache
 from pathlib import Path as p
-from typing import Dict, List
 
 from .abstract import (RE_COMPILE,
                        System,
@@ -25,21 +25,6 @@ from .abstract import (RE_COMPILE,
                        AbstractMisc)
 from ..tools.storage import Storage
 from ..tools.utils import open_read, run, percent, _round
-
-
-class Linux(System):
-    """ A Linux implementation of the abstract System class """
-
-    def __init__(self, options: Namespace) -> None:
-        super(Linux, self).__init__(options,
-                                    aux=None,
-                                    cpu=Cpu,
-                                    mem=Memory,
-                                    swap=Swap,
-                                    disk=Disk,
-                                    bat=detect_battery(),
-                                    net=Network,
-                                    misc=Misc)
 
 
 class Cpu(AbstractCpu):
@@ -58,15 +43,15 @@ class Cpu(AbstractCpu):
         return len(re.findall(r"^processor", self.cpu_file, re.M))
 
 
-    def _AbstractCpu__cpu_speed(self) -> (str, [float, int]):
+    def _AbstractCpu__cpu_speed(self) -> (
+            typing.Tuple[str, typing.Union[float, int]]):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
         check = lambda f: speed_reg.search(str(f))
         speed_dir = "/sys/devices/system/cpu"
-        speed_files = (f for f in p(speed_dir).rglob("*") if check(f))
+        speed = next((f for f in p(speed_dir).rglob("*") if check(f)), None)
 
-        speed = next(speed_files, None)
         if speed is not None:
             speed = float(open_read(speed))
             speed = _round(speed / 1e6, 2)
@@ -116,7 +101,7 @@ class Cpu(AbstractCpu):
 
 
 @lru_cache(maxsize=1)
-def mem_file() -> Dict[str, str]:
+def mem_file() -> typing.Dict[str, str]:
     """ Returns cached /proc/meminfo """
     reg = re.compile(r"\s+|kB")
     _mem_file = open_read("/proc/meminfo").strip().split("\n")
@@ -290,7 +275,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def percent(self) -> [float, int]:
+    def percent(self) -> typing.Union[float, int]:
         perc = None
         if bat_dir() is not None:
             current_charge = self.current_charge
@@ -344,7 +329,7 @@ class BatteryAmp(Battery):
 
 
     @property
-    def power(self) -> [float, int]:
+    def power(self) -> typing.Union[float, int]:
         power = None
         if bat_dir() is not None:
             voltage = int(open_read("{}/voltage_now".format(bat_dir())))
@@ -379,7 +364,7 @@ class BatteryWatt(Battery):
 
 
     @property
-    def power(self) -> [float, int]:
+    def power(self) -> typing.Union[float, int]:
         return _round(self.drain_rate / 1e6, self.options.bat_power_round)
 
 
@@ -429,7 +414,8 @@ class Network(AbstractNetwork):
 
 
     @property
-    def _AbstractNetwork__ssid(self) -> (List[str], RE_COMPILE):
+    def _AbstractNetwork__ssid(self) -> (
+            typing.Union[typing.List[str], RE_COMPILE]):
         ssid_exe = None
         regex = None
         dev = self.dev
@@ -458,13 +444,11 @@ class Misc(AbstractMisc):
     """ A Linux implementation of the AbstractMisc class """
 
     @property
-    def vol(self) -> [float, int]:
+    def vol(self) -> typing.Union[float, int]:
         check = lambda d: d.is_dir() and d.name.isdigit()
         extract = lambda f: open_read("{}/cmdline".format(f))
 
-        systems = {
-            "pulseaudio": get_vol_pulseaudio
-        }
+        systems = {"pulseaudio": get_vol_pulseaudio}
 
         reg = re.compile(r"|".join(systems.keys()))
 
@@ -484,7 +468,7 @@ class Misc(AbstractMisc):
 
 
     @property
-    def scr(self) -> [float, int]:
+    def scr(self) -> typing.Union[float, int]:
         check = lambda f: "kbd" not in f and "backlight" in f
 
         scr = None
@@ -500,7 +484,7 @@ class Misc(AbstractMisc):
         return scr
 
 
-def get_vol_pulseaudio() -> [float, int]:
+def get_vol_pulseaudio() -> typing.Union[float, int]:
     """ Return system volume using pulse audio """
     default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
     pac_dump = run(["pacmd", "dump"])
@@ -515,3 +499,18 @@ def get_vol_pulseaudio() -> [float, int]:
             vol = percent(int(vol.group(1), 16), 0x10000)
 
     return vol
+
+
+class Linux(System):
+    """ A Linux implementation of the abstract System class """
+
+    def __init__(self, options: Namespace) -> None:
+        super(Linux, self).__init__(options,
+                                    aux=None,
+                                    cpu=Cpu,
+                                    mem=Memory,
+                                    swap=Swap,
+                                    disk=Disk,
+                                    bat=detect_battery(),
+                                    net=Network,
+                                    misc=Misc)

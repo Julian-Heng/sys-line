@@ -9,11 +9,11 @@
 import re
 import shutil
 import time
+import typing
 
 from argparse import Namespace
 from functools import lru_cache
 from types import SimpleNamespace
-from typing import Dict, List
 
 from .abstract import (RE_COMPILE,
                        System,
@@ -29,21 +29,6 @@ from ..tools.sysctl import Sysctl
 from ..tools.utils import percent, run, _round
 
 
-class Darwin(System):
-    """ A Darwin implementation of the abstract System class """
-
-    def __init__(self, options: Namespace) -> None:
-        super(Darwin, self).__init__(options,
-                                     aux=SimpleNamespace(sysctl=Sysctl()),
-                                     cpu=Cpu,
-                                     mem=Memory,
-                                     swap=Swap,
-                                     disk=Disk,
-                                     bat=Battery,
-                                     net=Network,
-                                     misc=Misc)
-
-
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
 
@@ -53,7 +38,8 @@ class Cpu(AbstractCpu):
         return int(self.aux.sysctl.query("hw.logicalcpu_max"))
 
 
-    def _AbstractCpu__cpu_speed(self) -> (str, [float, int]):
+    def _AbstractCpu__cpu_speed(self) -> (
+            typing.Tuple[str, typing.Union[float, int]]):
         return self.aux.sysctl.query("machdep.cpu.brand_string"), None
 
 
@@ -75,7 +61,7 @@ class Cpu(AbstractCpu):
 
 
     @property
-    def temp(self) -> [float, int]:
+    def temp(self) -> typing.Union[float, int]:
         temp = None
         if shutil.which("osx-cpu-temp"):
             regex = r"CPU: ((\d+\.)?\d+)"
@@ -166,7 +152,7 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def diskutil(self) -> Dict[str, str]:
+    def diskutil(self) -> typing.Dict[str, str]:
         """ Returns diskutil program output as a dict """
         check = lambda i: i and len(i.split(": ", 1)) == 2
         dev = self.dev
@@ -201,7 +187,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def bat(self) -> Dict[str, str]:
+    def bat(self) -> typing.Dict[str, str]:
         """ Returns battery info from ioreg as a dict """
         _bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
         _bat = (re.sub("[\"{}]", "", i.strip()) for i in _bat)
@@ -247,7 +233,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def percent(self) -> [float, int]:
+    def percent(self) -> typing.Union[float, int]:
         perc = None
 
         if self.is_present:
@@ -271,7 +257,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def power(self) -> [float, int]:
+    def power(self) -> typing.Union[float, int]:
         power = None
 
         if self.is_present:
@@ -302,7 +288,8 @@ class Network(AbstractNetwork):
 
 
     @property
-    def _AbstractNetwork__ssid(self) -> (List[str], RE_COMPILE):
+    def _AbstractNetwork__ssid(self) -> (
+            tpying.Tuple[typing.List[str], RE_COMPILE]):
         ssid_exe_path = ["System", "Library", "PrivateFrameworks",
                          "Apple80211.framework", "Versions", "Current",
                          "Resources", "airport"]
@@ -319,14 +306,14 @@ class Network(AbstractNetwork):
         reg = re.compile(reg)
         match = (reg.match(line) for line in run(cmd).split("\n"))
 
-        return int(next((i.group(3) for i in match if i), 0))
+        return next((int(i.group(3)) for i in match if i), 0)
 
 
 class Misc(AbstractMisc):
     """ Darwin implementation of AbstractMisc class """
 
     @property
-    def vol(self) -> [float, int]:
+    def vol(self) -> typing.Union[float, int]:
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
@@ -334,14 +321,31 @@ class Misc(AbstractMisc):
 
 
     @property
-    def scr(self) -> [float, int]:
+    def scr(self) -> typing.Union[float, int]:
         scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
         scr_out = next((i for i in scr_out if "IODisplayParameters" in i), None)
         if scr_out is not None:
-            scr = re.search(r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)", scr_out)
+            reg = r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)"
+            scr = re.search(reg, scr_out)
             if (int(scr.group(1)) == 0):
-                scr = re.search(r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)", scr_out)
+                reg = r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)"
+                scr = re.search(reg, scr_out)
             scr = percent(int(scr.group(2)), int(scr.group(1)))
             scr = _round(scr, self.options.misc_screen_round)
 
         return scr
+
+
+class Darwin(System):
+    """ A Darwin implementation of the abstract System class """
+
+    def __init__(self, options: Namespace) -> None:
+        super(Darwin, self).__init__(options,
+                                     aux=SimpleNamespace(sysctl=Sysctl()),
+                                     cpu=Cpu,
+                                     mem=Memory,
+                                     swap=Swap,
+                                     disk=Disk,
+                                     bat=Battery,
+                                     net=Network,
+                                     misc=Misc)
