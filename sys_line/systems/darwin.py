@@ -289,7 +289,7 @@ class Network(AbstractNetwork):
 
     @property
     def _AbstractNetwork__ssid(self) -> (
-            tpying.Tuple[typing.List[str], RE_COMPILE]):
+            typing.Tuple[typing.List[str], RE_COMPILE]):
         ssid_exe_path = ["System", "Library", "PrivateFrameworks",
                          "Apple80211.framework", "Versions", "Current",
                          "Resources", "airport"]
