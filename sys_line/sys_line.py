@@ -19,9 +19,9 @@ def init_system(options: Namespace) -> System:
     os_name = os.uname().sysname
 
     # Module system files format is the output of "uname -s" in lowercase
-    mod = ".systems.{}".format(os_name.lower())
+    mod_name = ".systems.{}".format(os_name.lower())
     try:
-        mod = import_module(mod, package=__name__.split(".")[0])
+        mod = import_module(mod_name, package=__name__.split(".")[0])
 
         # Instantiate system
         system = getattr(mod, os_name)(options)

@@ -11,7 +11,7 @@
 
 import re
 import time
-import typing
+#import typing
 
 from abc import ABC, abstractmethod
 from argparse import Namespace
@@ -19,17 +19,10 @@ from datetime import datetime
 from functools import lru_cache
 from sys import version_info
 from types import SimpleNamespace
-#from typing import typing.List
+from typing import Any, Generator, List, Match, Optional, Pattern, Tuple, Union
 
 from ..tools.storage import Storage
 from ..tools.utils import percent, run, unix_epoch_to_str, _round
-
-
-""" Python 3.6 and lower does not have re.Pattern class """
-if version_info[0] == 3 and version_info[1] <= 6:
-    RE_COMPILE = type(re.compile(""))
-else:
-    RE_COMPILE = re.Pattern
 
 
 class AbstractGetter(ABC):
@@ -58,7 +51,7 @@ class AbstractGetter(ABC):
 
     @property
     @abstractmethod
-    def __info(self) -> typing.List[str]:
+    def __info(self) -> List[str]:
         """ Returns list of info in getter """
 
 
@@ -77,7 +70,7 @@ class AbstractStorage(AbstractGetter):
 
 
     @property
-    def _AbstractGetter__info(self) -> typing.List[str]:
+    def _AbstractGetter__info(self) -> List[str]:
         return ["used", "total", "percent"]
 
 
@@ -94,15 +87,10 @@ class AbstractStorage(AbstractGetter):
 
 
     @property
-    def percent(self) -> typing.Union[float, int]:
+    def percent(self) -> Union[float, int]:
         """ Abstract percent property """
-        perc = percent(self.used, self.total)
-
-        if perc is not None:
-            # Extract value if it's a Storage class
-            perc = perc.value if isinstance(perc, Storage) else perc
-            perc = _round(perc, self.rounding)
-
+        perc = percent(self.used.value, self.total.value)
+        perc = 0.0 if perc is None else _round(perc, self.rounding)
         return perc
 
 
@@ -110,7 +98,7 @@ class AbstractCpu(AbstractGetter):
     """ Abstract cpu class to be implemented by subclass """
 
     @property
-    def _AbstractGetter__info(self) -> typing.List[str]:
+    def _AbstractGetter__info(self) -> List[str]:
         return ["cores", "cpu", "load_avg",
                 "cpu_usage", "fan", "temp", "uptime"]
 
@@ -122,7 +110,7 @@ class AbstractCpu(AbstractGetter):
 
 
     @abstractmethod
-    def __cpu_speed(self) -> typing.Union[str, typing.Union[float, int]]:
+    def __cpu_speed(self) -> Tuple[str, Union[float, int]]:
         """
         Private abstract cpu and speed method to be implemented by subclass
         """
@@ -157,7 +145,7 @@ class AbstractCpu(AbstractGetter):
 
 
     @property
-    def cpu_usage(self) -> typing.Union[float, int]:
+    def cpu_usage(self) -> Union[float, int]:
         """ Cpu usage method """
         cores = self.cores
         ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
@@ -173,7 +161,7 @@ class AbstractCpu(AbstractGetter):
 
     @property
     @abstractmethod
-    def temp(self) -> typing.Union[float, int]:
+    def temp(self) -> Union[float, int]:
         """ Abstract temperature method to be implemented by subclass """
 
 
@@ -229,36 +217,36 @@ class AbstractDisk(AbstractStorage):
 
 
     @property
-    def __info(self) -> typing.List[str]:
+    def __info(self) -> List[str]:
         return ["dev", "mount", "name", "partition"]
 
 
     @property
     @lru_cache(maxsize=1)
-    def df_out(self):
+    def df_out(self) -> str:
         """ Return df output """
-        df_out = None
+        df_output = None
         df_line = None
         df_flags = self.DF_FLAGS
 
         if self.options.disk is None:
             df_flags.append(self.options.mount)
 
-        df_out = run(df_flags).strip().split("\n")
+        df_output = run(df_flags).strip().split("\n")
 
-        if (len(df_out) <= 1):
-            df_out = run(df_flags[:-1]).split("\n")
+        if (len(df_output) <= 1):
+            df_output = run(df_flags[:-1]).split("\n")
 
-        if len(df_out) == 2:
-            df_line = df_out[1].split()
+        if len(df_output) == 2:
+            df_line = df_output[1].split()
         else:
             if self.options.disk is not None:
                 reg = re.compile(self.options.disk)
             else:
                 reg = re.compile("{}$".format(self.options.mount))
 
-            find_dev = (i.split() for i in df_out if i and reg.search(i))
-            fallback = (i.split() for i in df_out if i.endswith("/"))
+            find_dev = (i.split() for i in df_output if i and reg.search(i))
+            fallback = (i.split() for i in df_output if i.endswith("/"))
             df_line = next(find_dev, next(fallback, None))
 
         return df_line
@@ -320,7 +308,7 @@ class AbstractBattery(AbstractGetter):
     """ Abstract battery class to be implemented by subclass """
 
     @property
-    def _AbstractGetter__info(self) -> typing.List[str]:
+    def _AbstractGetter__info(self) -> List[str]:
         return ["is_present", "is_charging", "is_full", "percent",
                 "time", "power"]
 
@@ -375,7 +363,7 @@ class AbstractNetwork(AbstractGetter):
     """ Abstract network class to be implemented by subclass """
 
     @property
-    def _AbstractGetter__info(self) -> typing.List[str]:
+    def _AbstractGetter__info(self) -> List[str]:
         return ["dev", "ssid", "local_ip", "download", "upload"]
 
 
@@ -388,12 +376,12 @@ class AbstractNetwork(AbstractGetter):
 
     @property
     @abstractmethod
-    def __ssid(self) -> typing.Tuple[typing.List[str], RE_COMPILE]:
+    def __ssid(self) -> Tuple[List[str], Pattern]:
         """ Abstract ssid resource method to be implemented by subclass """
 
 
     @property
-    def ssid(self) -> str:
+    def ssid(self) -> Optional[Generator[Optional[Match[Any]], None, None]]:
         """ Network ssid method """
         ssid = None
         cmd, reg = self.__ssid
@@ -473,7 +461,7 @@ class Date(AbstractGetter):
     """ Date class to fetch date and time """
 
     @property
-    def _AbstractGetter__info(self) -> typing.List[str]:
+    def _AbstractGetter__info(self) -> List[str]:
         return ["date", "time"]
 
 
@@ -504,19 +492,19 @@ class AbstractMisc(AbstractGetter):
     """ Misc class for fetching miscellaneous information """
 
     @property
-    def _AbstractGetter__info(self) -> typing.List[str]:
+    def _AbstractGetter__info(self) -> List[str]:
         return ["vol", "scr"]
 
 
     @property
     @abstractmethod
-    def vol(self) -> typing.Union[float, int]:
+    def vol(self) -> Union[float, int]:
         """ Abstract volume method to be implemented by subclass """
 
 
     @property
     @abstractmethod
-    def scr(self) -> typing.Union[float, int]:
+    def scr(self) -> Union[float, int]:
         """ Abstract screen brightness method to be implemented by subclass """
 
 

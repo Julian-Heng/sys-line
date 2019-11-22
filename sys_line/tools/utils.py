@@ -14,14 +14,14 @@ from pathlib import Path
 from .storage import Storage
 
 
-def percent(num_1: typing.Union[int, float, Storage],
-            num_2: typing.Union[int, float, Storage]) -> (
-                typing.Union[float, Storage]):
+def percent(num_1: typing.Union[int, float],
+            num_2: typing.Union[int, float]) -> (
+                typing.Union[float, Storage, None]):
     """ Returns percent of 2 numbers """
     return (num_1 / num_2) * 100 if num_2 else None
 
 
-def open_read(filename: typing.Union[Path, str]) -> typing.List[str]:
+def open_read(filename: typing.Union[Path, str]) -> str:
     """
     Wrapper for opening and reading a file
 
@@ -40,7 +40,7 @@ def run(cmd: typing.List[str]) -> str:
     return process.stdout.decode("utf-8")
 
 
-def unix_epoch_to_str(secs: int) -> str:
+def unix_epoch_to_str(secs: int) -> typing.Union[str, None]:
     """ Convert unix time to human readable output """
     days = int(secs / 86400)
     hours = int((secs / 3600) % 24)

@@ -8,15 +8,13 @@
 
 import re
 import time
-import typing
 
 from argparse import Namespace
 from functools import lru_cache
 from types import SimpleNamespace
-#from typing import typing.Dict, typing.List
+from typing import Dict, List, Optional, Pattern, Tuple, Union
 
-from .abstract import (RE_COMPILE,
-                       System,
+from .abstract import (System,
                        AbstractCpu,
                        AbstractMemory,
                        AbstractSwap,
@@ -39,7 +37,7 @@ class Cpu(AbstractCpu):
 
 
     def _AbstractCpu__cpu_speed(self) -> (
-            typing.Tuple[str, typing.Union[float, int]]):
+            Tuple[str, Union[float, int]]):
         cpu = self.aux.sysctl.query("hw.model")
         speed = self.aux.sysctl.query("hw.cpuspeed")
         if speed is None:
@@ -54,13 +52,13 @@ class Cpu(AbstractCpu):
 
 
     @property
-    def fan(self) -> int:
+    def fan(self) -> None:
         """ Stub """
         return None
 
 
     @property
-    def temp(self) -> float:
+    def temp(self) -> Optional[float]:
         temp = self.aux.sysctl.query("dev.cpu.0.temperature")
         return float(re.search(r"\d+\.?\d+").group(0)) if temp else None
 
@@ -129,13 +127,13 @@ class Disk(AbstractDisk):
     DF_FLAGS = ["df", "-P", "-k"]
 
     @property
-    def name(self) -> str:
+    def name(self) -> None:
         """ Stub """
         return None
 
 
     @property
-    def partition(self) -> str:
+    def partition(self) -> Optional[str]:
         partition = None
         dev = re.search(r"^(.*)p(\d+)$", self.dev)
 
@@ -151,7 +149,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def bat(self) -> typing.Dict[str, str]:
+    def bat(self) -> Optional[Dict[str, str]]:
         """ Returns battery info from acpiconf as dict """
         _bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
         _bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in _bat]
@@ -196,7 +194,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def power(self) -> float:
+    def power(self) -> Optional[float]:
         ret = None
         if self.is_present:
             ret = int(self.bat["Present rate"][:-3]) / 1000
@@ -209,7 +207,7 @@ class Network(AbstractNetwork):
     LOCAL_IP_CMD = ["ifconfig"]
 
     @property
-    def dev(self) -> str:
+    def dev(self) -> Optional[str]:
         active = re.compile(r"^\s+status: (associated|active)$", re.M)
         dev_list = run(["ifconfig", "-l"]).split()
         check = lambda i: active.search(run(["ifconfig", i]))
@@ -218,7 +216,7 @@ class Network(AbstractNetwork):
 
     @property
     def _AbstractNetwork__ssid(self) -> (
-            typing.Union[typing.List[str], RE_COMPILE]):
+            Tuple[List[Optional[str]], Pattern[str]]):
         ssid_reg = re.compile(r"ssid (.*) channel")
         ssid_exe = ["ifconfig", self.dev]
         return ssid_exe, ssid_reg
@@ -234,13 +232,13 @@ class Misc(AbstractMisc):
     """ FreeBSD implementation of AbstractMisc class """
 
     @property
-    def vol(self) -> typing.Union[float, int]:
+    def vol(self) -> None:
         """ Stub """
         return None
 
 
     @property
-    def scr(self) -> typing.Union[float, int]:
+    def scr(self) -> None:
         """ Stub """
         return None
 

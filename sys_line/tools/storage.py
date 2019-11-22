@@ -2,6 +2,9 @@
 
 """ Storage module """
 
+from __future__ import annotations
+import typing
+
 
 class Storage():
     """ Storage class for storing values with data prefixes """
@@ -11,16 +14,17 @@ class Storage():
                  value: int = 0,
                  prefix: str = "B",
                  rounding: int = -1) -> None:
-        self.value = value
-        self.__prefix = prefix
-        self.rounding = rounding
+        self.value: int = value
+        self.display_value: float = self.value
+        self.__prefix: str = prefix
+        self.rounding: int = rounding
 
 
     def __repr__(self) -> str:
         # Prevent cyclic import
         from .utils import _round
 
-        val = self.value
+        val = self.display_value
         rnd = self.rounding
         prf = self.prefix
         return "{} {}".format(_round(val, rnd) if rnd > -1 else val, prf)
@@ -30,82 +34,8 @@ class Storage():
         return self.__repr__()
 
 
-    def __add__(self, other: object) -> None:
-        val, other, is_storage = self.__check_storage(other)
-        self.value = val + other
-
-        if is_storage:
-            tmp_prefix = self.prefix
-            self.set_prefix_without_value("B")
-            self.prefix = tmp_prefix
-
-        return self
-
-
-    def __sub__(self, other: object) -> None:
-        val, other, is_storage = self.__check_storage(other)
-        self.value = val - other
-
-        if is_storage:
-            tmp_prefix = self.prefix
-            self.set_prefix_without_value("B")
-            self.prefix = tmp_prefix
-
-        return self
-
-
-    def __mul__(self, other: object) -> None:
-        val, other, is_storage = self.__check_storage(other)
-        self.value = val * other
-
-        if is_storage:
-            tmp_prefix = self.prefix
-            self.set_prefix_without_value("B")
-            self.prefix = tmp_prefix
-
-        return self
-
-
-    def __truediv__(self, other: object) -> None:
-        val, other, is_storage = self.__check_storage(other)
-        self.value = val / other
-
-        if is_storage:
-            tmp_prefix = self.prefix
-            self.set_prefix_without_value("B")
-            self.prefix = tmp_prefix
-
-        return self
-
-
-    def __rtruediv__(self, other: object) -> None:
-        val, other, is_storage = self.__check_storage(other)
-        self.value = other / val
-
-        if is_storage:
-            tmp_prefix = self.prefix
-            self.set_prefix_without_value("B")
-            self.prefix = tmp_prefix
-
-        return self
-
-
-    def __eq__(self, other: object) -> bool:
-        return self.value == other
-
-
-    def __bool__(self) -> bool:
-        return bool(self.value)
-
-
-    def __calc_prefix_delta(self, start: int, end: int) -> int:
+    def __calc_prefix_delta(self, start: str, end: str) -> int:
         return self.PREFIXES.index(end) - self.PREFIXES.index(start)
-
-
-    def __check_storage(self, other: object) -> (int, int, bool):
-        chk = isinstance(other, Storage)
-        return (self.bytes if chk else self.value,
-                other.bytes if chk else other, chk)
 
 
     @property
@@ -119,17 +49,19 @@ class Storage():
         """ Sets prefix and changes value """
         if prefix == "auto":
             count = 0
-            while self.value > 1024:
-                self.value /= 1024
+            self.display_value = self.value
+            while self.display_value > 1024:
+                self.display_value /= 1024
                 count += 1
             curr_index = self.PREFIXES.index(self.__prefix) + count
             self.__prefix = self.PREFIXES[curr_index]
         else:
             try:
                 delta = self.__calc_prefix_delta(self.__prefix, prefix)
+                self.display_value = self.value
                 if delta != 0:
                     # Convert the value
-                    self.value = self.value / pow(1024, delta)
+                    self.display_value = self.display_value / pow(1024, delta)
                     self.__prefix = prefix
             except ValueError:
                 pass

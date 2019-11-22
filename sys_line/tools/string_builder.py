@@ -7,15 +7,16 @@ import re
 import typing
 
 from ..systems.abstract import System
+from typing import Pattern, List
 
 
 class StringBuilder():
     """ String Builder class """
 
     def __init__(self) -> None:
-        self.extract_reg = re.compile(r"\{((\w+)\.(\w+))(?:\?)?")
-        self.trim_reg_1 = re.compile(r"\{\}")
-        self.trim_reg_2 = re.compile(r"\{\?|\}$")
+        self.extract_reg: Pattern = re.compile(r"\{((\w+)\.(\w+))(?:\?)?")
+        self.trim_reg_1: Pattern = re.compile(r"\{\}")
+        self.trim_reg_2: Pattern = re.compile(r"\{\?|\}$")
 
 
     def build(self, sys: System, fmt: str) -> str:
@@ -50,7 +51,7 @@ class StringBuilder():
         return out
 
 
-def tokenize(string: str) -> typing.List[str]:
+def tokenize(string: str) -> List[str]:
     """
     Find tokens within a string
     Returns a string list

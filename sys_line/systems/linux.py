@@ -13,9 +13,9 @@ import typing
 from argparse import Namespace
 from functools import lru_cache
 from pathlib import Path as p
+from typing import Dict, List, Optional, Pattern, Tuple, Union
 
-from .abstract import (RE_COMPILE,
-                       System,
+from .abstract import (System,
                        AbstractCpu,
                        AbstractMemory,
                        AbstractSwap,
@@ -44,7 +44,7 @@ class Cpu(AbstractCpu):
 
 
     def _AbstractCpu__cpu_speed(self) -> (
-            typing.Tuple[str, typing.Union[float, int]]):
+            Tuple[str, Optional[Union[float, int]]]):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
@@ -66,7 +66,7 @@ class Cpu(AbstractCpu):
 
 
     @property
-    def fan(self) -> int:
+    def fan(self) -> Optional[int]:
         fan = None
         fan_dir = "/sys/devices/platform"
         glob = "fan1_input"
@@ -80,7 +80,7 @@ class Cpu(AbstractCpu):
 
 
     @property
-    def temp(self) -> float:
+    def temp(self) -> Optional[float]:
         check = lambda f: p.exists(p(f)) and "temp" in open_read(f)
         glob = lambda d: p(d).glob("*")
 
@@ -101,7 +101,7 @@ class Cpu(AbstractCpu):
 
 
 @lru_cache(maxsize=1)
-def mem_file() -> typing.Dict[str, str]:
+def mem_file() -> Dict[str, str]:
     """ Returns cached /proc/meminfo """
     reg = re.compile(r"\s+|kB")
     _mem_file = open_read("/proc/meminfo").strip().split("\n")
@@ -214,7 +214,7 @@ def detect_battery() -> AbstractBattery:
 
 
 @lru_cache(maxsize=1)
-def bat_dir() -> str:
+def bat_dir() -> Optional[str]:
     """ Returns the path for the battery directory """
     check = lambda f: p(f).exists() and bool(int(open_read(f)))
     _bat_dir = p("/sys/class/power_supply").glob("*BAT*")
@@ -234,27 +234,27 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def current_charge(self) -> int:
+    def current_charge(self) -> Optional[int]:
         """ Returns cached battery current charge file """
         return None if bat_dir() is None else int(open_read(self.current))
 
 
     @property
     @lru_cache(maxsize=1)
-    def full_charge(self) -> int:
+    def full_charge(self) -> Optional[int]:
         """ Returns cached battery full charge file """
         return None if bat_dir() is None else int(open_read(self.full))
 
 
     @property
     @lru_cache(maxsize=1)
-    def drain_rate(self) -> int:
+    def drain_rate(self) -> Optional[int]:
         """ Returns cached battery drain rate file """
         return None if bat_dir() is None else int(open_read(self.drain))
 
 
     @lru_cache(maxsize=1)
-    def __compare_status(self, query) -> bool:
+    def __compare_status(self, query) -> Optional[bool]:
         """ Compares status to query """
         return None if bat_dir() is None else self.status == query
 
@@ -265,17 +265,17 @@ class Battery(AbstractBattery):
 
 
     @property
-    def is_charging(self) -> bool:
+    def is_charging(self) -> Optional[bool]:
         return self.__compare_status("Charging")
 
 
     @property
-    def is_full(self) -> bool:
+    def is_full(self) -> Optional[bool]:
         return self.__compare_status("Full")
 
 
     @property
-    def percent(self) -> typing.Union[float, int]:
+    def percent(self) -> Optional[Union[float, int]]:
         perc = None
         if bat_dir() is not None:
             current_charge = self.current_charge
@@ -329,7 +329,7 @@ class BatteryAmp(Battery):
 
 
     @property
-    def power(self) -> typing.Union[float, int]:
+    def power(self) -> Optional[Union[float, int]]:
         power = None
         if bat_dir() is not None:
             voltage = int(open_read("{}/voltage_now".format(bat_dir())))
@@ -364,7 +364,7 @@ class BatteryWatt(Battery):
 
 
     @property
-    def power(self) -> typing.Union[float, int]:
+    def power(self) -> Union[float, int]:
         return _round(self.drain_rate / 1e6, self.options.bat_power_round)
 
 
@@ -377,17 +377,17 @@ class BatteryStub(AbstractBattery):
 
 
     @property
-    def is_charging(self) -> bool:
+    def is_charging(self) -> None:
         return None
 
 
     @property
-    def is_full(self) -> bool:
+    def is_full(self) -> None:
         return None
 
 
     @property
-    def percent(self) -> float:
+    def percent(self) -> None:
         return None
 
 
@@ -397,7 +397,7 @@ class BatteryStub(AbstractBattery):
 
 
     @property
-    def power(self) -> float:
+    def power(self) -> None:
         return None
 
 
@@ -407,7 +407,7 @@ class Network(AbstractNetwork):
     LOCAL_IP_CMD = ["ip", "address", "show", "dev"]
 
     @property
-    def dev(self) -> str:
+    def dev(self) -> Optional[str]:
         check = lambda f: open_read("{}/operstate".format(f)).strip() == "up"
         find = lambda d: p(d).glob("[!v]*")
         return next((f.name for f in find("/sys/class/net") if check(f)), None)
@@ -415,7 +415,7 @@ class Network(AbstractNetwork):
 
     @property
     def _AbstractNetwork__ssid(self) -> (
-            typing.Union[typing.List[str], RE_COMPILE]):
+            Tuple[Optional[List[str]], Optional[Pattern]]):
         ssid_exe = None
         regex = None
         dev = self.dev
@@ -444,7 +444,7 @@ class Misc(AbstractMisc):
     """ A Linux implementation of the AbstractMisc class """
 
     @property
-    def vol(self) -> typing.Union[float, int]:
+    def vol(self) -> Optional[Union[float, int]]:
         check = lambda d: d.is_dir() and d.name.isdigit()
         extract = lambda f: open_read("{}/cmdline".format(f))
 
@@ -468,7 +468,7 @@ class Misc(AbstractMisc):
 
 
     @property
-    def scr(self) -> typing.Union[float, int]:
+    def scr(self) -> Optional[Union[float, int]]:
         check = lambda f: "kbd" not in f and "backlight" in f
 
         scr = None
@@ -484,7 +484,7 @@ class Misc(AbstractMisc):
         return scr
 
 
-def get_vol_pulseaudio() -> typing.Union[float, int]:
+def get_vol_pulseaudio() -> Optional[Union[float, int]]:
     """ Return system volume using pulse audio """
     default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
     pac_dump = run(["pacmd", "dump"])
