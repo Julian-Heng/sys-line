@@ -1,9 +1,10 @@
-__pycache__/
+*.bin
 *.egg-info/
+*.py[cod]
+*.spec
+*.swp
 *build/
 *dist/
-*.bin
-*.py[cod]
-*.swp
-*.spec
+.mypy_cache/
+__pycache__/
 files.txt
