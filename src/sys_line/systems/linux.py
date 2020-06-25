@@ -432,17 +432,19 @@ class Misc(AbstractMisc):
 
     @property
     def scr(self):
-        check = lambda f: "kbd" not in f and "backlight" in f
-
         scr = None
-        scr_files = (f for f in p("/sys/devices").rglob("*") if check(f.name))
-        scr_dir = next(scr_files, None)
+        backlight_path = p("/sys/devices/backlight")
 
-        if scr_dir is not None:
-            curr = int(open_read("{}/brightness".format(scr_dir)))
-            max_bright = int(open_read("{}/max_brightness".format(scr_dir)))
-            scr = percent(curr, max_bright)
-            scr = _round(scr, self.options.misc_screen_round)
+        if backlight_path.exists():
+            check = lambda f: "kbd" not in f and "backlight" in f
+            scr_files = (f for f in backlight_path.rglob("*") if check(f.name))
+            scr_dir = next(scr_files, None)
+
+            if scr_dir is not None:
+                curr = int(open_read("{}/brightness".format(scr_dir)))
+                max_scr = int(open_read("{}/max_brightness".format(scr_dir)))
+                scr = percent(curr, max_scr)
+                scr = _round(scr, self.options.misc_screen_round)
 
         return scr
 
