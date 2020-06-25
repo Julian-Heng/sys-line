@@ -4,6 +4,7 @@
 """ Argument handling """
 
 import argparse
+import itertools
 import platform
 import textwrap
 
@@ -94,10 +95,10 @@ def parse() -> argparse.Namespace:
 
 
     mut_group = groups["disk"].add_mutually_exclusive_group()
-    mut_group.add_argument("-dd", "--disk", action="store", default=None,
-                           metavar="disk")
-    mut_group.add_argument("-dm", "--mount", action="store", default="/",
-                           metavar="mount")
+    mut_group.add_argument("-dd", "--disk", nargs="*", action="append",
+                           default=None, metavar="disk")
+    mut_group.add_argument("-dm", "--mount", nargs="*", action="append",
+                           default=["/"], metavar="mount")
 
 
     groups["disk"].add_argument("-dsd", "--disk-short-dev",
@@ -156,4 +157,13 @@ def parse() -> argparse.Namespace:
                                 action="store", type=int, default=0,
                                 metavar="int")
 
-    return parser.parse_args()
+    result = parser.parse_args()
+
+    flatten = lambda l: list(itertools.chain(*l))
+    unique = lambda l: list(dict.fromkeys(l))
+    if result.disk is not None:
+        result.disk = unique(flatten(result.disk))
+    if len(result.mount) > 1:
+        result.mount = unique(flatten(result.mount[1:]))
+
+    return result

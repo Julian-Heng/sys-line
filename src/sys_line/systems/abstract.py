@@ -11,7 +11,6 @@
 
 import re
 import time
-#import typing
 
 from abc import ABC, abstractmethod
 from argparse import Namespace
@@ -226,41 +225,53 @@ class AbstractDisk(AbstractStorage):
     def df_out(self) -> str:
         """ Return df output """
         df_output = None
-        df_line = None
-        df_flags = self.DF_FLAGS
+        df_lines = None
+        df_cmd = self.DF_FLAGS
 
         if self.options.disk is None:
-            df_flags.append(self.options.mount)
+            df_cmd += self.options.mount
+        else:
+            df_cmd += self.options.disk
 
-        df_output = run(df_flags).strip().split("\n")
+        df_output = run(df_cmd).strip().split("\n")
 
         if (len(df_output) <= 1):
-            df_output = run(df_flags[:-1]).split("\n")
+            df_output = run(df_cmd[:-1]).split("\n")
 
         if len(df_output) == 2:
-            df_line = df_output[1].split()
+            df_lines = [df_output[1].split()]
         else:
             if self.options.disk is not None:
-                reg = re.compile(self.options.disk)
+                reg = re.compile("|".join(self.options.disk))
             else:
-                reg = re.compile("{}$".format(self.options.mount))
+                reg = re.compile("({})$".format("|".join(self.options.mount)))
 
             find_dev = (i.split() for i in df_output if i and reg.search(i))
             fallback = (i.split() for i in df_output if i.endswith("/"))
-            df_line = next(find_dev, next(fallback, None))
 
-        return df_line
+            df_lines = list(find_dev)
+            if len(df_lines) == 0:
+                df_lines = next(fallback, None)
+
+        return df_lines
+
+
+    @property
+    def original_dev(self):
+        """ Disk device without modification """
+        dev = None
+        df_out = self.df_out
+        if df_out is not None:
+            dev = [i[0] for i in df_out]
+        return dev
 
 
     @property
     def dev(self):
         """ Disk device method """
-        dev = None
-        df_out = self.df_out
-        if df_out is not None:
-            dev = df_out[0]
-            if self.options.disk_short_dev:
-                dev = dev.split("/")[-1]
+        dev = self.original_dev
+        if self.options.disk_short_dev:
+            dev = [i.split("/")[-1] for i in dev]
         return dev
 
 
@@ -273,7 +284,7 @@ class AbstractDisk(AbstractStorage):
     @property
     def mount(self) -> str:
         """ Abstract disk mount method to be implemented by subclass """
-        return self.df_out[5] if self.df_out else None
+        return [i[5] for i in self.df_out] if self.df_out is not None else None
 
 
     @property
@@ -285,23 +296,38 @@ class AbstractDisk(AbstractStorage):
     @property
     def used(self) -> Storage:
         """ Abstract disk used method to be implemented by subclass """
-        used = None
+        used = list()
         if self.df_out is not None:
-            used = Storage(value=int(self.df_out[2]), prefix="KiB",
-                           rounding=self.options.disk_used_round)
-            used.prefix = self.options.disk_used_prefix
+            for i in self.df_out:
+                stor = Storage(value=int(i[2]), prefix="KiB",
+                               rounding=self.options.disk_used_round)
+                stor.prefix = self.options.disk_used_prefix
+                used.append(stor)
         return used
 
 
     @property
     def total(self) -> Storage:
         """ Abstract disk total method to be implemented by subclass """
-        total = None
+        total = list()
         if self.df_out is not None:
-            total = Storage(value=int(self.df_out[1]), prefix="KiB",
-                            rounding=self.options.disk_total_round)
-            total.prefix = self.options.disk_total_prefix
+            for i in self.df_out:
+                stor = Storage(value=int(i[1]), prefix="KiB",
+                                rounding=self.options.disk_total_round)
+                stor.prefix = self.options.disk_total_prefix
+                total.append(stor)
         return total
+
+
+    @property
+    def percent(self) -> Union[float, int]:
+        """ Abstract percent property """
+        perc = list()
+        for used, total in zip(self.used, self.total):
+            value = percent(used.value, total.value)
+            value = 0.0 if value is None else _round(value, self.rounding)
+            perc.append(value)
+        return perc
 
 
 class AbstractBattery(AbstractGetter):

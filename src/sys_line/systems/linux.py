@@ -162,24 +162,30 @@ class Disk(AbstractDisk):
         columns = ["KNAME", "NAME", "LABEL", "PARTLABEL",
                    "FSTYPE", "MOUNTPOINT"]
 
+        lsblk = dict()
+
         if self.dev is not None:
             cmd = ["lsblk", "--output", ",".join(columns),
-                   "--paths", "--pairs", self.dev]
-            lsblk = re.findall(r"[^\"\s]\S*|\".+?", run(cmd))
-            lsblk = dict(re.sub("\"", "", i).split("=", 1) for i in lsblk)
+                   "--paths", "--pairs"] + self.original_dev
 
-        return lsblk if lsblk else {i: None for i in columns}
+            for line in run(cmd).strip().split("\n"):
+                out = re.findall(r"[^\"\s]\S*|\".+?", line)
+                out = dict(re.sub("\"", "", i).split("=", 1) for i in out)
+                lsblk[out["KNAME"]] = out
+
+        return lsblk
 
 
     @property
     def name(self) -> str:
         labels = ["LABEL", "PARTLABEL"]
-        return next((self.__lsblk[i] for i in labels if self.__lsblk[i]), None)
+        return [next((v[i] for i in labels if v[i]), None)
+                for k, v in self.__lsblk.items()]
 
 
     @property
     def partition(self) -> str:
-        return self.__lsblk["FSTYPE"]
+        return [i["FSTYPE"] for i in self.__lsblk.values()]
 
 
 @lru_cache(maxsize=1)
