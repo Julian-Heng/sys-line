@@ -12,8 +12,6 @@ import time
 
 from argparse import Namespace
 from functools import lru_cache
-from types import SimpleNamespace
-from typing import Dict, List, Optional, Pattern, Tuple, Union
 
 from .abstract import (System,
                        AbstractCpu,
@@ -27,28 +25,27 @@ from ..tools.storage import Storage
 from ..tools.sysctl import Sysctl
 from ..tools.utils import percent, run, _round
 
-
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
 
     @property
     @lru_cache(maxsize=1)
-    def cores(self) -> int:
+    def cores(self):
         return int(self.aux.sysctl.query("hw.logicalcpu_max"))
 
 
-    def _AbstractCpu__cpu_speed(self) -> Tuple[str, None]:
+    def _AbstractCpu__cpu_speed(self):
         return self.aux.sysctl.query("machdep.cpu.brand_string"), None
 
 
     @property
-    def load_avg(self) -> str:
+    def load_avg(self):
         load = self.aux.sysctl.query("vm.loadavg").split()
         return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
 
 
     @property
-    def fan(self) -> Optional[int]:
+    def fan(self):
         fan = None
         if shutil.which("osx-cpu-temp"):
             regex = r"(\d+) RPM"
@@ -59,7 +56,7 @@ class Cpu(AbstractCpu):
 
 
     @property
-    def temp(self) -> Optional[Union[float, int]]:
+    def temp(self):
         temp = None
         if shutil.which("osx-cpu-temp"):
             regex = r"CPU: ((\d+\.)?\d+)"
@@ -70,7 +67,7 @@ class Cpu(AbstractCpu):
         return temp
 
 
-    def _AbstractCpu__uptime(self) -> int:
+    def _AbstractCpu__uptime(self):
         reg = re.compile(r"sec = (\d+),")
         sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
         sec = int(time.time()) - int(sec)
@@ -82,7 +79,7 @@ class Memory(AbstractMemory):
     """ Darwin implementation of AbstractMemory class """
 
     @property
-    def used(self) -> Storage:
+    def used(self):
         words = ["active", "wired down", "occupied by compressor"]
         vm_stat = run(["vm_stat"]).strip().split("\n")[1:]
         vm_stat = (re.sub(r"Pages |\.", r"", i) for i in vm_stat)
@@ -95,7 +92,7 @@ class Memory(AbstractMemory):
 
 
     @property
-    def total(self) -> Storage:
+    def total(self):
         total = Storage(value=int(self.aux.sysctl.query("hw.memsize")),
                         rounding=self.options.mem_total_round)
         total.prefix = self.options.mem_total_prefix
@@ -108,12 +105,12 @@ class Swap(AbstractSwap):
 
     @property
     @lru_cache(maxsize=1)
-    def swapusage(self) -> str:
+    def swapusage(self):
         """ Returns swapusage from sysctl """
         return self.aux.sysctl.query("vm.swapusage").strip()
 
 
-    def __lookup_swap(self, search: str) -> int:
+    def __lookup_swap(self, search):
         value = 0
 
         regex = r"{} = (\d+\.\d+)M".format(search)
@@ -126,7 +123,7 @@ class Swap(AbstractSwap):
 
 
     @property
-    def used(self) -> Storage:
+    def used(self):
         used = Storage(value=self.__lookup_swap("used"),
                        rounding=self.options.swap_used_round)
         used.prefix = self.options.swap_used_prefix
@@ -135,7 +132,7 @@ class Swap(AbstractSwap):
 
 
     @property
-    def total(self) -> Storage:
+    def total(self):
         total = Storage(value=self.__lookup_swap("total"),
                         rounding=self.options.swap_total_round)
         total.prefix = self.options.swap_total_prefix
@@ -150,7 +147,7 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def diskutil(self) -> Optional[Dict[str, str]]:
+    def diskutil(self):
         """ Returns diskutil program output as a dict """
         check = lambda i: i and len(i.split(": ", 1)) == 2
         dev = self.dev
@@ -163,7 +160,7 @@ class Disk(AbstractDisk):
         return _diskutil
 
 
-    def __lookup_diskutil(self, key: str) -> Optional[str]:
+    def __lookup_diskutil(self, key):
         try:
             return self.diskutil[key]
         except KeyError:
@@ -171,12 +168,12 @@ class Disk(AbstractDisk):
 
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self):
         return self.__lookup_diskutil("Volume Name")
 
 
     @property
-    def partition(self) -> Optional[str]:
+    def partition(self):
         return self.__lookup_diskutil("File System Personality")
 
 
@@ -185,7 +182,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def bat(self) -> Dict[str, str]:
+    def bat(self):
         """ Returns battery info from ioreg as a dict """
         _bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
         _bat = (re.sub("[\"{}]", "", i.strip()) for i in _bat)
@@ -195,7 +192,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def __current(self) -> int:
+    def __current(self):
         current = 0
         if self.is_present:
             current = int(self.bat["InstantAmperage"])
@@ -207,13 +204,13 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def __current_capacity(self) -> Optional[int]:
+    def __current_capacity(self):
         return int(self.bat["CurrentCapacity"]) if self.is_present else None
 
 
     @property
     @lru_cache(maxsize=1)
-    def is_present(self) -> bool:
+    def is_present(self):
         is_present = False
         if self.bat is not None:
             is_present = self.bat["BatteryInstalled"] == "Yes"
@@ -221,17 +218,17 @@ class Battery(AbstractBattery):
 
 
     @property
-    def is_charging(self) -> Optional[bool]:
+    def is_charging(self):
         return self.bat["IsCharging"] == "Yes" if self.is_present else None
 
 
     @property
-    def is_full(self) -> Optional[bool]:
+    def is_full(self):
         return self.bat["FullyCharged"] == "Yes" if self.is_present else None
 
 
     @property
-    def percent(self) -> Optional[Union[float, int]]:
+    def percent(self):
         perc = None
 
         if self.is_present:
@@ -242,7 +239,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def _AbstractBattery__time(self) -> int:
+    def _AbstractBattery__time(self):
         charge = 0
 
         if self.is_present and self.__current != 0:
@@ -255,7 +252,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def power(self) -> Optional[Union[float, int]]:
+    def power(self):
         power = None
 
         if self.is_present:
@@ -272,7 +269,7 @@ class Network(AbstractNetwork):
     LOCAL_IP_CMD = ["ifconfig"]
 
     @property
-    def dev(self) -> Optional[str]:
+    def dev(self):
         active = re.compile(r"status: active")
         dev_reg = re.compile(r"Device: (.*)$")
         check = lambda i: active.search(run(["ifconfig", i]))
@@ -286,7 +283,7 @@ class Network(AbstractNetwork):
 
 
     @property
-    def _AbstractNetwork__ssid(self) -> Tuple[List[str], Pattern]:
+    def _AbstractNetwork__ssid(self):
         ssid_exe_path = ["System", "Library", "PrivateFrameworks",
                          "Apple80211.framework", "Versions", "Current",
                          "Resources", "airport"]
@@ -296,7 +293,7 @@ class Network(AbstractNetwork):
         return ssid_exe, ssid_reg
 
 
-    def _AbstractNetwork__bytes_delta(self, dev: str, mode: str) -> int:
+    def _AbstractNetwork__bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]
         reg_str = r"^({})(\s+[^\s]+){{{}}}\s+(\d+)"
         reg_str = reg_str.format(dev, 8 if mode == "up" else 5)
@@ -310,7 +307,7 @@ class Misc(AbstractMisc):
     """ Darwin implementation of AbstractMisc class """
 
     @property
-    def vol(self) -> Union[float, int]:
+    def vol(self):
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
@@ -318,7 +315,7 @@ class Misc(AbstractMisc):
 
 
     @property
-    def scr(self) -> Optional[Union[float, int]]:
+    def scr(self):
         scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
         scr_out = next((i for i in scr_out if "IODisplayParameters" in i), None)
         if scr_out is not None:
@@ -336,7 +333,7 @@ class Misc(AbstractMisc):
 class Darwin(System):
     """ A Darwin implementation of the abstract System class """
 
-    def __init__(self, options: Namespace) -> None:
+    def __init__(self, options):
         super(Darwin, self).__init__(options,
                                      aux=SimpleNamespace(sysctl=Sysctl()),
                                      cpu=Cpu,

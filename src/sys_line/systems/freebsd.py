@@ -11,8 +11,6 @@ import time
 
 from argparse import Namespace
 from functools import lru_cache
-from types import SimpleNamespace
-from typing import Dict, List, Optional, Pattern, Tuple, Union
 
 from .abstract import (System,
                        AbstractCpu,
@@ -32,12 +30,11 @@ class Cpu(AbstractCpu):
 
     @property
     @lru_cache(maxsize=1)
-    def cores(self) -> int:
+    def cores(self):
         return int(self.aux.sysctl.query("hw.ncpu"))
 
 
-    def _AbstractCpu__cpu_speed(self) -> (
-            Tuple[str, Union[float, int]]):
+    def _AbstractCpu__cpu_speed(self):
         cpu = self.aux.sysctl.query("hw.model")
         speed = self.aux.sysctl.query("hw.cpuspeed")
         if speed is None:
@@ -46,24 +43,24 @@ class Cpu(AbstractCpu):
 
 
     @property
-    def load_avg(self) -> str:
+    def load_avg(self):
         load = self.aux.sysctl.query("vm.loadavg").split()
         return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
 
 
     @property
-    def fan(self) -> None:
+    def fan(self):
         """ Stub """
         return None
 
 
     @property
-    def temp(self) -> Optional[float]:
+    def temp(self):
         temp = self.aux.sysctl.query("dev.cpu.0.temperature")
         return float(re.search(r"\d+\.?\d+").group(0)) if temp else None
 
 
-    def _AbstractCpu__uptime(self) -> int:
+    def _AbstractCpu__uptime(self):
         reg = re.compile(r"sec = (\d+),")
         sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
         sec = int(time.time()) - int(sec)
@@ -75,7 +72,7 @@ class Memory(AbstractMemory):
     """ FreeBSD implementation of AbstractMemory class """
 
     @property
-    def used(self) -> Storage:
+    def used(self):
         total = int(self.aux.sysctl.query("hw.realmem"))
         pagesize = int(self.aux.sysctl.query("hw.pagesize"))
 
@@ -90,7 +87,7 @@ class Memory(AbstractMemory):
 
 
     @property
-    def total(self) -> Storage:
+    def total(self):
         total = int(self.aux.sysctl.query("hw.realmem"))
         total = Storage(value=total, prefix="B",
                         rounding=self.options.mem_total_round)
@@ -102,7 +99,7 @@ class Swap(AbstractSwap):
     """ FreeBSD implementation of AbstractSwap class """
 
     @property
-    def used(self) -> Storage:
+    def used(self):
         extract = lambda i: int(i.split()[2])
         pstat = run(["pstat", "-s"]).strip().split("\n")[1:]
         pstat = sum([extract(i) for i in pstat])
@@ -113,7 +110,7 @@ class Swap(AbstractSwap):
 
 
     @property
-    def total(self) -> Storage:
+    def total(self):
         total = int(self.aux.sysctl.query("vm.swap_total"))
         total = Storage(value=total, prefix="B",
                         rounding=self.options.swap_total_round)
@@ -127,13 +124,13 @@ class Disk(AbstractDisk):
     DF_FLAGS = ["df", "-P", "-k"]
 
     @property
-    def name(self) -> None:
+    def name(self):
         """ Stub """
         return None
 
 
     @property
-    def partition(self) -> Optional[str]:
+    def partition(self):
         partition = None
         dev = re.search(r"^(.*)p(\d+)$", self.dev)
 
@@ -149,7 +146,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def bat(self) -> Optional[Dict[str, str]]:
+    def bat(self):
         """ Returns battery info from acpiconf as dict """
         _bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
         _bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in _bat]
@@ -157,22 +154,22 @@ class Battery(AbstractBattery):
 
 
     @property
-    def is_present(self) -> bool:
+    def is_present(self):
         return self.bat["State"] != "not present" if self.bat else False
 
 
     @property
-    def is_charging(self) -> bool:
+    def is_charging(self):
         return self.bat["State"] == "charging" if self.is_present else None
 
 
     @property
-    def is_full(self) -> bool:
+    def is_full(self):
         return self.bat["State"] == "high" if self.is_present else None
 
 
     @property
-    def percent(self) -> int:
+    def percent(self):
         ret = None
         if self.is_present:
             ret = int(self.bat["Remaining capacity"][:-1])
@@ -180,7 +177,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def _AbstractBattery__time(self) -> int:
+    def _AbstractBattery__time(self):
         secs = 0
         if self.is_present:
             acpi_time = self.bat["Remaining time"]
@@ -194,7 +191,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def power(self) -> Optional[float]:
+    def power(self):
         ret = None
         if self.is_present:
             ret = int(self.bat["Present rate"][:-3]) / 1000
@@ -207,7 +204,7 @@ class Network(AbstractNetwork):
     LOCAL_IP_CMD = ["ifconfig"]
 
     @property
-    def dev(self) -> Optional[str]:
+    def dev(self):
         active = re.compile(r"^\s+status: (associated|active)$", re.M)
         dev_list = run(["ifconfig", "-l"]).split()
         check = lambda i: active.search(run(["ifconfig", i]))
@@ -215,14 +212,13 @@ class Network(AbstractNetwork):
 
 
     @property
-    def _AbstractNetwork__ssid(self) -> (
-            Tuple[List[Optional[str]], Pattern[str]]):
+    def _AbstractNetwork__ssid(self):
         ssid_reg = re.compile(r"ssid (.*) channel")
         ssid_exe = ["ifconfig", self.dev]
         return ssid_exe, ssid_reg
 
 
-    def _AbstractNetwork__bytes_delta(self, dev: str, mode: str) -> int:
+    def _AbstractNetwork__bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]
         index = 10 if mode == "up" else 7
         return int(run(cmd).strip().split("\n")[1].split()[index])
@@ -232,13 +228,13 @@ class Misc(AbstractMisc):
     """ FreeBSD implementation of AbstractMisc class """
 
     @property
-    def vol(self) -> None:
+    def vol(self):
         """ Stub """
         return None
 
 
     @property
-    def scr(self) -> None:
+    def scr(self):
         """ Stub """
         return None
 
@@ -246,7 +242,7 @@ class Misc(AbstractMisc):
 class FreeBSD(System):
     """ A FreeBSD implementation of the abstract System class """
 
-    def __init__(self, options: Namespace) -> None:
+    def __init__(self, options):
         super(FreeBSD, self).__init__(options,
                                       aux=SimpleNamespace(sysctl=Sysctl()),
                                       cpu=Cpu,

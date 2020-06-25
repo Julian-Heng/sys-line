@@ -8,12 +8,10 @@
 
 import re
 import shutil
-import typing
 
 from argparse import Namespace
 from functools import lru_cache
 from pathlib import Path as p
-from typing import Dict, List, Optional, Pattern, Tuple, Union
 
 from .abstract import (System,
                        AbstractCpu,
@@ -32,19 +30,18 @@ class Cpu(AbstractCpu):
 
     @property
     @lru_cache(maxsize=1)
-    def cpu_file(self) -> str:
+    def cpu_file(self):
         """ Returns cached /proc/cpuinfo """
         return open_read("/proc/cpuinfo")
 
 
     @property
     @lru_cache(maxsize=1)
-    def cores(self) -> int:
+    def cores(self):
         return len(re.findall(r"^processor", self.cpu_file, re.M))
 
 
-    def _AbstractCpu__cpu_speed(self) -> (
-            Tuple[str, Optional[Union[float, int]]]):
+    def _AbstractCpu__cpu_speed(self):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
@@ -60,13 +57,13 @@ class Cpu(AbstractCpu):
 
 
     @property
-    def load_avg(self) -> str:
+    def load_avg(self):
         load = open_read("/proc/loadavg").split(" ")
         return load[0] if self.options.cpu_load_short else " ".join(load[:3])
 
 
     @property
-    def fan(self) -> Optional[int]:
+    def fan(self):
         fan = None
         fan_dir = "/sys/devices/platform"
         glob = "fan1_input"
@@ -80,7 +77,7 @@ class Cpu(AbstractCpu):
 
 
     @property
-    def temp(self) -> Optional[float]:
+    def temp(self):
         check = lambda f: p.exists(p(f)) and "temp" in open_read(f)
         glob = lambda d: p(d).glob("*")
 
@@ -96,12 +93,12 @@ class Cpu(AbstractCpu):
         return temp
 
 
-    def _AbstractCpu__uptime(self) -> int:
+    def _AbstractCpu__uptime(self):
         return int(float(open_read("/proc/uptime").strip().split(" ")[0]))
 
 
 @lru_cache(maxsize=1)
-def mem_file() -> Dict[str, str]:
+def mem_file():
     """ Returns cached /proc/meminfo """
     reg = re.compile(r"\s+|kB")
     _mem_file = open_read("/proc/meminfo").strip().split("\n")
@@ -112,7 +109,7 @@ class Memory(AbstractMemory):
     """ A Linux implementation of the AbstractMemory class """
 
     @property
-    def used(self) -> Storage:
+    def used(self):
         keys = [["MemTotal", "Shmem"],
                 ["MemFree", "Buffers", "Cached", "SReclaimable"]]
         used = sum([int(mem_file()[i]) for i in keys[0]])
@@ -124,7 +121,7 @@ class Memory(AbstractMemory):
 
 
     @property
-    def total(self) -> Storage:
+    def total(self):
         total = Storage(value=int(mem_file()["MemTotal"]), prefix="KiB",
                         rounding=self.options.mem_total_round)
         total.prefix = self.options.mem_total_prefix
@@ -135,7 +132,7 @@ class Swap(AbstractSwap):
     """ A Linux implementation of the AbstractSwap class """
 
     @property
-    def used(self) -> Storage:
+    def used(self):
         used = int(mem_file()["SwapTotal"]) - int(mem_file()["SwapFree"])
         used = Storage(value=used, prefix="KiB",
                        rounding=self.options.swap_used_round)
@@ -144,7 +141,7 @@ class Swap(AbstractSwap):
 
 
     @property
-    def total(self) -> Storage:
+    def total(self):
         total = Storage(value=int(mem_file()["SwapTotal"]), prefix="KiB",
                         rounding=self.options.swap_total_round)
         total.prefix = self.options.swap_total_prefix
@@ -158,7 +155,7 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def __lsblk(self) -> None:
+    def __lsblk(self):
         columns = ["KNAME", "NAME", "LABEL", "PARTLABEL",
                    "FSTYPE", "MOUNTPOINT"]
 
@@ -177,19 +174,19 @@ class Disk(AbstractDisk):
 
 
     @property
-    def name(self) -> str:
+    def name(self):
         labels = ["LABEL", "PARTLABEL"]
         return [next((v[i] for i in labels if v[i]), None)
                 for k, v in self.__lsblk.items()]
 
 
     @property
-    def partition(self) -> str:
+    def partition(self):
         return [i["FSTYPE"] for i in self.__lsblk.values()]
 
 
 @lru_cache(maxsize=1)
-def detect_battery() -> AbstractBattery:
+def detect_battery():
     """
     Linux stores battery information in /sys/class/power_supply However,
     depending on the machine/driver it may store different information.
@@ -220,7 +217,7 @@ def detect_battery() -> AbstractBattery:
 
 
 @lru_cache(maxsize=1)
-def bat_dir() -> Optional[str]:
+def bat_dir():
     """ Returns the path for the battery directory """
     check = lambda f: p(f).exists() and bool(int(open_read(f)))
     _bat_dir = p("/sys/class/power_supply").glob("*BAT*")
@@ -233,55 +230,55 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def status(self) -> str:
+    def status(self):
         """ Returns cached battery status file """
         return open_read("{}/status".format(bat_dir())).strip()
 
 
     @property
     @lru_cache(maxsize=1)
-    def current_charge(self) -> Optional[int]:
+    def current_charge(self):
         """ Returns cached battery current charge file """
         return None if bat_dir() is None else int(open_read(self.current))
 
 
     @property
     @lru_cache(maxsize=1)
-    def full_charge(self) -> Optional[int]:
+    def full_charge(self):
         """ Returns cached battery full charge file """
         return None if bat_dir() is None else int(open_read(self.full))
 
 
     @property
     @lru_cache(maxsize=1)
-    def drain_rate(self) -> Optional[int]:
+    def drain_rate(self):
         """ Returns cached battery drain rate file """
         return None if bat_dir() is None else int(open_read(self.drain))
 
 
     @lru_cache(maxsize=1)
-    def __compare_status(self, query) -> Optional[bool]:
+    def __compare_status(self, query):
         """ Compares status to query """
         return None if bat_dir() is None else self.status == query
 
 
     @property
-    def is_present(self) -> bool:
+    def is_present(self):
         return bat_dir() is not None
 
 
     @property
-    def is_charging(self) -> Optional[bool]:
+    def is_charging(self):
         return self.__compare_status("Charging")
 
 
     @property
-    def is_full(self) -> Optional[bool]:
+    def is_full(self):
         return self.__compare_status("Full")
 
 
     @property
-    def percent(self) -> Optional[Union[float, int]]:
+    def percent(self):
         perc = None
         if bat_dir() is not None:
             current_charge = self.current_charge
@@ -294,7 +291,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def _AbstractBattery__time(self) -> int:
+    def _AbstractBattery__time(self):
         remaining = 0
         if bat_dir() is not None and self.drain_rate:
             charge = self.current_charge
@@ -306,7 +303,7 @@ class Battery(AbstractBattery):
 
 
     @property
-    def power(self) -> float:
+    def power(self):
         pass
 
 
@@ -315,27 +312,27 @@ class BatteryAmp(Battery):
 
     @property
     @lru_cache(maxsize=1)
-    def current(self) -> str:
+    def current(self):
         """ Returns current charge filename """
         return "{}/charge_now".format(bat_dir())
 
 
     @property
     @lru_cache(maxsize=1)
-    def full(self) -> str:
+    def full(self):
         """ Returns full charge filename """
         return "{}/charge_full".format(bat_dir())
 
 
     @property
     @lru_cache(maxsize=1)
-    def drain(self) -> str:
+    def drain(self):
         """ Returns current filename """
         return "{}/current_now".format(bat_dir())
 
 
     @property
-    def power(self) -> Optional[Union[float, int]]:
+    def power(self):
         power = None
         if bat_dir() is not None:
             voltage = int(open_read("{}/voltage_now".format(bat_dir())))
@@ -350,27 +347,27 @@ class BatteryWatt(Battery):
 
     @property
     @lru_cache(maxsize=1)
-    def current(self) -> str:
+    def current(self):
         """ Returns current energy filename """
         return "{}/energy_now".format(bat_dir())
 
 
     @property
     @lru_cache(maxsize=1)
-    def full(self) -> str:
+    def full(self):
         """ Returns full energy filename """
         return "{}/energy_full".format(bat_dir())
 
 
     @property
     @lru_cache(maxsize=1)
-    def drain(self) -> str:
+    def drain(self):
         """ Returns power filename """
         return "{}/power_now".format(bat_dir())
 
 
     @property
-    def power(self) -> Union[float, int]:
+    def power(self):
         return _round(self.drain_rate / 1e6, self.options.bat_power_round)
 
 
@@ -378,32 +375,32 @@ class BatteryStub(AbstractBattery):
     """ Sub-Battery class for systems that has no battery """
 
     @property
-    def is_present(self) -> bool:
+    def is_present(self):
         return False
 
 
     @property
-    def is_charging(self) -> None:
+    def is_charging(self):
         return None
 
 
     @property
-    def is_full(self) -> None:
+    def is_full(self):
         return None
 
 
     @property
-    def percent(self) -> None:
+    def percent(self):
         return None
 
 
     @property
-    def _AbstractBattery__time(self) -> int:
+    def _AbstractBattery__time(self):
         return 0
 
 
     @property
-    def power(self) -> None:
+    def power(self):
         return None
 
 
@@ -413,15 +410,14 @@ class Network(AbstractNetwork):
     LOCAL_IP_CMD = ["ip", "address", "show", "dev"]
 
     @property
-    def dev(self) -> Optional[str]:
+    def dev(self):
         check = lambda f: open_read("{}/operstate".format(f)).strip() == "up"
         find = lambda d: p(d).glob("[!v]*")
         return next((f.name for f in find("/sys/class/net") if check(f)), None)
 
 
     @property
-    def _AbstractNetwork__ssid(self) -> (
-            Tuple[Optional[List[str]], Optional[Pattern]]):
+    def _AbstractNetwork__ssid(self):
         ssid_exe = None
         regex = None
         dev = self.dev
@@ -440,7 +436,7 @@ class Network(AbstractNetwork):
         return ssid_exe, regex
 
 
-    def _AbstractNetwork__bytes_delta(self, dev: str, mode: str) -> int:
+    def _AbstractNetwork__bytes_delta(self, dev, mode):
         net = "/sys/class/net/{}/statistics/{{}}_bytes".format(dev)
         stat_file = net.format("tx" if mode == "up" else "rx")
         return int(open_read(stat_file))
@@ -450,7 +446,7 @@ class Misc(AbstractMisc):
     """ A Linux implementation of the AbstractMisc class """
 
     @property
-    def vol(self) -> Optional[Union[float, int]]:
+    def vol(self):
         check = lambda d: d.is_dir() and d.name.isdigit()
         extract = lambda f: open_read("{}/cmdline".format(f))
 
@@ -474,7 +470,7 @@ class Misc(AbstractMisc):
 
 
     @property
-    def scr(self) -> Optional[Union[float, int]]:
+    def scr(self):
         check = lambda f: "kbd" not in f and "backlight" in f
 
         scr = None
@@ -490,7 +486,7 @@ class Misc(AbstractMisc):
         return scr
 
 
-def get_vol_pulseaudio() -> Optional[Union[float, int]]:
+def get_vol_pulseaudio():
     """ Return system volume using pulse audio """
     default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
     pac_dump = run(["pacmd", "dump"])
@@ -510,7 +506,7 @@ def get_vol_pulseaudio() -> Optional[Union[float, int]]:
 class Linux(System):
     """ A Linux implementation of the abstract System class """
 
-    def __init__(self, options: Namespace) -> None:
+    def __init__(self, options):
         super(Linux, self).__init__(options,
                                     aux=None,
                                     cpu=Cpu,

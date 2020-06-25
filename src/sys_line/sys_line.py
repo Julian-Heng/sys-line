@@ -14,7 +14,7 @@ from .tools.string_builder import StringBuilder
 from .systems.abstract import System
 
 
-def init_system(options: Namespace) -> System:
+def init_system(options):
     """ Determine what system class this machine should use """
     os_name = os.uname().sysname
 
@@ -33,7 +33,7 @@ def init_system(options: Namespace) -> System:
     return system
 
 
-def main() -> None:
+def main():
     """ Main method """
     options = parse()
     system = init_system(options)

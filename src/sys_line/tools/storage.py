@@ -3,24 +3,21 @@
 """ Storage module """
 
 from __future__ import annotations
-import typing
 
 
 class Storage():
     """ Storage class for storing values with data prefixes """
+
     PREFIXES = ("B", "KiB", "MiB", "GiB", "TiB", "auto")
 
-    def __init__(self,
-                 value: int = 0,
-                 prefix: str = "B",
-                 rounding: int = -1) -> None:
-        self.value: int = value
-        self.display_value: float = self.value
-        self.__prefix: str = prefix
-        self.rounding: int = rounding
+    def __init__(self, value = 0, prefix = "B", rounding = -1):
+        self.value = value
+        self.display_value = self.value
+        self.__prefix = prefix
+        self.rounding = rounding
 
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         # Prevent cyclic import
         from .utils import _round
 
@@ -30,22 +27,22 @@ class Storage():
         return "{} {}".format(_round(val, rnd) if rnd > -1 else val, prf)
 
 
-    def __str__(self) -> str:
+    def __str__(self):
         return self.__repr__()
 
 
-    def __calc_prefix_delta(self, start: str, end: str) -> int:
+    def __calc_prefix_delta(self, start, end):
         return self.PREFIXES.index(end) - self.PREFIXES.index(start)
 
 
     @property
-    def prefix(self) -> str:
+    def prefix(self):
         """ Returns prefix """
         return self.__prefix
 
 
     @prefix.setter
-    def prefix(self, prefix: str) -> None:
+    def prefix(self, prefix):
         """ Sets prefix and changes value """
         if prefix == "auto":
             count = 0
@@ -67,13 +64,13 @@ class Storage():
                 pass
 
 
-    def set_prefix_without_value(self, prefix: str) -> None:
+    def set_prefix_without_value(self, prefix):
         """ Change the prefix without the value """
         self.prefix = prefix
 
 
     @property
-    def bytes(self) -> int:
+    def bytes(self):
         """ Return storage amount in bytes """
         val = self.value
         delta = self.__calc_prefix_delta(self.prefix, "B")

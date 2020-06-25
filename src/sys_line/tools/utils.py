@@ -7,21 +7,18 @@ import os
 import re
 import subprocess
 import sys
-import typing
 
 from pathlib import Path
 
 from .storage import Storage
 
 
-def percent(num_1: typing.Union[int, float],
-            num_2: typing.Union[int, float]) -> (
-                typing.Union[float, Storage, None]):
+def percent(num_1, num_2):
     """ Returns percent of 2 numbers """
     return (num_1 / num_2) * 100 if num_2 else None
 
 
-def open_read(filename: typing.Union[Path, str]) -> str:
+def open_read(filename):
     """
     Wrapper for opening and reading a file
 
@@ -32,7 +29,7 @@ def open_read(filename: typing.Union[Path, str]) -> str:
         return f.read()
 
 
-def run(cmd: typing.List[str]) -> str:
+def run(cmd):
     """ Runs cmd and returns output as a string """
     stdout = subprocess.PIPE
     stderr = open(os.devnull, "w")
@@ -40,7 +37,7 @@ def run(cmd: typing.List[str]) -> str:
     return process.stdout.decode("utf-8")
 
 
-def unix_epoch_to_str(secs: int) -> typing.Union[str, None]:
+def unix_epoch_to_str(secs):
     """ Convert unix time to human readable output """
     days = int(secs / 86400)
     hours = int((secs / 3600) % 24)
@@ -57,7 +54,7 @@ def unix_epoch_to_str(secs: int) -> typing.Union[str, None]:
     return _str if _str else None
 
 
-def _round(num: float, rnd: int) -> typing.Union[int, float]:
+def _round(num, rnd):
     """ Wrapper for round method to trim whole float numbers """
     ret = round(num, rnd)
     return int(ret) if rnd == 0 or ret == int(num) else ret
