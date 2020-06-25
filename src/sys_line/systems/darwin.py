@@ -13,13 +13,8 @@ import time
 from argparse import Namespace
 from functools import lru_cache
 
-from .abstract import (System,
-                       AbstractCpu,
-                       AbstractMemory,
-                       AbstractSwap,
-                       AbstractDisk,
-                       AbstractBattery,
-                       AbstractNetwork,
+from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
+                       AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
 from ..tools.storage import Storage
 from ..tools.sysctl import Sysctl
@@ -33,16 +28,13 @@ class Cpu(AbstractCpu):
     def cores(self):
         return int(self.aux.sysctl.query("hw.logicalcpu_max"))
 
-
     def _AbstractCpu__cpu_speed(self):
         return self.aux.sysctl.query("machdep.cpu.brand_string"), None
-
 
     @property
     def load_avg(self):
         load = self.aux.sysctl.query("vm.loadavg").split()
         return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
-
 
     @property
     def fan(self):
@@ -54,7 +46,6 @@ class Cpu(AbstractCpu):
 
         return fan
 
-
     @property
     def temp(self):
         temp = None
@@ -65,7 +56,6 @@ class Cpu(AbstractCpu):
             temp = _round(temp, self.options.cpu_temp_round)
 
         return temp
-
 
     def _AbstractCpu__uptime(self):
         reg = re.compile(r"sec = (\d+),")
@@ -90,7 +80,6 @@ class Memory(AbstractMemory):
 
         return used
 
-
     @property
     def total(self):
         total = Storage(value=int(self.aux.sysctl.query("hw.memsize")),
@@ -109,7 +98,6 @@ class Swap(AbstractSwap):
         """ Returns swapusage from sysctl """
         return self.aux.sysctl.query("vm.swapusage").strip()
 
-
     def __lookup_swap(self, search):
         value = 0
 
@@ -121,7 +109,6 @@ class Swap(AbstractSwap):
 
         return value
 
-
     @property
     def used(self):
         used = Storage(value=self.__lookup_swap("used"),
@@ -129,7 +116,6 @@ class Swap(AbstractSwap):
         used.prefix = self.options.swap_used_prefix
 
         return used
-
 
     @property
     def total(self):
@@ -159,18 +145,15 @@ class Disk(AbstractDisk):
 
         return _diskutil
 
-
     def __lookup_diskutil(self, key):
         try:
             return self.diskutil[key]
         except KeyError:
             return None
 
-
     @property
     def name(self):
         return self.__lookup_diskutil("Volume Name")
-
 
     @property
     def partition(self):
@@ -189,7 +172,6 @@ class Battery(AbstractBattery):
         _bat = dict(i.split(" = ", 1) for i in _bat if i.strip())
         return _bat if _bat else None
 
-
     @property
     @lru_cache(maxsize=1)
     def __current(self):
@@ -201,12 +183,10 @@ class Battery(AbstractBattery):
 
         return current
 
-
     @property
     @lru_cache(maxsize=1)
     def __current_capacity(self):
         return int(self.bat["CurrentCapacity"]) if self.is_present else None
-
 
     @property
     @lru_cache(maxsize=1)
@@ -216,16 +196,13 @@ class Battery(AbstractBattery):
             is_present = self.bat["BatteryInstalled"] == "Yes"
         return is_present
 
-
     @property
     def is_charging(self):
         return self.bat["IsCharging"] == "Yes" if self.is_present else None
 
-
     @property
     def is_full(self):
         return self.bat["FullyCharged"] == "Yes" if self.is_present else None
-
 
     @property
     def percent(self):
@@ -236,7 +213,6 @@ class Battery(AbstractBattery):
             perc = _round(perc, self.options.bat_percent_round)
 
         return perc
-
 
     @property
     def _AbstractBattery__time(self):
@@ -249,7 +225,6 @@ class Battery(AbstractBattery):
             charge = int((charge / self.__current) * 3600)
 
         return charge
-
 
     @property
     def power(self):
@@ -281,7 +256,6 @@ class Network(AbstractNetwork):
 
         return next((i for i in dev_list if check(i)), None)
 
-
     @property
     def _AbstractNetwork__ssid(self):
         ssid_exe_path = ["System", "Library", "PrivateFrameworks",
@@ -291,7 +265,6 @@ class Network(AbstractNetwork):
         ssid_reg = re.compile("^SSID: (.*)$")
 
         return ssid_exe, ssid_reg
-
 
     def _AbstractNetwork__bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]
@@ -312,7 +285,6 @@ class Misc(AbstractMisc):
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
         return _round(vol, self.options.misc_volume_round)
-
 
     @property
     def scr(self):
@@ -336,10 +308,5 @@ class Darwin(System):
     def __init__(self, options):
         super(Darwin, self).__init__(options,
                                      aux=SimpleNamespace(sysctl=Sysctl()),
-                                     cpu=Cpu,
-                                     mem=Memory,
-                                     swap=Swap,
-                                     disk=Disk,
-                                     bat=Battery,
-                                     net=Network,
-                                     misc=Misc)
+                                     cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
+                                     bat=Battery, net=Network, misc=Misc)

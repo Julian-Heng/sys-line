@@ -12,13 +12,8 @@ import time
 from argparse import Namespace
 from functools import lru_cache
 
-from .abstract import (System,
-                       AbstractCpu,
-                       AbstractMemory,
-                       AbstractSwap,
-                       AbstractDisk,
-                       AbstractBattery,
-                       AbstractNetwork,
+from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
+                       AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
 from ..tools.storage import Storage
 from ..tools.sysctl import Sysctl
@@ -33,7 +28,6 @@ class Cpu(AbstractCpu):
     def cores(self):
         return int(self.aux.sysctl.query("hw.ncpu"))
 
-
     def _AbstractCpu__cpu_speed(self):
         cpu = self.aux.sysctl.query("hw.model")
         speed = self.aux.sysctl.query("hw.cpuspeed")
@@ -41,24 +35,20 @@ class Cpu(AbstractCpu):
             speed = self.aux.sysctl.query("hw.clockrate")
         return cpu, _round(int(speed) / 1000, 2)
 
-
     @property
     def load_avg(self):
         load = self.aux.sysctl.query("vm.loadavg").split()
         return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
-
 
     @property
     def fan(self):
         """ Stub """
         return None
 
-
     @property
     def temp(self):
         temp = self.aux.sysctl.query("dev.cpu.0.temperature")
         return float(re.search(r"\d+\.?\d+").group(0)) if temp else None
-
 
     def _AbstractCpu__uptime(self):
         reg = re.compile(r"sec = (\d+),")
@@ -85,7 +75,6 @@ class Memory(AbstractMemory):
         used.prefix = self.options.mem_used_prefix
         return used
 
-
     @property
     def total(self):
         total = int(self.aux.sysctl.query("hw.realmem"))
@@ -108,7 +97,6 @@ class Swap(AbstractSwap):
         used.prefix = self.options.swap_used_prefix
         return used
 
-
     @property
     def total(self):
         total = int(self.aux.sysctl.query("vm.swap_total"))
@@ -127,7 +115,6 @@ class Disk(AbstractDisk):
     def name(self):
         """ Stub """
         return None
-
 
     @property
     def partition(self):
@@ -152,21 +139,17 @@ class Battery(AbstractBattery):
         _bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in _bat]
         return dict(i.split(":", 1) for i in _bat) if len(_bat) > 1 else None
 
-
     @property
     def is_present(self):
         return self.bat["State"] != "not present" if self.bat else False
-
 
     @property
     def is_charging(self):
         return self.bat["State"] == "charging" if self.is_present else None
 
-
     @property
     def is_full(self):
         return self.bat["State"] == "high" if self.is_present else None
-
 
     @property
     def percent(self):
@@ -174,7 +157,6 @@ class Battery(AbstractBattery):
         if self.is_present:
             ret = int(self.bat["Remaining capacity"][:-1])
         return ret
-
 
     @property
     def _AbstractBattery__time(self):
@@ -188,7 +170,6 @@ class Battery(AbstractBattery):
                 secs = 0
 
         return secs
-
 
     @property
     def power(self):
@@ -210,13 +191,11 @@ class Network(AbstractNetwork):
         check = lambda i: active.search(run(["ifconfig", i]))
         return next((i for i in dev_list if check(i)), None)
 
-
     @property
     def _AbstractNetwork__ssid(self):
         ssid_reg = re.compile(r"ssid (.*) channel")
         ssid_exe = ["ifconfig", self.dev]
         return ssid_exe, ssid_reg
-
 
     def _AbstractNetwork__bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]
@@ -232,7 +211,6 @@ class Misc(AbstractMisc):
         """ Stub """
         return None
 
-
     @property
     def scr(self):
         """ Stub """
@@ -245,10 +223,5 @@ class FreeBSD(System):
     def __init__(self, options):
         super(FreeBSD, self).__init__(options,
                                       aux=SimpleNamespace(sysctl=Sysctl()),
-                                      cpu=Cpu,
-                                      mem=Memory,
-                                      swap=Swap,
-                                      disk=Disk,
-                                      bat=Battery,
-                                      net=Network,
-                                      misc=Misc)
+                                      cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
+                                      bat=Battery, net=Network, misc=Misc)
