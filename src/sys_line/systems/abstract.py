@@ -33,6 +33,11 @@ class AbstractGetter(ABC):
         self.options = options
         self.aux = aux
 
+    def query(self, info, options):
+        if info not in self._valid_info:
+            raise RuntimeError("info name not in domain")
+        return getattr(self, info)
+
     def __str__(self):
         """ The string representation of the getter would return all values """
         return "\n".join([
