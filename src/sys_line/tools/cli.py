@@ -12,7 +12,7 @@ from .storage import Storage
 from ..systems.abstract import System
 
 
-def parse():
+def parse_cli():
     """ Parse the program arguments """
     fmt = argparse.RawDescriptionHelpFormatter
     desc = "a simple status line generator"
