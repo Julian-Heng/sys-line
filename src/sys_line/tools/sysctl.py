@@ -15,7 +15,6 @@ class Sysctl():
         sysctl = run(["sysctl", "-A", "-e"]).strip().split("\n")
         self.sysctl = dict(i.split("=", 1) for i in sysctl if i and "=" in i)
 
-
     def query(self, key):
         """ Fetch a sysctl variable """
         try:

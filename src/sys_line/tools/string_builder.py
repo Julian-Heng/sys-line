@@ -16,7 +16,6 @@ class StringBuilder():
         self.trim_reg_1 = re.compile(r"\{\}")
         self.trim_reg_2 = re.compile(r"\{\?|\}$")
 
-
     def build(self, sys, fmt):
         """ Recursive function to build a string from a format """
         out = ""

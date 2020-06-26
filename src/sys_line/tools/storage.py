@@ -16,7 +16,6 @@ class Storage():
         self._prefix = prefix
         self.rounding = rounding
 
-
     def __repr__(self):
         # Prevent cyclic import
         from .utils import _round
@@ -26,20 +25,16 @@ class Storage():
         prf = self.prefix
         return "{} {}".format(_round(val, rnd) if rnd > -1 else val, prf)
 
-
     def __str__(self):
         return self.__repr__()
 
-
     def _calc_prefix_delta(self, start, end):
         return self.PREFIXES.index(end) - self.PREFIXES.index(start)
-
 
     @property
     def prefix(self):
         """ Returns prefix """
         return self._prefix
-
 
     @prefix.setter
     def prefix(self, prefix):
@@ -63,11 +58,9 @@ class Storage():
             except ValueError:
                 pass
 
-
     def set_prefix_without_value(self, prefix):
         """ Change the prefix without the value """
         self.prefix = prefix
-
 
     @property
     def bytes(self):
