@@ -40,7 +40,8 @@ def main():
 
     if system is not None:
         if options.all is not None:
-            for domain in options.all if options.all else system.SHORT_DOMAINS:
+            domains = options.all if options.all else system.SHORT_DOMAINS
+            for domain in domains:
                 print(getattr(system, domain))
         elif options.format:
             print(StringBuilder().build(system, options.format))
