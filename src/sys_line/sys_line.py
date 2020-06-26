@@ -10,7 +10,7 @@ from argparse import Namespace
 from importlib import import_module
 
 from .tools.options import parse
-from .tools.string_builder import StringBuilder
+from .tools.format import FormatTree
 from .systems.abstract import System
 
 
@@ -44,6 +44,6 @@ def main():
             for domain in domains:
                 print(getattr(system, domain))
         elif options.format:
-            print(StringBuilder().build(system, options.format))
+            print(FormatTree(system, options.format).build())
     else:
         sys.exit(2)
