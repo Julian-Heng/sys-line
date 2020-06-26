@@ -28,7 +28,7 @@ class Cpu(AbstractCpu):
     def cores(self):
         return int(self.aux.sysctl.query("hw.ncpu"))
 
-    def _AbstractCpu__cpu_speed(self):
+    def _cpu_speed(self):
         cpu = self.aux.sysctl.query("hw.model")
         speed = self.aux.sysctl.query("hw.cpuspeed")
         if speed is None:
@@ -50,7 +50,7 @@ class Cpu(AbstractCpu):
         temp = self.aux.sysctl.query("dev.cpu.0.temperature")
         return float(re.search(r"\d+\.?\d+").group(0)) if temp else None
 
-    def _AbstractCpu__uptime(self):
+    def _uptime(self):
         reg = re.compile(r"sec = (\d+),")
         sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
         sec = int(time.time()) - int(sec)
@@ -159,7 +159,7 @@ class Battery(AbstractBattery):
         return ret
 
     @property
-    def _AbstractBattery__time(self):
+    def _time(self):
         secs = 0
         if self.is_present:
             acpi_time = self.bat["Remaining time"]
@@ -192,12 +192,12 @@ class Network(AbstractNetwork):
         return next((i for i in dev_list if check(i)), None)
 
     @property
-    def _AbstractNetwork__ssid(self):
+    def _ssid(self):
         ssid_reg = re.compile(r"ssid (.*) channel")
         ssid_exe = ["ifconfig", self.dev]
         return ssid_exe, ssid_reg
 
-    def _AbstractNetwork__bytes_delta(self, dev, mode):
+    def _bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]
         index = 10 if mode == "up" else 7
         return int(run(cmd).strip().split("\n")[1].split()[index])

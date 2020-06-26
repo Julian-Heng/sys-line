@@ -13,7 +13,7 @@ class Storage():
     def __init__(self, value = 0, prefix = "B", rounding = -1):
         self.value = value
         self.display_value = self.value
-        self.__prefix = prefix
+        self._prefix = prefix
         self.rounding = rounding
 
 
@@ -31,14 +31,14 @@ class Storage():
         return self.__repr__()
 
 
-    def __calc_prefix_delta(self, start, end):
+    def _calc_prefix_delta(self, start, end):
         return self.PREFIXES.index(end) - self.PREFIXES.index(start)
 
 
     @property
     def prefix(self):
         """ Returns prefix """
-        return self.__prefix
+        return self._prefix
 
 
     @prefix.setter
@@ -50,16 +50,16 @@ class Storage():
             while self.display_value > 1024:
                 self.display_value /= 1024
                 count += 1
-            curr_index = self.PREFIXES.index(self.__prefix) + count
-            self.__prefix = self.PREFIXES[curr_index]
+            curr_index = self.PREFIXES.index(self._prefix) + count
+            self._prefix = self.PREFIXES[curr_index]
         else:
             try:
-                delta = self.__calc_prefix_delta(self.__prefix, prefix)
+                delta = self._calc_prefix_delta(self._prefix, prefix)
                 self.display_value = self.value
                 if delta != 0:
                     # Convert the value
                     self.display_value = self.display_value / pow(1024, delta)
-                    self.__prefix = prefix
+                    self._prefix = prefix
             except ValueError:
                 pass
 
@@ -73,5 +73,5 @@ class Storage():
     def bytes(self):
         """ Return storage amount in bytes """
         val = self.value
-        delta = self.__calc_prefix_delta(self.prefix, "B")
+        delta = self._calc_prefix_delta(self.prefix, "B")
         return int(val / pow(1024, delta))

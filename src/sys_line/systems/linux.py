@@ -34,7 +34,7 @@ class Cpu(AbstractCpu):
     def cores(self):
         return len(re.findall(r"^processor", self.cpu_file, re.M))
 
-    def _AbstractCpu__cpu_speed(self):
+    def _cpu_speed(self):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
@@ -82,7 +82,7 @@ class Cpu(AbstractCpu):
 
         return temp
 
-    def _AbstractCpu__uptime(self):
+    def _uptime(self):
         return int(float(open_read("/proc/uptime").strip().split(" ")[0]))
 
 
@@ -142,7 +142,7 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def __lsblk(self):
+    def _lsblk(self):
         columns = ["KNAME", "NAME", "LABEL", "PARTLABEL",
                    "FSTYPE", "MOUNTPOINT"]
 
@@ -163,11 +163,11 @@ class Disk(AbstractDisk):
     def name(self):
         labels = ["LABEL", "PARTLABEL"]
         return [next((v[i] for i in labels if v[i]), None)
-                for k, v in self.__lsblk.items()]
+                for k, v in self._lsblk.items()]
 
     @property
     def partition(self):
-        return [i["FSTYPE"] for i in self.__lsblk.values()]
+        return [i["FSTYPE"] for i in self._lsblk.values()]
 
 
 @lru_cache(maxsize=1)
@@ -238,7 +238,7 @@ class Battery(AbstractBattery):
         return None if bat_dir() is None else int(open_read(self.drain))
 
     @lru_cache(maxsize=1)
-    def __compare_status(self, query):
+    def _compare_status(self, query):
         """ Compares status to query """
         return None if bat_dir() is None else self.status == query
 
@@ -248,11 +248,11 @@ class Battery(AbstractBattery):
 
     @property
     def is_charging(self):
-        return self.__compare_status("Charging")
+        return self._compare_status("Charging")
 
     @property
     def is_full(self):
-        return self.__compare_status("Full")
+        return self._compare_status("Full")
 
     @property
     def percent(self):
@@ -267,7 +267,7 @@ class Battery(AbstractBattery):
         return perc
 
     @property
-    def _AbstractBattery__time(self):
+    def _time(self):
         remaining = 0
         if bat_dir() is not None and self.drain_rate:
             charge = self.current_charge
@@ -360,7 +360,7 @@ class BatteryStub(AbstractBattery):
         return None
 
     @property
-    def _AbstractBattery__time(self):
+    def _time(self):
         return 0
 
     @property
@@ -380,7 +380,7 @@ class Network(AbstractNetwork):
         return next((f.name for f in find("/sys/class/net") if check(f)), None)
 
     @property
-    def _AbstractNetwork__ssid(self):
+    def _ssid(self):
         ssid_exe = None
         regex = None
         dev = self.dev
@@ -398,7 +398,7 @@ class Network(AbstractNetwork):
 
         return ssid_exe, regex
 
-    def _AbstractNetwork__bytes_delta(self, dev, mode):
+    def _bytes_delta(self, dev, mode):
         net = "/sys/class/net/{}/statistics/{{}}_bytes".format(dev)
         stat_file = net.format("tx" if mode == "up" else "rx")
         return int(open_read(stat_file))

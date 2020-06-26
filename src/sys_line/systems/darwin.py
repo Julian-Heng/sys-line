@@ -28,7 +28,7 @@ class Cpu(AbstractCpu):
     def cores(self):
         return int(self.aux.sysctl.query("hw.logicalcpu_max"))
 
-    def _AbstractCpu__cpu_speed(self):
+    def _cpu_speed(self):
         return self.aux.sysctl.query("machdep.cpu.brand_string"), None
 
     @property
@@ -57,7 +57,7 @@ class Cpu(AbstractCpu):
 
         return temp
 
-    def _AbstractCpu__uptime(self):
+    def _uptime(self):
         reg = re.compile(r"sec = (\d+),")
         sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
         sec = int(time.time()) - int(sec)
@@ -98,7 +98,7 @@ class Swap(AbstractSwap):
         """ Returns swapusage from sysctl """
         return self.aux.sysctl.query("vm.swapusage").strip()
 
-    def __lookup_swap(self, search):
+    def _lookup_swap(self, search):
         value = 0
 
         regex = r"{} = (\d+\.\d+)M".format(search)
@@ -111,7 +111,7 @@ class Swap(AbstractSwap):
 
     @property
     def used(self):
-        used = Storage(value=self.__lookup_swap("used"),
+        used = Storage(value=self._lookup_swap("used"),
                        rounding=self.options.swap_used_round)
         used.prefix = self.options.swap_used_prefix
 
@@ -119,7 +119,7 @@ class Swap(AbstractSwap):
 
     @property
     def total(self):
-        total = Storage(value=self.__lookup_swap("total"),
+        total = Storage(value=self._lookup_swap("total"),
                         rounding=self.options.swap_total_round)
         total.prefix = self.options.swap_total_prefix
 
@@ -145,7 +145,7 @@ class Disk(AbstractDisk):
 
         return _diskutil
 
-    def __lookup_diskutil(self, key):
+    def _lookup_diskutil(self, key):
         try:
             return self.diskutil[key]
         except KeyError:
@@ -153,11 +153,11 @@ class Disk(AbstractDisk):
 
     @property
     def name(self):
-        return self.__lookup_diskutil("Volume Name")
+        return self._lookup_diskutil("Volume Name")
 
     @property
     def partition(self):
-        return self.__lookup_diskutil("File System Personality")
+        return self._lookup_diskutil("File System Personality")
 
 
 class Battery(AbstractBattery):
@@ -174,7 +174,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def __current(self):
+    def _current(self):
         current = 0
         if self.is_present:
             current = int(self.bat["InstantAmperage"])
@@ -185,7 +185,7 @@ class Battery(AbstractBattery):
 
     @property
     @lru_cache(maxsize=1)
-    def __current_capacity(self):
+    def _current_capacity(self):
         return int(self.bat["CurrentCapacity"]) if self.is_present else None
 
     @property
@@ -209,20 +209,20 @@ class Battery(AbstractBattery):
         perc = None
 
         if self.is_present:
-            perc = percent(self.__current_capacity, int(self.bat["MaxCapacity"]))
+            perc = percent(self._current_capacity, int(self.bat["MaxCapacity"]))
             perc = _round(perc, self.options.bat_percent_round)
 
         return perc
 
     @property
-    def _AbstractBattery__time(self):
+    def _time(self):
         charge = 0
 
-        if self.is_present and self.__current != 0:
-            charge = self.__current_capacity
+        if self.is_present and self._current != 0:
+            charge = self._current_capacity
             if self.is_charging:
                 charge = int(self.bat["MaxCapacity"]) - charge
-            charge = int((charge / self.__current) * 3600)
+            charge = int((charge / self._current) * 3600)
 
         return charge
 
@@ -232,7 +232,7 @@ class Battery(AbstractBattery):
 
         if self.is_present:
             voltage = int(self.bat["Voltage"])
-            power = (self.__current * voltage) / 1e6
+            power = (self._current * voltage) / 1e6
             power = _round(power, self.options.bat_power_round)
 
         return power
@@ -257,7 +257,7 @@ class Network(AbstractNetwork):
         return next((i for i in dev_list if check(i)), None)
 
     @property
-    def _AbstractNetwork__ssid(self):
+    def _ssid(self):
         ssid_exe_path = ["System", "Library", "PrivateFrameworks",
                          "Apple80211.framework", "Versions", "Current",
                          "Resources", "airport"]
@@ -266,7 +266,7 @@ class Network(AbstractNetwork):
 
         return ssid_exe, ssid_reg
 
-    def _AbstractNetwork__bytes_delta(self, dev, mode):
+    def _bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]
         reg_str = r"^({})(\s+[^\s]+){{{}}}\s+(\d+)"
         reg_str = reg_str.format(dev, 8 if mode == "up" else 5)
