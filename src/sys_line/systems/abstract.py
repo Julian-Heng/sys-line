@@ -189,12 +189,6 @@ class AbstractSwap(AbstractStorage):
 class AbstractDisk(AbstractStorage):
     """ Abstract disk class to be implemented by subclass """
 
-    def __str__(self):
-        return "{}\n{}".format("\n".join([
-            "{}.{}: {}".format(self.domain_name, i, getattr(self, i))
-            for i in self._valid_info
-        ]), super(AbstractDisk, self).__str__())
-
     @property
     def _valid_info(self):
         return super(AbstractDisk, self)._valid_info + ["dev", "mount",
