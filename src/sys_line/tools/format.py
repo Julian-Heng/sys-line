@@ -36,7 +36,7 @@ class FormatTree(FormatNode):
 
 class FormatInfo(FormatNode):
 
-    EXTRACT_REGEX = re.compile(r"\{((\w+)\.(\w+))(?:\?)?")
+    EXTRACT_REGEX = re.compile(r"\{((\w+)(?:\[([^\]]+)\])?\.(\w+))(?:\?)?")
 
     def __init__(self, system, fmt):
         super(FormatInfo, self).__init__()
@@ -47,17 +47,27 @@ class FormatInfo(FormatNode):
 
         extract = self.EXTRACT_REGEX.search(self.fmt)
         self.domain = extract.group(2)
-        self.info = extract.group(3)
+        self.options = extract.group(3)
+        self.info = extract.group(4)
 
         if self.fmt.find("?") > -1:
             alt = self.fmt[(self.fmt.find("?") + 1):-1]
-            alt = alt.replace("{}", "{{{}.{}}}".format(self.domain, self.info))
+
+            if self.options is None:
+                rebuild = "{{{}.{}}}"
+                args = (self.domain, self.info)
+            else:
+                rebuild = "{{{}[{}].{}}}"
+                args = (self.domain, self.options, self.info)
+
+            alt = alt.replace("{}", rebuild.format(*args))
             self.alt = FormatTree(self.system, alt)
         else:
             self.alt = None
 
     def build(self):
-        replace = getattr(self.system, self.domain).query(self.info, None)
+        replace = getattr(self.system, self.domain).query(self.info,
+                                                          self.options)
         if replace is not None:
             if isinstance(replace, bool):
                 replace = self.alt.build() if replace else ""

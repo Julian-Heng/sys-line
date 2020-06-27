@@ -36,6 +36,9 @@ class AbstractGetter(ABC):
     def query(self, info, options):
         if info not in self._valid_info:
             raise RuntimeError("info name not in domain")
+        return self._query(info, options)
+
+    def _query(self, info, options):
         return getattr(self, info)
 
     def __str__(self):
@@ -196,6 +199,9 @@ class AbstractDisk(AbstractStorage):
     def _valid_info(self):
         return super(AbstractDisk, self)._valid_info + ["dev", "mount",
                                                         "name", "partition"]
+
+    def _query(self, info, options):
+        return getattr(self, info)[options]
 
     @property
     @abstractmethod
