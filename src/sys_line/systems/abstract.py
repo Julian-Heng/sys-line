@@ -198,12 +198,17 @@ class AbstractDisk(AbstractStorage):
                                                         "name", "partition"]
 
     @property
+    @abstractmethod
+    def _DF_FLAGS(self):
+        pass
+
+    @property
     @lru_cache(maxsize=1)
     def df_out(self):
         """ Return df output """
         df_output = None
         df_lines = None
-        df_cmd = self.DF_FLAGS
+        df_cmd = self._DF_FLAGS
 
         if self.options.disk is None:
             df_cmd += self.options.mount
@@ -213,7 +218,7 @@ class AbstractDisk(AbstractStorage):
         df_output = run(df_cmd).strip().split("\n")
 
         if (len(df_output) <= 1):
-            df_output = run(df_cmd[:-1]).split("\n")
+            df_output = run(self._DF_FLAGS).split("\n")
 
         if len(df_output) == 2:
             df_lines = [df_output[1].split()]
@@ -238,7 +243,7 @@ class AbstractDisk(AbstractStorage):
         dev = None
         df_out = self.df_out
         if df_out is not None:
-            dev = [i[0] for i in df_out]
+            dev = {i[0]: i[0] for i in df_out}
         return dev
 
     @property
@@ -246,7 +251,7 @@ class AbstractDisk(AbstractStorage):
         """ Disk device method """
         dev = self.original_dev
         if self.options.disk_short_dev:
-            dev = [i.split("/")[-1] for i in dev]
+            dev = {k: v.split("/")[-1] for k, v in dev.items()}
         return dev
 
     @property
@@ -257,7 +262,10 @@ class AbstractDisk(AbstractStorage):
     @property
     def mount(self):
         """ Abstract disk mount method to be implemented by subclass """
-        return [i[5] for i in self.df_out] if self.df_out is not None else None
+        mount = None
+        if self.df_out is not None:
+            mount = {i[0]: i[5] for i in self.df_out}
+        return mount
 
     @property
     @abstractmethod
@@ -267,35 +275,41 @@ class AbstractDisk(AbstractStorage):
     @property
     def used(self):
         """ Abstract disk used method to be implemented by subclass """
-        used = list()
+        used = None
         if self.df_out is not None:
+            used = dict()
             for i in self.df_out:
                 stor = Storage(value=int(i[2]), prefix="KiB",
                                rounding=self.options.disk_used_round)
                 stor.prefix = self.options.disk_used_prefix
-                used.append(stor)
+                used[i[0]] = stor
         return used
 
     @property
     def total(self):
         """ Abstract disk total method to be implemented by subclass """
-        total = list()
+        total = None
         if self.df_out is not None:
+            total = dict()
             for i in self.df_out:
                 stor = Storage(value=int(i[1]), prefix="KiB",
                                 rounding=self.options.disk_total_round)
                 stor.prefix = self.options.disk_total_prefix
-                total.append(stor)
+                total[i[0]] = stor
         return total
 
     @property
     def percent(self):
         """ Abstract percent property """
-        perc = list()
-        for used, total in zip(self.used, self.total):
-            value = percent(used.value, total.value)
-            value = 0.0 if value is None else _round(value, self.rounding)
-            perc.append(value)
+        perc = None
+        if self.original_dev is not None:
+            perc = dict()
+            used = self.used
+            total = self.total
+            for dev in self.original_dev.keys():
+                value = percent(used[dev].value, total[dev].value)
+                value = 0.0 if value is None else _round(value, self.rounding)
+                perc[dev] = value
         return perc
 
 

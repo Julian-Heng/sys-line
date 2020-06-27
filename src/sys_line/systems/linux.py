@@ -138,7 +138,9 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ A Linux implementation of the AbstractDisk class """
 
-    DF_FLAGS = ["df", "-P"]
+    @property
+    def _DF_FLAGS(self):
+        return ["df", "-P"]
 
     @property
     @lru_cache(maxsize=1)
@@ -150,7 +152,7 @@ class Disk(AbstractDisk):
 
         if self.dev is not None:
             cmd = ["lsblk", "--output", ",".join(columns),
-                   "--paths", "--pairs"] + self.original_dev
+                   "--paths", "--pairs"] + list(self.original_dev.values())
 
             for line in run(cmd).strip().split("\n"):
                 out = re.findall(r"[^\"\s]\S*|\".+?", line)
@@ -162,12 +164,12 @@ class Disk(AbstractDisk):
     @property
     def name(self):
         labels = ["LABEL", "PARTLABEL"]
-        return [next((v[i] for i in labels if v[i]), None)
-                for k, v in self._lsblk.items()]
+        return {k: next((v[i] for i in labels if v[i]), None)
+                for k, v in self._lsblk.items()}
 
     @property
     def partition(self):
-        return [i["FSTYPE"] for i in self._lsblk.values()]
+        return {k: v["FSTYPE"] for k, v in self._lsblk.items()}
 
 
 @lru_cache(maxsize=1)
