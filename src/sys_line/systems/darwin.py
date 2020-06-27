@@ -19,7 +19,7 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractMisc)
 from ..tools.storage import Storage
 from ..tools.sysctl import Sysctl
-from ..tools.utils import percent, run, _round
+from ..tools.utils import percent, run, _round, trim_string
 
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
@@ -139,18 +139,21 @@ class Disk(AbstractDisk):
     def diskutil(self):
         """ Returns diskutil program output as a dict """
         check = lambda i: i and len(i.split(": ", 1)) == 2
-        dev = self.dev
+        devs = self.original_dev.values()
         _diskutil = None
-        if dev is not None:
-            _diskutil = run(["diskutil", "info", self.dev]).split("\n")
-            _diskutil = (re.sub(r"\s+", " ", i).strip() for i in _diskutil)
-            _diskutil = dict(i.split(": ", 1) for i in _diskutil if check(i))
+        if devs is not None:
+            _diskutil = dict()
+            for dev in devs:
+                out = run(["diskutil", "info", dev]).split("\n")
+                out = (re.sub("r\s+", " ", i).strip() for i in out)
+                out = dict(i.split(": ", 1) for i in out if check(i))
+                _diskutil[dev] = {k: trim_string(v) for k, v in out.items()}
 
         return _diskutil
 
     def _lookup_diskutil(self, key):
         try:
-            return self.diskutil[key]
+            return {k: v[key] for k, v in self.diskutil.items()}
         except KeyError:
             return None
 
