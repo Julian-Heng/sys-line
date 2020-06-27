@@ -43,7 +43,8 @@ def parse_cli():
                                      usage=usage_msg,
                                      formatter_class=fmt)
 
-    parser.add_argument("format", nargs="?", type=str, default="")
+    parser.add_argument("format", nargs="*", action="append", type=str,
+                        default=[""])
     parser.add_argument("-v", "--version", action="version", version=ver)
     parser.add_argument("-a", "--all", nargs="*", choices=System.SHORT_DOMAINS,
                         default=None, metavar="domain")
@@ -161,6 +162,9 @@ def parse_cli():
 
     flatten = lambda l: list(itertools.chain(*l))
     unique = lambda l: list(dict.fromkeys(l))
+
+    if len(result.format) > 1:
+        result.format = flatten(result.format[1:])
     if result.disk:
         result.disk = unique(flatten(result.disk))
     if len(result.mount) > 1:

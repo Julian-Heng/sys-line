@@ -44,6 +44,7 @@ def main():
             for domain in domains:
                 print(getattr(system, domain))
         elif options.format:
-            print(FormatTree(system, options.format).build())
+            for fmt in options.format:
+                print(FormatTree(system, fmt).build())
     else:
         sys.exit(2)
