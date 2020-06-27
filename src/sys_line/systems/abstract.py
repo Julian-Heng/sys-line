@@ -210,10 +210,10 @@ class AbstractDisk(AbstractStorage):
         df_lines = None
         df_cmd = self._DF_FLAGS
 
-        if self.options.disk is None:
-            df_cmd += self.options.mount
-        else:
+        if self.options.disk:
             df_cmd += self.options.disk
+        else:
+            df_cmd += self.options.mount
 
         df_output = run(df_cmd).strip().split("\n")
 
@@ -223,7 +223,7 @@ class AbstractDisk(AbstractStorage):
         if len(df_output) == 2:
             df_lines = [df_output[1].split()]
         else:
-            if self.options.disk is not None:
+            if self.options.disk:
                 reg = re.compile("|".join(self.options.disk))
             else:
                 reg = re.compile("({})$".format("|".join(self.options.mount)))

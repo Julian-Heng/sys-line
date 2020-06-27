@@ -96,7 +96,7 @@ def parse_cli():
 
     mut_group = groups["disk"].add_mutually_exclusive_group()
     mut_group.add_argument("-dd", "--disk", nargs="*", action="append",
-                           default=None, metavar="disk")
+                           default=[], metavar="disk")
     mut_group.add_argument("-dm", "--mount", nargs="*", action="append",
                            default=["/"], metavar="mount")
 
@@ -161,7 +161,7 @@ def parse_cli():
 
     flatten = lambda l: list(itertools.chain(*l))
     unique = lambda l: list(dict.fromkeys(l))
-    if result.disk is not None:
+    if result.disk:
         result.disk = unique(flatten(result.disk))
     if len(result.mount) > 1:
         result.mount = unique(flatten(result.mount[1:]))
