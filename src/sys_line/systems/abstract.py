@@ -195,7 +195,27 @@ class AbstractDisk(AbstractStorage):
                                                         "name", "partition"]
 
     def _query(self, info, options):
+        if options is None:
+            # Set options to the first available mount or disk. By default, it
+            # should be "/" if no disks or mounts are set. Otherwise, it is set
+            # to the first disk or mount set in the arguments
+            options = next(iter(getattr(self, info)), "/")
+        elif not (options in self.options.disk or options in self.options.mount):
+            if options.startswith("/dev"):
+                self.options.disk.append(options)
+            else:
+                self.options.mount.append(options)
+
+            # Clears cache for df_out to account for the changes to the options
+            AbstractDisk.df_out.fget.cache_clear()
+
+        if not options.startswith("/dev"):
+            options = self._mount_to_devname(options)
+
         return getattr(self, info)[options]
+
+    def _mount_to_devname(self, mount_path):
+        return next((k for k, v in self.mount.items() if mount_path == v))
 
     @property
     @abstractmethod
