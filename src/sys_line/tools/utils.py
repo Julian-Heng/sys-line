@@ -50,7 +50,7 @@ def unix_epoch_to_str(secs):
         "{}s".format(secs) if secs else ""
     )
 
-    _str = re.sub(r"\s+", " ", string.strip())
+    _str = trim_string(_str)
     return _str if _str else None
 
 
@@ -58,3 +58,7 @@ def _round(num, rnd):
     """ Wrapper for round method to trim whole float numbers """
     ret = round(num, rnd)
     return int(ret) if rnd == 0 or ret == int(num) else ret
+
+
+def trim_string(string):
+    return re.sub(r"\s+", " ", string.strip())
