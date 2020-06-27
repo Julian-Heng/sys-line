@@ -130,7 +130,9 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ Darwin implementation of AbstractDisk class """
 
-    DF_FLAGS = ["df", "-P", "-k"]
+    @property
+    def _DF_FLAGS(self):
+        return ["df", "-P", "-k"]
 
     @property
     @lru_cache(maxsize=1)
