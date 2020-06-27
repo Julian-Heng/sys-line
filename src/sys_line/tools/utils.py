@@ -50,8 +50,8 @@ def unix_epoch_to_str(secs):
         "{}s".format(secs) if secs else ""
     )
 
-    _str = trim_string(_str)
-    return _str if _str else None
+    string = trim_string(string)
+    return string if string else None
 
 
 def _round(num, rnd):
