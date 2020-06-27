@@ -26,53 +26,13 @@ class FormatTree(FormatNode):
         self.nodes = list()
 
     def build(self):
-        for i in self._tokenize():
+        for i in Tokenizer.tokenize(self.fmt):
             if i.startswith("{"):
                 self.nodes.append(FormatInfo(self.system, i))
             else:
                 self.nodes.append(FormatString(i))
 
         return "".join([i.build() for i in self.nodes])
-
-    def _tokenize(self):
-        """
-        Find tokens within a string
-        Returns a string list
-        """
-        tokens = list()
-        curr = ""
-        state = ""
-        level = 0
-
-        for i in self.fmt:
-            if i == "{":
-                level += 1
-                if state == "":
-                    state = "in"
-                    if curr != "":
-                        tokens.append(curr)
-                    curr = ""
-                elif state == "out":
-                    state = "in"
-                    if curr != "":
-                        tokens.append(curr)
-                    curr = ""
-                curr += i
-            elif i == "}":
-                level -= 1
-                curr += i
-                if level == 0:
-                    state = "out"
-                    if curr != "":
-                        tokens.append(curr)
-                    curr = ""
-            else:
-                curr += i
-
-        tokens.append(curr)
-
-        return tokens
-
 
 class FormatInfo(FormatNode):
 
@@ -119,3 +79,52 @@ class FormatString(FormatNode):
 
     def build(self):
         return self.string
+
+
+class Tokenizer:
+
+    class State:
+        START = -1
+        INSIDE = 0
+        OUTSIDE = 1
+
+    @staticmethod
+    def tokenize(string):
+        """
+        Find tokens within a string
+        Returns a string list
+        """
+
+        tokens = list()
+        curr = ""
+        state = Tokenizer.State.START
+        level = 0
+
+        for i in string:
+            if i == "{":
+                level += 1
+                if state == Tokenizer.State.START:
+                    state = Tokenizer.State.INSIDE
+                    if curr:
+                        tokens.append(curr)
+                    curr = ""
+                elif state == Tokenizer.State.OUTSIDE:
+                    state = Tokenizer.State.INSIDE
+                    if curr:
+                        tokens.append(curr)
+                    curr = ""
+                curr += i
+            elif i == "}":
+                level -= 1
+                curr += i
+                if level == 0:
+                    state = Tokenizer.State.OUTSIDE
+                    if curr:
+                        tokens.append(curr)
+                    curr = ""
+            else:
+                curr += i
+
+        tokens.append(curr)
+
+        return tokens
