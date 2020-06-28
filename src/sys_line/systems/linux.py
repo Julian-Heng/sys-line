@@ -386,7 +386,7 @@ class Network(AbstractNetwork):
     @property
     def _ssid(self):
         ssid_cmd = None
-        regex = None
+        ssid_reg = None
         dev = self.dev
 
         if dev is not None:
@@ -398,9 +398,9 @@ class Network(AbstractNetwork):
                     ssid_reg = re.compile(r"^SSID: (.*)$")
             except FileNotFoundError:
                 ssid_cmd = None
-                regex = None
+                ssid_reg = None
 
-        return ssid_cmd, regex
+        return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
         net = "/sys/class/net/{}/statistics/{{}}_bytes".format(dev)
