@@ -182,7 +182,9 @@ class Battery(AbstractBattery):
 class Network(AbstractNetwork):
     """ FreeBSD implementation of AbstractNetwork class """
 
-    LOCAL_IP_CMD = ["ifconfig"]
+    @property
+    def _LOCAL_IP_CMD(self):
+        return ["ifconfig"]
 
     @property
     def dev(self):

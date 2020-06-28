@@ -389,6 +389,11 @@ class AbstractNetwork(AbstractGetter):
         return ["dev", "ssid", "local_ip", "download", "upload"]
 
     @property
+    @abstractmethod
+    def _LOCAL_IP_CMD(self):
+        pass
+
+    @property
     @lru_cache(maxsize=1)
     @abstractmethod
     def dev(self):
@@ -416,7 +421,7 @@ class AbstractNetwork(AbstractGetter):
         ip_out = None
         if self.dev is not None:
             reg = re.compile(r"^inet\s+((?:[0-9]{1,3}\.){3}[0-9]{1,3})")
-            ip_out = run(self.LOCAL_IP_CMD + [self.dev]).strip().split("\n")
+            ip_out = run(self._LOCAL_IP_CMD + [self.dev]).strip().split("\n")
             ip_out = (reg.match(line.strip()) for line in ip_out)
             ip_out = next((i.group(1) for i in ip_out if i), None)
         return ip_out

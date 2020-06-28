@@ -373,7 +373,9 @@ class BatteryStub(AbstractBattery):
 class Network(AbstractNetwork):
     """ A Linux implementation of the AbstractNetwork class """
 
-    LOCAL_IP_CMD = ["ip", "address", "show", "dev"]
+    @property
+    def _LOCAL_IP_CMD(self):
+        return ["ip", "address", "show", "dev"]
 
     @property
     def dev(self):
