@@ -122,11 +122,21 @@ class Disk(AbstractDisk):
     @property
     def partition(self):
         partition = None
-        dev = re.search(r"^(.*)p(\d+)$", self.dev)
+        gpart_out = dict()
+        reg = re.compile(r"^(.*)p(\d+)$")
+        dev_reg = {i: reg.search(i) for i in self.original_dev.keys()}
 
-        if dev is not None:
-            gpart = run(["gpart", "show", dev.group(1)]).strip().split("\n")
-            partition = gpart[int(dev.group(2))].split()[3]
+        if dev_reg:
+            partition = dict()
+            for k, v in dev_reg.items():
+                if v is not None:
+                    if k not in gpart_out.keys():
+                        gpart_cmd = ["gpart", "show", "-p", v.group(1)]
+                        gpart_out[k] = run(gpart_cmd).strip().split("\n")
+
+                    geom = v.group(0).split("/")[-1]
+                    out = next((i for i in gpart_out[k] if geom in i), None)
+                    partition[k] = None if out is None else out.split()[3]
 
         return partition
 
