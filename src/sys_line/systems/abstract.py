@@ -126,10 +126,15 @@ class AbstractCpu(AbstractGetter):
 
         return cpu
 
-    @property
     @abstractmethod
-    def load_avg(self):
+    def _load_avg(self):
         """ Abstract load average method to be implemented by subclass """
+
+    @property
+    def load_avg(self):
+        """ Load average method """
+        load = self._load_avg()
+        return load[0] if self.options.cpu_load_short else " ".join(load)
 
     @property
     def cpu_usage(self):

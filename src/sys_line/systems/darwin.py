@@ -32,10 +32,8 @@ class Cpu(AbstractCpu):
     def _cpu_speed(self):
         return self.aux.sysctl.query("machdep.cpu.brand_string"), None
 
-    @property
-    def load_avg(self):
-        load = self.aux.sysctl.query("vm.loadavg").split()
-        return load[1] if self.options.cpu_load_short else " ".join(load[1:4])
+    def _load_avg(self):
+        return self.aux.sysctl.query("vm.loadavg").split()[1:4]
 
     @property
     def fan(self):

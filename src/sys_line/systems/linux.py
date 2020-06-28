@@ -49,10 +49,8 @@ class Cpu(AbstractCpu):
 
         return cpu, speed
 
-    @property
-    def load_avg(self):
-        load = open_read("/proc/loadavg").split(" ")
-        return load[0] if self.options.cpu_load_short else " ".join(load[:3])
+    def _load_avg(self):
+        return open_read("/proc/loadavg").split(" ")[:3]
 
     @property
     def fan(self):
