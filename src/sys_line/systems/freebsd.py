@@ -196,8 +196,8 @@ class Network(AbstractNetwork):
     @property
     def _ssid(self):
         ssid_reg = re.compile(r"ssid (.*) channel")
-        ssid_exe = ["ifconfig", self.dev]
-        return ssid_exe, ssid_reg
+        ssid_cmd = ["ifconfig", self.dev]
+        return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]

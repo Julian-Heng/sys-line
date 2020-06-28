@@ -266,13 +266,13 @@ class Network(AbstractNetwork):
 
     @property
     def _ssid(self):
-        ssid_exe_path = ["System", "Library", "PrivateFrameworks",
+        ssid_cmd_path = ["System", "Library", "PrivateFrameworks",
                          "Apple80211.framework", "Versions", "Current",
                          "Resources", "airport"]
-        ssid_exe = ["/{}".format("/".join(ssid_exe_path)), "--getinfo"]
+        ssid_cmd = ["/{}".format("/".join(ssid_cmd_path)), "--getinfo"]
         ssid_reg = re.compile("^SSID: (.*)$")
 
-        return ssid_exe, ssid_reg
+        return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]

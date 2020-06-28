@@ -385,7 +385,7 @@ class Network(AbstractNetwork):
 
     @property
     def _ssid(self):
-        ssid_exe = None
+        ssid_cmd = None
         regex = None
         dev = self.dev
 
@@ -394,13 +394,13 @@ class Network(AbstractNetwork):
                 wifi_path = "/proc/net/wireless"
                 wifi_out = open_read(wifi_path).strip().split("\n")
                 if len(wifi_out) >= 3 and shutil.which("iw"):
-                    ssid_exe = ["iw", "dev", dev, "link"]
+                    ssid_cmd = ["iw", "dev", dev, "link"]
                     regex = re.compile("^SSID: (.*)$")
             except FileNotFoundError:
-                ssid_exe = None
+                ssid_cmd = None
                 regex = None
 
-        return ssid_exe, regex
+        return ssid_cmd, regex
 
     def _bytes_delta(self, dev, mode):
         net = "/sys/class/net/{}/statistics/{{}}_bytes".format(dev)
