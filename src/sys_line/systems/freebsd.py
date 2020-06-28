@@ -146,9 +146,9 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def bat(self):
         """ Returns battery info from acpiconf as dict """
-        _bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
-        _bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in _bat]
-        return dict(i.split(":", 1) for i in _bat) if len(_bat) > 1 else None
+        bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
+        bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in bat]
+        return dict(i.split(":", 1) for i in bat) if len(bat) > 1 else None
 
     @property
     def is_present(self):

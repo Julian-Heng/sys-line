@@ -138,16 +138,16 @@ class Disk(AbstractDisk):
         """ Returns diskutil program output as a dict """
         check = lambda i: i and len(i.split(": ", 1)) == 2
         devs = self.original_dev.values()
-        _diskutil = None
+        diskutil = None
         if devs is not None:
-            _diskutil = dict()
+            diskutil = dict()
             for dev in devs:
                 out = run(["diskutil", "info", dev]).split("\n")
                 out = (re.sub("r\s+", " ", i).strip() for i in out)
                 out = dict(i.split(": ", 1) for i in out if check(i))
-                _diskutil[dev] = {k: trim_string(v) for k, v in out.items()}
+                diskutil[dev] = {k: trim_string(v) for k, v in out.items()}
 
-        return _diskutil
+        return diskutil
 
     def _lookup_diskutil(self, key):
         try:
@@ -171,10 +171,10 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def bat(self):
         """ Returns battery info from ioreg as a dict """
-        _bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
-        _bat = (re.sub("[\"{}]", "", i.strip()) for i in _bat)
-        _bat = dict(i.split(" = ", 1) for i in _bat if i.strip())
-        return _bat if _bat else None
+        bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
+        bat = (re.sub("[\"{}]", "", i.strip()) for i in bat)
+        bat = dict(i.split(" = ", 1) for i in bat if i.strip())
+        return bat if bat else None
 
     @property
     @lru_cache(maxsize=1)
