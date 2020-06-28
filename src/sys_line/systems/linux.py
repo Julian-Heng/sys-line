@@ -391,9 +391,9 @@ class Network(AbstractNetwork):
 
         if dev is not None:
             try:
-                wifi = "/proc/net/wireless"
-                if (len(open_read(wifi).strip().split("\n")) >= 3 and
-                        shutil.which("iw")):
+                wifi_path = "/proc/net/wireless"
+                wifi_out = open_read(wifi_path).strip().split("\n")
+                if len(wifi_out) >= 3 and shutil.which("iw"):
                     ssid_exe = ["iw", "dev", dev, "link"]
                     regex = re.compile("^SSID: (.*)$")
             except FileNotFoundError:
