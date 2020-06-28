@@ -7,6 +7,7 @@
 """ Linux specific module """
 
 import re
+import shlex
 import shutil
 
 from argparse import Namespace
@@ -144,32 +145,32 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def _lsblk(self):
+    def lsblk_entries(self):
+        lsblk_entries = None
         columns = ["KNAME", "NAME", "LABEL", "PARTLABEL",
                    "FSTYPE", "MOUNTPOINT"]
+        cmd = ["lsblk", "--output", ",".join(columns), "--paths", "--pairs"]
+        lsblk_out = run(cmd).strip().split("\n")
 
-        lsblk = dict()
-
-        if self.dev is not None:
-            cmd = ["lsblk", "--output", ",".join(columns),
-                   "--paths", "--pairs"] + list(self.original_dev.values())
-
-            for line in run(cmd).strip().split("\n"):
-                out = re.findall(r"[^\"\s]\S*|\".+?", line)
+        if lsblk_out:
+            lsblk_entries = dict()
+            for line in lsblk_out:
+                out = shlex.split(line)
                 out = dict(re.sub("\"", "", i).split("=", 1) for i in out)
-                lsblk[out["KNAME"]] = out
+                lsblk_entries[out["KNAME"]] = out
 
-        return lsblk
+        return lsblk_entries
 
     @property
     def name(self):
         labels = ["LABEL", "PARTLABEL"]
         return {k: next((v[i] for i in labels if v[i]), None)
-                for k, v in self._lsblk.items()}
+                for k, v in self.lsblk_entries.items() if k in self.original_dev}
 
     @property
     def partition(self):
-        return {k: v["FSTYPE"] for k, v in self._lsblk.items()}
+        return {k: v["FSTYPE"]
+                for k, v in self.lsblk_entries.items() if k in self.original_dev}
 
 
 @lru_cache(maxsize=1)
