@@ -394,7 +394,7 @@ class Network(AbstractNetwork):
                 wifi_path = "/proc/net/wireless"
                 wifi_out = open_read(wifi_path).strip().split("\n")
                 if len(wifi_out) >= 3 and shutil.which("iw"):
-                    ssid_cmd = ["iw", "dev", dev, "link"]
+                    ssid_cmd = ("iw", "dev", dev, "link")
                     regex = re.compile("^SSID: (.*)$")
             except FileNotFoundError:
                 ssid_cmd = None

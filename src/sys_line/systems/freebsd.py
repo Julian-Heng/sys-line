@@ -196,7 +196,7 @@ class Network(AbstractNetwork):
     @property
     def _ssid(self):
         ssid_reg = re.compile(r"ssid (.*) channel")
-        ssid_cmd = ["ifconfig", self.dev]
+        ssid_cmd = ("ifconfig", self.dev)
         return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):

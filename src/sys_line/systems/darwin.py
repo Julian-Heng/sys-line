@@ -269,7 +269,7 @@ class Network(AbstractNetwork):
         ssid_cmd_path = ["System", "Library", "PrivateFrameworks",
                          "Apple80211.framework", "Versions", "Current",
                          "Resources", "airport"]
-        ssid_cmd = ["/{}".format("/".join(ssid_cmd_path)), "--getinfo"]
+        ssid_cmd = ("/{}".format("/".join(ssid_cmd_path)), "--getinfo")
         ssid_reg = re.compile("^SSID: (.*)$")
 
         return ssid_cmd, ssid_reg
