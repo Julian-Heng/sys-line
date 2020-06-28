@@ -11,6 +11,7 @@ import time
 
 from argparse import Namespace
 from functools import lru_cache
+from types import SimpleNamespace
 
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
@@ -109,7 +110,9 @@ class Swap(AbstractSwap):
 class Disk(AbstractDisk):
     """ FreeBSD implementation of AbstractDisk class """
 
-    DF_FLAGS = ["df", "-P", "-k"]
+    @property
+    def _DF_FLAGS(self):
+        return ["df", "-P", "-k"]
 
     @property
     def name(self):
