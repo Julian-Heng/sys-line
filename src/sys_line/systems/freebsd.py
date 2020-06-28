@@ -49,7 +49,7 @@ class Cpu(AbstractCpu):
     @property
     def temp(self):
         temp = self.aux.sysctl.query("dev.cpu.0.temperature")
-        return float(re.search(r"\d+\.?\d+").group(0)) if temp else None
+        return float(re.search(r"\d+\.?\d+", temp).group(0)) if temp else None
 
     def _uptime(self):
         reg = re.compile(r"sec = (\d+),")
