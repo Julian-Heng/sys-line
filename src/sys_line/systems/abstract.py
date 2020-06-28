@@ -215,7 +215,7 @@ class AbstractDisk(AbstractStorage):
         return getattr(self, info)[options]
 
     def _mount_to_devname(self, mount_path):
-        return next((k for k, v in self.mount.items() if mount_path == v))
+        return next(k for k, v in self.mount.items() if mount_path == v)
 
     @property
     @abstractmethod
