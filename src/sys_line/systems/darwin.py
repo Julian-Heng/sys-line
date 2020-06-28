@@ -255,7 +255,7 @@ class Network(AbstractNetwork):
     def dev(self):
         active = re.compile(r"status: active")
         dev_reg = re.compile(r"Device: (.*)$")
-        check = lambda i: active.search(run(["ifconfig", i]))
+        check = lambda i: active.search(run(self._LOCAL_IP_CMD + [i]))
 
         dev_list = run(["networksetup", "-listallhardwareports"])
         dev_list = dev_list.strip().split("\n")

@@ -189,14 +189,14 @@ class Network(AbstractNetwork):
     @property
     def dev(self):
         active = re.compile(r"^\s+status: (associated|active)$", re.M)
-        dev_list = run(["ifconfig", "-l"]).split()
-        check = lambda i: active.search(run(["ifconfig", i]))
+        dev_list = run(self._LOCAL_IP_CMD + ["-l"]).split()
+        check = lambda i: active.search(run(self._LOCAL_IP_CMD + [i]))
         return next((i for i in dev_list if check(i)), None)
 
     @property
     def _ssid(self):
+        ssid_cmd = tuple(self._LOCAL_IP_CMD + [self.dev])
         ssid_reg = re.compile(r"ssid (.*) channel")
-        ssid_cmd = ("ifconfig", self.dev)
         return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
