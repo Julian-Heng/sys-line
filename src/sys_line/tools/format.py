@@ -34,9 +34,10 @@ class FormatTree(FormatNode):
 
         return "".join([i.build() for i in self.nodes])
 
+
 class FormatInfo(FormatNode):
 
-    EXTRACT_REGEX = re.compile(r"\{((\w+)(?:\[([^\]]+)\])?\.(\w+))(?:\?)?")
+    EXTRACT_REGEX = re.compile(r"\{(?:(\w+)(?:\[([^\]]+)\])?\.(\w+))(?:\?)?")
 
     def __init__(self, system, fmt):
         super(FormatInfo, self).__init__()
@@ -46,22 +47,14 @@ class FormatInfo(FormatNode):
         self.nodes = list()
 
         extract = self.EXTRACT_REGEX.search(self.fmt)
-        self.domain = extract.group(2)
-        self.options = extract.group(3)
-        self.info = extract.group(4)
+        self.domain = extract.group(1)
+        self.options = extract.group(2)
+        self.info = extract.group(3)
 
         if self.fmt.find("?") > -1:
             alt = self.fmt[(self.fmt.find("?") + 1):-1]
-
-            if self.options is None:
-                rebuild = "{{{}.{}}}"
-                args = (self.domain, self.info)
-            else:
-                rebuild = "{{{}[{}].{}}}"
-                args = (self.domain, self.options, self.info)
-
-            alt = alt.replace("{}", rebuild.format(*args))
-            self.alt = FormatTree(self.system, alt)
+            self.alt = [FormatTree(self.system, i)
+                        for i in Tokenizer.tokenize(alt)]
         else:
             self.alt = None
 
@@ -70,15 +63,18 @@ class FormatInfo(FormatNode):
                                                           self.options)
         if replace is not None:
             if isinstance(replace, bool):
-                replace = self.alt.build() if replace else ""
+                replace = self._build_alt(replace) if replace else ""
             else:
                 replace = str(replace)
                 if self.alt is not None:
-                    replace = self.alt.build()
+                    replace = self._build_alt(replace)
         else:
             replace = ""
 
         return replace
+
+    def _build_alt(self, r):
+        return "".join([r if i.fmt == "{}" else i.build() for i in self.alt])
 
 
 class FormatString(FormatNode):
