@@ -28,7 +28,7 @@ class Cpu(AbstractCpu):
     @lru_cache(maxsize=1)
     def cpu_file(self):
         """ Returns cached /proc/cpuinfo """
-        return open_read("/proc/cpuinfo")
+        return open_read(Linux.FILES["proc_cpu"])
 
     @property
     @lru_cache(maxsize=1)
@@ -40,7 +40,7 @@ class Cpu(AbstractCpu):
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
         check = lambda f: speed_reg.search(str(f))
-        speed_dir = "/sys/devices/system/cpu"
+        speed_dir = Linux.FILES["sys_cpu"]
         speed = next((f for f in p(speed_dir).rglob("*") if check(f)), None)
 
         if speed is not None:
@@ -50,12 +50,12 @@ class Cpu(AbstractCpu):
         return cpu, speed
 
     def _load_avg(self):
-        return open_read("/proc/loadavg").split(" ")[:3]
+        return open_read(Linux.FILES["proc_load"]).split(" ")[:3]
 
     @property
     def fan(self):
         fan = None
-        fan_dir = "/sys/devices/platform"
+        fan_dir = Linux.FILES["sys_platform"]
         glob = "fan1_input"
         files = (f for f in p(fan_dir).rglob(glob))
 
@@ -71,7 +71,8 @@ class Cpu(AbstractCpu):
         glob = lambda d: p(d).glob("*")
 
         temp = None
-        files = (f for f in glob("/sys/class/hwmon") if check("{}/name".format(f)))
+        files = (f for f in glob(Linux.FILES["sys_hwmon"])
+                    if check("{}/name".format(f)))
 
         temp_dir = next(files, None)
         if temp_dir is not None:
@@ -82,15 +83,8 @@ class Cpu(AbstractCpu):
         return temp
 
     def _uptime(self):
-        return int(float(open_read("/proc/uptime").strip().split(" ")[0]))
-
-
-@lru_cache(maxsize=1)
-def mem_file():
-    """ Returns cached /proc/meminfo """
-    reg = re.compile(r"\s+|kB")
-    _mem_file = open_read("/proc/meminfo").strip().split("\n")
-    return dict(reg.sub("", i).split(":", 1) for i in _mem_file)
+        uptime = open_read(Linux.FILES["proc_uptime"]).strip().split(" ")[0]
+        return int(float(uptime))
 
 
 class Memory(AbstractMemory):
@@ -98,10 +92,11 @@ class Memory(AbstractMemory):
 
     @property
     def used(self):
+        mem_file = Linux.mem_file()
         keys = [["MemTotal", "Shmem"],
                 ["MemFree", "Buffers", "Cached", "SReclaimable"]]
-        used = sum([int(mem_file()[i]) for i in keys[0]])
-        used -= sum([int(mem_file()[i]) for i in keys[1]])
+        used = sum([mem_file[i] for i in keys[0]])
+        used -= sum([mem_file[i] for i in keys[1]])
         used = Storage(value=used, prefix="KiB",
                        rounding=self.options.mem_used_round)
         used.prefix = self.options.mem_used_prefix
@@ -109,7 +104,8 @@ class Memory(AbstractMemory):
 
     @property
     def total(self):
-        total = Storage(value=int(mem_file()["MemTotal"]), prefix="KiB",
+        mem_file = Linux.mem_file()
+        total = Storage(value=mem_file["MemTotal"], prefix="KiB",
                         rounding=self.options.mem_total_round)
         total.prefix = self.options.mem_total_prefix
         return total
@@ -120,7 +116,8 @@ class Swap(AbstractSwap):
 
     @property
     def used(self):
-        used = int(mem_file()["SwapTotal"]) - int(mem_file()["SwapFree"])
+        mem_file = Linux.mem_file()
+        used = mem_file["SwapTotal"] - mem_file["SwapFree"]
         used = Storage(value=used, prefix="KiB",
                        rounding=self.options.swap_used_round)
         used.prefix = self.options.swap_used_prefix
@@ -128,7 +125,8 @@ class Swap(AbstractSwap):
 
     @property
     def total(self):
-        total = Storage(value=int(mem_file()["SwapTotal"]), prefix="KiB",
+        mem_file = Linux.mem_file()
+        total = Storage(value=mem_file["SwapTotal"], prefix="KiB",
                         rounding=self.options.swap_total_round)
         total.prefix = self.options.swap_total_prefix
         return total
@@ -170,46 +168,6 @@ class Disk(AbstractDisk):
                 for k, v in self.lsblk_entries.items() if k in self.original_dev}
 
 
-@lru_cache(maxsize=1)
-def detect_battery():
-    """
-    Linux stores battery information in /sys/class/power_supply However,
-    depending on the machine/driver it may store different information.
-
-    Example:
-
-        On one machine it might contain these files:
-            /sys/class/power_supply/charge_now
-            /sys/class/power_supply/charge_full
-            /sys/class/power_supply/current_now
-
-        On another it might contain these files:
-            /sys/class/power_supply/energy_now
-            /sys/class/power_supply/energy_full
-            /sys/class/power_supply/power_now
-
-    So the purpose of this method is to determine which implementation it
-    should use
-    """
-    check = lambda d: p(d).exists()
-
-    avail = {
-        "{}/charge_now".format(bat_dir()): BatteryAmp,
-        "{}/energy_now".format(bat_dir()): BatteryWatt
-    }
-
-    return next((v for k, v in avail.items() if check(k)), BatteryStub)
-
-
-@lru_cache(maxsize=1)
-def bat_dir():
-    """ Returns the path for the battery directory """
-    check = lambda f: p(f).exists() and bool(int(open_read(f)))
-    _bat_dir = p("/sys/class/power_supply").glob("*BAT*")
-    _bat_dir = (d for d in _bat_dir if check("{}/present".format(d)))
-    return next(_bat_dir, None)
-
-
 class Battery(AbstractBattery):
     """ A Linux implementation of the AbstractBattery class """
 
@@ -217,34 +175,34 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def status(self):
         """ Returns cached battery status file """
-        return open_read("{}/status".format(bat_dir())).strip()
+        return open_read("{}/status".format(Linux.bat_dir())).strip()
 
     @property
     @lru_cache(maxsize=1)
     def current_charge(self):
         """ Returns cached battery current charge file """
-        return None if bat_dir() is None else int(open_read(self.current))
+        return None if Linux.bat_dir() is None else int(open_read(self.current))
 
     @property
     @lru_cache(maxsize=1)
     def full_charge(self):
         """ Returns cached battery full charge file """
-        return None if bat_dir() is None else int(open_read(self.full))
+        return None if Linux.bat_dir() is None else int(open_read(self.full))
 
     @property
     @lru_cache(maxsize=1)
     def drain_rate(self):
         """ Returns cached battery drain rate file """
-        return None if bat_dir() is None else int(open_read(self.drain))
+        return None if Linux.bat_dir() is None else int(open_read(self.drain))
 
     @lru_cache(maxsize=1)
     def _compare_status(self, query):
         """ Compares status to query """
-        return None if bat_dir() is None else self.status == query
+        return None if Linux.bat_dir() is None else self.status == query
 
     @property
     def is_present(self):
-        return bat_dir() is not None
+        return Linux.bat_dir() is not None
 
     @property
     def is_charging(self):
@@ -257,7 +215,7 @@ class Battery(AbstractBattery):
     @property
     def percent(self):
         perc = None
-        if bat_dir() is not None:
+        if Linux.bat_dir() is not None:
             current_charge = self.current_charge
             full_charge = self.full_charge
 
@@ -269,7 +227,7 @@ class Battery(AbstractBattery):
     @property
     def _time(self):
         remaining = 0
-        if bat_dir() is not None and self.drain_rate:
+        if Linux.bat_dir() is not None and self.drain_rate:
             charge = self.current_charge
             if self.is_charging:
                 charge = self.full_charge - charge
@@ -289,25 +247,25 @@ class BatteryAmp(Battery):
     @lru_cache(maxsize=1)
     def current(self):
         """ Returns current charge filename """
-        return "{}/charge_now".format(bat_dir())
+        return "{}/charge_now".format(Linux.bat_dir())
 
     @property
     @lru_cache(maxsize=1)
     def full(self):
         """ Returns full charge filename """
-        return "{}/charge_full".format(bat_dir())
+        return "{}/charge_full".format(Linux.bat_dir())
 
     @property
     @lru_cache(maxsize=1)
     def drain(self):
         """ Returns current filename """
-        return "{}/current_now".format(bat_dir())
+        return "{}/current_now".format(Linux.bat_dir())
 
     @property
     def power(self):
         power = None
-        if bat_dir() is not None:
-            voltage = int(open_read("{}/voltage_now".format(bat_dir())))
+        if Linux.bat_dir() is not None:
+            voltage = int(open_read("{}/voltage_now".format(Linux.bat_dir())))
             power = (self.drain_rate * voltage) / 1e12
             power = _round(power, self.options.bat_power_round)
 
@@ -321,19 +279,19 @@ class BatteryWatt(Battery):
     @lru_cache(maxsize=1)
     def current(self):
         """ Returns current energy filename """
-        return "{}/energy_now".format(bat_dir())
+        return "{}/energy_now".format(Linux.bat_dir())
 
     @property
     @lru_cache(maxsize=1)
     def full(self):
         """ Returns full energy filename """
-        return "{}/energy_full".format(bat_dir())
+        return "{}/energy_full".format(Linux.bat_dir())
 
     @property
     @lru_cache(maxsize=1)
     def drain(self):
         """ Returns power filename """
-        return "{}/power_now".format(bat_dir())
+        return "{}/power_now".format(Linux.bat_dir())
 
     @property
     def power(self):
@@ -379,7 +337,8 @@ class Network(AbstractNetwork):
     def dev(self):
         check = lambda f: open_read("{}/operstate".format(f)).strip() == "up"
         find = lambda d: p(d).glob("[!v]*")
-        return next((f.name for f in find("/sys/class/net") if check(f)), None)
+        return next((f.name for f in find(Linux.FILES["sys_net"])
+                        if check(f)), None)
 
     @property
     def _ssid(self):
@@ -389,7 +348,7 @@ class Network(AbstractNetwork):
 
         if dev is not None:
             try:
-                wifi_path = "/proc/net/wireless"
+                wifi_path = Linux.FILES["proc_wifi"]
                 wifi_out = open_read(wifi_path).strip().split("\n")
                 if len(wifi_out) >= 3 and shutil.which("iw"):
                     ssid_cmd = ("iw", "dev", dev, "link")
@@ -401,7 +360,7 @@ class Network(AbstractNetwork):
         return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
-        net = "/sys/class/net/{}/statistics/{{}}_bytes".format(dev)
+        net = "{}/{}/statistics/{{}}_bytes".format(Linux.FILES["sys_net"], dev)
         stat_file = net.format("tx" if mode == "up" else "rx")
         return int(open_read(stat_file))
 
@@ -414,7 +373,7 @@ class Misc(AbstractMisc):
         check = lambda d: d.is_dir() and d.name.isdigit()
         extract = lambda f: open_read("{}/cmdline".format(f))
 
-        systems = {"pulseaudio": get_vol_pulseaudio}
+        systems = {"pulseaudio": Linux.vol_pulseaudio}
 
         reg = re.compile(r"|".join(systems.keys()))
 
@@ -435,7 +394,7 @@ class Misc(AbstractMisc):
     @property
     def scr(self):
         scr = None
-        backlight_path = p("/sys/devices/backlight")
+        backlight_path = p(Linux.FILES["sys_backlight"])
 
         if backlight_path.exists():
             check = lambda f: "kbd" not in f and "backlight" in f
@@ -451,27 +410,102 @@ class Misc(AbstractMisc):
         return scr
 
 
-def get_vol_pulseaudio():
-    """ Return system volume using pulse audio """
-    default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
-    pac_dump = run(["pacmd", "dump"])
-
-    vol = None
-    default = default_reg.search(pac_dump)
-    if default is not None:
-        vol_reg = r"^set-sink-volume {} 0x(.*)$".format(default.group(1))
-        vol_reg = re.compile(vol_reg, re.M)
-        vol = vol_reg.search(pac_dump)
-        if vol is not None:
-            vol = percent(int(vol.group(1), 16), 0x10000)
-
-    return vol
-
-
 class Linux(System):
     """ A Linux implementation of the abstract System class """
 
+    FILES = {
+        # Cpu
+        "proc_cpu": "/proc/cpuinfo",
+        "sys_cpu": "/sys/devices/system/cpu",
+        "proc_load": "/proc/loadavg",
+        "sys_platform": "/sys/devices/platform",
+        "sys_hwmon": "/sys/class/hwmon",
+        "proc_uptime": "/proc/uptime",
+
+        # Mem/Swap
+        "proc_mem": "/proc/meminfo",
+
+        # Battery
+        "sys_power_supply": "/sys/class/power_supply",
+
+        # Network
+        "sys_net": "/sys/class/net",
+        "proc_wifi": "/proc/net/wireless",
+
+        # Misc
+        "sys_backlight": "/sys/devices/backlight"
+    }
+
     def __init__(self, options):
         super(Linux, self).__init__(options, aux=None, cpu=Cpu, mem=Memory,
-                                    swap=Swap, disk=Disk, bat=detect_battery(),
+                                    swap=Swap, disk=Disk,
+                                    bat=Linux.detect_battery(),
                                     net=Network, misc=Misc)
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def mem_file():
+        """ Returns cached /proc/meminfo """
+        reg = re.compile(r"\s+|kB")
+        _mem_file = open_read(Linux.FILES["proc_mem"]).strip().split("\n")
+        _mem_file = dict(reg.sub("", i).split(":", 1) for i in _mem_file)
+        _mem_file = {k: int(v) for k, v in _mem_file.items()}
+        return _mem_file
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def bat_dir():
+        """ Returns the path for the battery directory """
+        check = lambda f: p(f).exists() and bool(int(open_read(f)))
+        _bat_dir = p(Linux.FILES["sys_power_supply"]).glob("*BAT*")
+        _bat_dir = (d for d in _bat_dir if check("{}/present".format(d)))
+        return next(_bat_dir, None)
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def detect_battery():
+        """
+        Linux stores battery information in /sys/class/power_supply However,
+        depending on the machine/driver it may store different information.
+
+        Example:
+
+            On one machine it might contain these files:
+                /sys/class/power_supply/charge_now
+                /sys/class/power_supply/charge_full
+                /sys/class/power_supply/current_now
+
+            On another it might contain these files:
+                /sys/class/power_supply/energy_now
+                /sys/class/power_supply/energy_full
+                /sys/class/power_supply/power_now
+
+        So the purpose of this method is to determine which implementation it
+        should use
+        """
+        check = lambda d: p(d).exists()
+
+        avail = {
+            "{}/charge_now".format(Linux.bat_dir()): BatteryAmp,
+            "{}/energy_now".format(Linux.bat_dir()): BatteryWatt
+        }
+
+        return next((v for k, v in avail.items() if check(k)), BatteryStub)
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def vol_pulseaudio():
+        """ Return system volume using pulse audio """
+        default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
+        pac_dump = run(["pacmd", "dump"])
+
+        vol = None
+        default = default_reg.search(pac_dump)
+        if default is not None:
+            vol_reg = r"^set-sink-volume {} 0x(.*)$".format(default.group(1))
+            vol_reg = re.compile(vol_reg, re.M)
+            vol = vol_reg.search(pac_dump)
+            if vol is not None:
+                vol = percent(int(vol.group(1), 16), 0x10000)
+
+        return vol
