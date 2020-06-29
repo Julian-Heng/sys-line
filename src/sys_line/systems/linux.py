@@ -145,8 +145,7 @@ class Disk(AbstractDisk):
     @lru_cache(maxsize=1)
     def lsblk_entries(self):
         lsblk_entries = None
-        columns = ["KNAME", "NAME", "LABEL", "PARTLABEL",
-                   "FSTYPE", "MOUNTPOINT"]
+        columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
         cmd = ["lsblk", "--output", ",".join(columns), "--paths", "--pairs"]
         lsblk_out = run(cmd).strip().split("\n")
 
@@ -155,7 +154,7 @@ class Disk(AbstractDisk):
             for line in lsblk_out:
                 out = shlex.split(line)
                 out = dict(re.sub("\"", "", i).split("=", 1) for i in out)
-                lsblk_entries[out["KNAME"]] = out
+                lsblk_entries[out["NAME"]] = out
 
         return lsblk_entries
 
