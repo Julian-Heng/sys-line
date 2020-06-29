@@ -16,6 +16,7 @@ from abc import ABC, abstractmethod
 from argparse import Namespace
 from datetime import datetime
 from functools import lru_cache
+from pathlib import Path as p
 
 from ..tools.storage import Storage
 from ..tools.utils import percent, run, unix_epoch_to_str, _round
@@ -217,7 +218,7 @@ class AbstractDisk(AbstractStorage):
             else:
                 self.options.mount.append(options)
 
-        if not options.startswith("/dev"):
+        if not p(options).is_block_device():
             options = self._mount_to_devname(options)
 
         return getattr(self, info)[options]
