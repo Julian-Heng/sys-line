@@ -13,6 +13,7 @@ import re
 import time
 
 from abc import ABC, abstractmethod
+from copy import copy
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path as p
@@ -40,7 +41,66 @@ class AbstractGetter(ABC):
         return self._query(info, options)
 
     def _query(self, info, options):
-        return getattr(self, info)
+        if options is None:
+            val = getattr(self, info)
+        else:
+            # Copy current options to tmp
+            tmp = copy(self.options)
+
+            # Set options and get value
+            for k, v in self._parse_options(info, options).items():
+                setattr(self.options, k, v)
+            val = getattr(self, info)
+
+            # Restore options
+            self.options = tmp
+        return val
+
+    def _parse_options(self, info, options):
+        opts = dict()
+        if options:
+            for i in options.split(","):
+                if not i:
+                    continue
+
+                # An option with "=" requires a value, unless it is a boolean
+                # option
+                if "=" not in i:
+                    if hasattr(self.options, i):
+                        if isinstance(getattr(self.options, i), bool):
+                            i = "{}=True".format(i)
+                        else:
+                            err = "option requires value: {}".format(i)
+                            raise RuntimeError(err)
+                    else:
+                        err = "no such option in domain: {}".format(i)
+                        raise RuntimeError(err)
+
+                k, v = i.split("=", 1)
+
+                # A prefix option needs to be one of the prefixes
+                if k == "prefix":
+                    if v not in Storage.PREFIXES:
+                        err = "invalid value for prefix: {}".format(v)
+                        raise RuntimeError(err)
+
+                if (hasattr(self.options, k) or
+                    hasattr(self.options, "{}_{}".format(info, k))):
+                    # Boolean options does not require the info name as part of
+                    # the option
+                    if v in ["True", "False"]:
+                        v = v == "True"
+                        key = k
+                    else:
+                        if v.isnumeric():
+                            v = int(v)
+                        key = "{}_{}".format(info, k)
+                    opts[key] = v
+                else:
+                    err = "no such option in domain: {}".format(i)
+                    raise RuntimeError(err)
+
+        return opts
 
     def __str__(self):
         """ The string representation of the getter would return all values """
@@ -222,21 +282,37 @@ class AbstractDisk(AbstractStorage):
                                                         "name", "partition"]
 
     def _query(self, info, options):
-        if options is None:
-            # Set options to the first available mount or disk. By default, it
+        # Key for which device to get information from
+        key = None
+        new_opts = list()
+
+        if options:
+            for i in options.split(","):
+                if "=" in i:
+                    if i.split("=", 1)[0] not in ["disk", "mount"]:
+                        new_opts.append(i)
+                else:
+                    if hasattr(self.options, i):
+                        new_opts.append(i)
+                    else:
+                        key = i
+        new_opts = ",".join(new_opts)
+
+        if key is None:
+            # Set key to the first available mount or disk. By default, it
             # should be "/" if no disks or mounts are set. Otherwise, it is set
             # to the first disk or mount set in the arguments
-            options = next(iter(getattr(self, info)), "/")
-        elif not (options in self.options.disk or options in self.options.mount):
-            if options.startswith("/dev"):
-                self.options.disk.append(options)
+            key = next(iter(getattr(self, info)), "/")
+        elif not (key in self.options.disk or key in self.options.mount):
+            if p(key).is_block_device():
+                self.options.disk.append(key)
             else:
-                self.options.mount.append(options)
+                self.options.mount.append(key)
 
-        if not p(options).is_block_device():
-            options = self._mount_to_devname(options)
+        if not p(key).is_block_device():
+            key = self._mount_to_devname(key)
 
-        return getattr(self, info)[options]
+        return super(AbstractDisk, self)._query(info, new_opts)[key]
 
     def _mount_to_devname(self, mount_path):
         return next(k for k, v in self.mount.items() if mount_path == v)
