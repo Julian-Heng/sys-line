@@ -5,8 +5,9 @@
 
 import argparse
 import itertools
-import platform
 import textwrap
+
+from platform import python_build, python_implementation, python_version
 
 from .storage import Storage
 from ..systems.abstract import System
@@ -27,10 +28,8 @@ def parse_cli():
     usage_msg = "%(prog)s [options] format..."
     ver = "%(prog)s ("
 
-    ver = "{}{} {}, {})".format(ver,
-                                platform.python_implementation(),
-                                platform.python_version(),
-                                " ".join(platform.python_build()))
+    ver = "{}{} {}, {})".format(ver, python_implementation(), python_version(),
+                                " ".join(python_build()))
 
     parser = argparse.ArgumentParser(description=desc, epilog=epilog,
                                      usage=usage_msg,
