@@ -159,13 +159,14 @@ def parse_cli():
     return result
 
 
-def process_args(args):
-    def make_namespace(d):
-        ret = SimpleNamespace()
-        for k, v in d.items():
-            setattr(ret, k, make_namespace(v) if isinstance(v, dict) else v)
-        return ret
+def dict_to_namespace(d):
+    ret = SimpleNamespace()
+    for k, v in d.items():
+        setattr(ret, k, dict_to_namespace(v) if isinstance(v, dict) else v)
+    return ret
 
+
+def process_args(args):
     options = dict()
     for k, v in vars(args).items():
         if k in ["format", "all"]:
@@ -183,4 +184,4 @@ def process_args(args):
             if domain not in options:
                 options[domain] = dict()
             options[domain][info] = v
-    return make_namespace(options)
+    return dict_to_namespace(options)
