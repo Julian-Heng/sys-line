@@ -60,9 +60,8 @@ class AbstractStorage(AbstractGetter):
     AbstractStorage for info that fetches used, total and percent attributes
     """
 
-    def __init__(self, domain_name, options, aux, rounding = 2):
+    def __init__(self, domain_name, options, aux):
         super(AbstractStorage, self).__init__(domain_name, options, aux=aux)
-        self.rounding = rounding
 
     @property
     def _valid_info(self):
@@ -213,9 +212,8 @@ class AbstractSwap(AbstractStorage):
 class AbstractDisk(AbstractStorage):
     """ Abstract disk class to be implemented by subclass """
 
-    def __init__(self, domain_name, options, aux, rounding = 2):
-        super(AbstractDisk, self).__init__(domain_name, options, aux=aux,
-                                           rounding=rounding)
+    def __init__(self, domain_name, options, aux):
+        super(AbstractDisk, self).__init__(domain_name, options, aux=aux)
         self._df_entries = None
 
     @property
