@@ -104,7 +104,7 @@ class AbstractStorage(AbstractGetter):
     def percent(self):
         """ Abstract percent property """
         perc = percent(self.used.value, self.total.value)
-        perc = 0.0 if perc is None else _round(perc, self.rounding)
+        perc = 0.0 if perc is None else _round(perc, self.options.percent_round)
         return perc
 
 
@@ -357,7 +357,10 @@ class AbstractDisk(AbstractStorage):
             total = self.total
             for dev in self.original_dev.keys():
                 value = percent(used[dev].value, total[dev].value)
-                value = 0.0 if value is None else _round(value, self.rounding)
+                if value is None:
+                    value = 0.0
+                else:
+                    value = _round(value, self.options.percent_round)
                 perc[dev] = value
         return perc
 
