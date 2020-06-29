@@ -27,13 +27,6 @@ def parse_cli():
     usage_msg = "%(prog)s [options] format..."
     ver = "%(prog)s ("
 
-    if "__compiled__" in globals():
-        ver = "{}Nuitka {}.{}.{}-{}, ".format(ver,
-                                              __compiled__.major,
-                                              __compiled__.minor,
-                                              __compiled__.micro,
-                                              __compiled__.releaselevel)
-
     ver = "{}{} {}, {})".format(ver,
                                 platform.python_implementation(),
                                 platform.python_version(),
