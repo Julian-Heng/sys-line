@@ -52,7 +52,6 @@ def parse_cli():
                                action="store", type=int, default=1,
                                metavar="int")
 
-
     groups["memory"].add_argument("-mup", "--mem-used-prefix",
                                   action="store", default="MiB",
                                   choices=Storage.PREFIXES, metavar="prefix")
@@ -69,7 +68,6 @@ def parse_cli():
                                   action="store", type=int, default=2,
                                   metavar="int")
 
-
     groups["swap"].add_argument("-sup", "--swap-used-prefix",
                                 action="store", default="MiB",
                                 choices=Storage.PREFIXES, metavar="prefix")
@@ -85,7 +83,6 @@ def parse_cli():
     groups["swap"].add_argument("-spr", "--swap-percent-round",
                                 action="store", type=int, default=2,
                                 metavar="int")
-
 
     groups["disk"].add_argument("-dd", "--disk", nargs="*", action="append",
                                 default=[], metavar="disk")
@@ -109,14 +106,12 @@ def parse_cli():
                                 action="store", type=int, default=2,
                                 metavar="int")
 
-
     groups["battery"].add_argument("-bpr", "--bat-percent-round",
                                    action="store", type=int, default=2,
                                    metavar="int")
     groups["battery"].add_argument("-bppr", "--bat-power-round",
                                    action="store", type=int, default=2,
                                    metavar="int")
-
 
     groups["network"].add_argument("-ndp", "--net-download-prefix",
                                    action="store", default="KiB",
@@ -131,14 +126,12 @@ def parse_cli():
                                    action="store", type=int, default=2,
                                    metavar="int")
 
-
     groups["date"].add_argument("-tdf", "--date-format",
                                 action="store", type=str, default="%a, %d %h",
                                 metavar="str")
     groups["date"].add_argument("-tf", "--time-format",
                                 action="store", type=str, default="%H:%M",
                                 metavar="str")
-
 
     groups["misc"].add_argument("-mvr", "--misc-volume-round",
                                 action="store", type=int, default=0,
