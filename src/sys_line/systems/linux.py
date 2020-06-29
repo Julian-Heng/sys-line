@@ -10,7 +10,6 @@ import re
 import shlex
 import shutil
 
-from argparse import Namespace
 from functools import lru_cache
 from pathlib import Path as p
 
@@ -90,46 +89,28 @@ class Cpu(AbstractCpu):
 class Memory(AbstractMemory):
     """ A Linux implementation of the AbstractMemory class """
 
-    @property
-    def used(self):
+    def _used(self):
         mem_file = Linux.mem_file()
         keys = [["MemTotal", "Shmem"],
                 ["MemFree", "Buffers", "Cached", "SReclaimable"]]
         used = sum([mem_file[i] for i in keys[0]])
         used -= sum([mem_file[i] for i in keys[1]])
-        used = Storage(value=used, prefix="KiB",
-                       rounding=self.options.mem_used_round)
-        used.prefix = self.options.mem_used_prefix
-        return used
+        return used, "KiB"
 
-    @property
-    def total(self):
-        mem_file = Linux.mem_file()
-        total = Storage(value=mem_file["MemTotal"], prefix="KiB",
-                        rounding=self.options.mem_total_round)
-        total.prefix = self.options.mem_total_prefix
-        return total
+    def _total(self):
+        return Linux.mem_file()["MemTotal"], "KiB"
 
 
 class Swap(AbstractSwap):
     """ A Linux implementation of the AbstractSwap class """
 
-    @property
-    def used(self):
+    def _used(self):
         mem_file = Linux.mem_file()
         used = mem_file["SwapTotal"] - mem_file["SwapFree"]
-        used = Storage(value=used, prefix="KiB",
-                       rounding=self.options.swap_used_round)
-        used.prefix = self.options.swap_used_prefix
-        return used
+        return used, "KiB"
 
-    @property
-    def total(self):
-        mem_file = Linux.mem_file()
-        total = Storage(value=mem_file["SwapTotal"], prefix="KiB",
-                        rounding=self.options.swap_total_round)
-        total.prefix = self.options.swap_total_prefix
-        return total
+    def _total(self):
+        return Linux.mem_file()["SwapTotal"], "KiB"
 
 
 class Disk(AbstractDisk):
@@ -220,7 +201,7 @@ class Battery(AbstractBattery):
             full_charge = self.full_charge
 
             perc = percent(current_charge, full_charge)
-            perc = _round(perc, self.options.bat_percent_round)
+            perc = _round(perc, self.options.percent_round)
 
         return perc
 
@@ -267,7 +248,7 @@ class BatteryAmp(Battery):
         if Linux.bat_dir() is not None:
             voltage = int(open_read("{}/voltage_now".format(Linux.bat_dir())))
             power = (self.drain_rate * voltage) / 1e12
-            power = _round(power, self.options.bat_power_round)
+            power = _round(power, self.options.power_round)
 
         return power
 
@@ -295,7 +276,7 @@ class BatteryWatt(Battery):
 
     @property
     def power(self):
-        return _round(self.drain_rate / 1e6, self.options.bat_power_round)
+        return _round(self.drain_rate / 1e6, self.options.power_round)
 
 
 class BatteryStub(AbstractBattery):
@@ -385,7 +366,7 @@ class Misc(AbstractMisc):
             try:
                 vol = systems[audio.group(0)]()
                 if vol is not None:
-                    vol = _round(vol, self.options.misc_volume_round)
+                    vol = _round(vol, self.options.volume_round)
             except KeyError:
                 vol = None
 
@@ -405,7 +386,7 @@ class Misc(AbstractMisc):
                 curr = int(open_read("{}/brightness".format(scr_dir)))
                 max_scr = int(open_read("{}/max_brightness".format(scr_dir)))
                 scr = percent(curr, max_scr)
-                scr = _round(scr, self.options.misc_screen_round)
+                scr = _round(scr, self.options.screen_round)
 
         return scr
 

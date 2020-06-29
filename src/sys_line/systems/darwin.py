@@ -10,7 +10,6 @@ import re
 import shutil
 import time
 
-from argparse import Namespace
 from functools import lru_cache
 from types import SimpleNamespace
 
@@ -52,7 +51,7 @@ class Cpu(AbstractCpu):
             regex = r"CPU: ((\d+\.)?\d+)"
             match = re.search(regex, run(["osx-cpu-temp", "-f", "-c"]))
             temp = float(match.group(1)) if match else 0.0
-            temp = _round(temp, self.options.cpu_temp_round)
+            temp = _round(temp, self.options.temp_round)
 
         return temp
 
@@ -67,23 +66,21 @@ class Cpu(AbstractCpu):
 class Memory(AbstractMemory):
     """ Darwin implementation of AbstractMemory class """
 
-    @property
-    def used(self):
+    def _used(self):
         words = ["active", "wired down", "occupied by compressor"]
         vm_stat = run(["vm_stat"]).strip().split("\n")[1:]
         vm_stat = (re.sub(r"Pages |\.", r"", i) for i in vm_stat)
         vm_stat = dict(i.split(":", 1) for i in vm_stat)
         used = Storage(value=sum([int(vm_stat[i]) for i in words]) * 4096,
-                       rounding=self.options.mem_used_round)
-        used.prefix = self.options.mem_used_prefix
+                       rounding=self.options.used_round)
+        used.prefix = self.options.used_prefix
 
         return used
 
-    @property
-    def total(self):
+    def _total(self):
         total = Storage(value=int(self.aux.sysctl.query("hw.memsize")),
-                        rounding=self.options.mem_total_round)
-        total.prefix = self.options.mem_total_prefix
+                        rounding=self.options.total_round)
+        total.prefix = self.options.total_prefix
 
         return total
 
@@ -111,16 +108,16 @@ class Swap(AbstractSwap):
     @property
     def used(self):
         used = Storage(value=self._lookup_swap("used"),
-                       rounding=self.options.swap_used_round)
-        used.prefix = self.options.swap_used_prefix
+                       rounding=self.options.used_round)
+        used.prefix = self.options.used_prefix
 
         return used
 
     @property
     def total(self):
         total = Storage(value=self._lookup_swap("total"),
-                        rounding=self.options.swap_total_round)
-        total.prefix = self.options.swap_total_prefix
+                        rounding=self.options.total_round)
+        total.prefix = self.options.total_prefix
 
         return total
 
@@ -214,7 +211,7 @@ class Battery(AbstractBattery):
 
         if self.is_present:
             perc = percent(self._current_capacity, int(self.bat["MaxCapacity"]))
-            perc = _round(perc, self.options.bat_percent_round)
+            perc = _round(perc, self.options.percent_round)
 
         return perc
 
@@ -237,7 +234,7 @@ class Battery(AbstractBattery):
         if self.is_present:
             voltage = int(self.bat["Voltage"])
             power = (self._current * voltage) / 1e6
-            power = _round(power, self.options.bat_power_round)
+            power = _round(power, self.options.power_round)
 
         return power
 
@@ -290,7 +287,7 @@ class Misc(AbstractMisc):
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
-        return _round(vol, self.options.misc_volume_round)
+        return _round(vol, self.options.volume_round)
 
     @property
     def scr(self):
@@ -303,7 +300,7 @@ class Misc(AbstractMisc):
                 reg = r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)"
                 scr = re.search(reg, scr_out)
             scr = percent(int(scr.group(2)), int(scr.group(1)))
-            scr = _round(scr, self.options.misc_screen_round)
+            scr = _round(scr, self.options.screen_round)
 
         return scr
 

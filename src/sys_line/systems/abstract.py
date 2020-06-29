@@ -13,7 +13,6 @@ import re
 import time
 
 from abc import ABC, abstractmethod
-from argparse import Namespace
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path as p
@@ -69,15 +68,37 @@ class AbstractStorage(AbstractGetter):
     def _valid_info(self):
         return ["used", "total", "percent"]
 
-    @property
     @abstractmethod
-    def used(self):
-        """ Abstract used property to be implemented by subclass """
+    def _used(self):
+        """
+        Abstract used method that returns Storage arguments to be implemented
+        by subclass
+        """
+        pass
 
     @property
+    def used(self):
+        value, prefix = self._used()
+        used = Storage(value=value, prefix=prefix,
+                       rounding=self.options.used_round)
+        used.prefix = self.options.used_prefix
+        return used
+
     @abstractmethod
+    def _total(self):
+        """
+        Abstract total method that returns Storage arguments to be implemented
+        by subclass
+        """
+        pass
+
+    @property
     def total(self):
-        """ Abstract total property to be implemented by subclass """
+        value, prefix = self._total()
+        total = Storage(value=value, prefix=prefix,
+                        rounding=self.options.total_round)
+        total.prefix = self.options.total_prefix
+        return total
 
     @property
     def percent(self):
@@ -135,7 +156,7 @@ class AbstractCpu(AbstractGetter):
     def load_avg(self):
         """ Load average method """
         load = self._load_avg()
-        return load[0] if self.options.cpu_load_short else " ".join(load)
+        return load[0] if self.options.load_short else " ".join(load)
 
     @property
     def cpu_usage(self):
@@ -143,7 +164,7 @@ class AbstractCpu(AbstractGetter):
         cores = self.cores
         ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
         cpu_usage = sum([float(i) for i in ps_out]) / cores
-        return _round(cpu_usage, self.options.cpu_usage_round)
+        return _round(cpu_usage, self.options.usage_round)
 
     @property
     @abstractmethod
@@ -168,28 +189,24 @@ class AbstractCpu(AbstractGetter):
 class AbstractMemory(AbstractStorage):
     """ Abstract memory class to be implemented by subclass """
 
-    @property
     @abstractmethod
-    def used(self):
+    def _used(self):
         pass
 
-    @property
     @abstractmethod
-    def total(self):
+    def _total(self):
         pass
 
 
 class AbstractSwap(AbstractStorage):
     """ Abstract swap class to be implemented by subclass """
 
-    @property
     @abstractmethod
-    def used(self):
+    def _used(self):
         pass
 
-    @property
     @abstractmethod
-    def total(self):
+    def _total(self):
         pass
 
 
@@ -276,7 +293,7 @@ class AbstractDisk(AbstractStorage):
     def dev(self):
         """ Disk device method """
         dev = self.original_dev
-        if self.options.disk_short_dev:
+        if self.options.short_dev:
             dev = {k: v.split("/")[-1] for k, v in dev.items()}
         return dev
 
@@ -298,6 +315,9 @@ class AbstractDisk(AbstractStorage):
     def partition(self):
         """ Abstract disk partition method to be implemented by subclass """
 
+    def _used(self):
+        pass
+
     @property
     def used(self):
         """ Disk used method """
@@ -306,10 +326,13 @@ class AbstractDisk(AbstractStorage):
             used = dict()
             for k, v in self.df_entries.items():
                 stor = Storage(value=int(v.used), prefix="KiB",
-                               rounding=self.options.disk_used_round)
-                stor.prefix = self.options.disk_used_prefix
+                               rounding=self.options.used_round)
+                stor.prefix = self.options.used_prefix
                 used[k] = stor
         return used
+
+    def _total(self):
+        pass
 
     @property
     def total(self):
@@ -319,8 +342,8 @@ class AbstractDisk(AbstractStorage):
             total = dict()
             for k, v in self.df_entries.items():
                 stor = Storage(value=int(v.blocks), prefix="KiB",
-                                rounding=self.options.disk_total_round)
-                stor.prefix = self.options.disk_total_prefix
+                                rounding=self.options.total_round)
+                stor.prefix = self.options.total_prefix
                 total[k] = stor
         return total
 
@@ -469,16 +492,16 @@ class AbstractNetwork(AbstractGetter):
     def download(self):
         """ Network download method """
         download = Storage(value=self._bytes_rate("down"),
-                           rounding=self.options.net_download_round)
-        download.prefix = self.options.net_download_prefix
+                           rounding=self.options.download_round)
+        download.prefix = self.options.download_prefix
         return download
 
     @property
     def upload(self):
         """ Network upload method """
         upload = Storage(value=self._bytes_rate("up"),
-                         rounding=self.options.net_upload_round)
-        upload.prefix = self.options.net_upload_prefix
+                         rounding=self.options.upload_round)
+        upload.prefix = self.options.upload_prefix
         return upload
 
 
@@ -555,46 +578,46 @@ class System(ABC):
     @lru_cache(maxsize=1)
     def cpu(self):
         """ Return an instance of AbstractCpu """
-        return self._getters["cpu"]("cpu", self.options, self.aux)
+        return self._getters["cpu"]("cpu", self.options.cpu, self.aux)
 
     @property
     @lru_cache(maxsize=1)
     def mem(self):
         """ Return an instance of AbstractMemory """
-        return self._getters["mem"]("mem", self.options, self.aux)
+        return self._getters["mem"]("mem", self.options.mem, self.aux)
 
     @property
     @lru_cache(maxsize=1)
     def swap(self):
         """ Return an instance of AbstractSwap """
-        return self._getters["swap"]("swap", self.options, self.aux)
+        return self._getters["swap"]("swap", self.options.swap, self.aux)
 
     @property
     @lru_cache(maxsize=1)
     def disk(self):
         """ Return an instance of AbstractDisk """
-        return self._getters["disk"]("disk", self.options, self.aux)
+        return self._getters["disk"]("disk", self.options.disk, self.aux)
 
     @property
     @lru_cache(maxsize=1)
     def bat(self):
         """ Return an instance of AbstractBattery """
-        return self._getters["bat"]("bat", self.options, self.aux)
+        return self._getters["bat"]("bat", self.options.bat, self.aux)
 
     @property
     @lru_cache(maxsize=1)
     def net(self):
         """ Return an instance of AbstractNetwork """
-        return self._getters["net"]("net", self.options, self.aux)
+        return self._getters["net"]("net", self.options.net, self.aux)
 
     @property
     @lru_cache(maxsize=1)
     def date(self):
         """ Return an instance of Date """
-        return self._getters["date"]("date", self.options, self.aux)
+        return self._getters["date"]("date", self.options.date, self.aux)
 
     @property
     @lru_cache(maxsize=1)
     def misc(self):
         """ Return an instance of AbstractMisc """
-        return self._getters["misc"]("misc", self.options, self.aux)
+        return self._getters["misc"]("misc", self.options.misc, self.aux)

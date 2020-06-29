@@ -6,7 +6,6 @@
 import os
 import sys
 
-from argparse import Namespace
 from importlib import import_module
 
 from .tools.cli import parse_cli

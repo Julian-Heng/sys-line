@@ -8,6 +8,7 @@ import itertools
 import textwrap
 
 from platform import python_build, python_implementation, python_version
+from types import SimpleNamespace
 
 from .storage import Storage
 from ..systems.abstract import System
@@ -154,4 +155,32 @@ def parse_cli():
     if result.mount != ["/"]:
         result.mount = unique(flatten(result.mount[1:]))
 
+    result = process_args(result)
     return result
+
+
+def process_args(args):
+    def make_namespace(d):
+        ret = SimpleNamespace()
+        for k, v in d.items():
+            setattr(ret, k, make_namespace(v) if isinstance(v, dict) else v)
+        return ret
+
+    options = dict()
+    for k, v in vars(args).items():
+        if k in ["format", "all"]:
+            options[k] = v
+        elif k in ["disk", "mount"]:
+            if "disk" not in options:
+                options["disk"] = dict()
+            options["disk"][k] = v
+        elif k in ["date_format", "time_format"]:
+            if "date" not in options:
+                options["date"] = dict()
+            options["date"][k] = v
+        else:
+            domain, info = k.split("_", 1)
+            if domain not in options:
+                options[domain] = dict()
+            options[domain][info] = v
+    return make_namespace(options)

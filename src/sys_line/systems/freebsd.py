@@ -9,7 +9,6 @@
 import re
 import time
 
-from argparse import Namespace
 from functools import lru_cache
 from types import SimpleNamespace
 
@@ -70,16 +69,16 @@ class Memory(AbstractMemory):
 
         used = total - sum([i * pagesize for i in keys])
         used = Storage(value=used, prefix="B",
-                       rounding=self.options.mem_used_round)
-        used.prefix = self.options.mem_used_prefix
+                       rounding=self.options.used_round)
+        used.prefix = self.options.used_prefix
         return used
 
     @property
     def total(self):
         total = int(self.aux.sysctl.query("hw.realmem"))
         total = Storage(value=total, prefix="B",
-                        rounding=self.options.mem_total_round)
-        total.prefix = self.options.mem_total_prefix
+                        rounding=self.options.total_round)
+        total.prefix = self.options.total_prefix
         return total
 
 
@@ -92,16 +91,16 @@ class Swap(AbstractSwap):
         pstat = run(["pstat", "-s"]).strip().split("\n")[1:]
         pstat = sum([extract(i) for i in pstat])
         used = Storage(value=pstat, prefix="KiB",
-                       rounding=self.options.swap_used_round)
-        used.prefix = self.options.swap_used_prefix
+                       rounding=self.options.used_round)
+        used.prefix = self.options.used_prefix
         return used
 
     @property
     def total(self):
         total = int(self.aux.sysctl.query("vm.swap_total"))
         total = Storage(value=total, prefix="B",
-                        rounding=self.options.swap_total_round)
-        total.prefix = self.options.swap_total_prefix
+                        rounding=self.options.total_round)
+        total.prefix = self.options.total_prefix
         return total
 
 
