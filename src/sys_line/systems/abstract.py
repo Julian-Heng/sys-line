@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=abstract-class-instantiated
-# pylint: disable=abstract-method
 # pylint: disable=invalid-name
-# pylint: disable=no-member
-# pylint: disable=pointless-string-statement
-# pylint: disable=too-few-public-methods
 # pylint: disable=too-many-arguments
 
 """ Abstract classes for getting system info """
@@ -28,14 +23,20 @@ class AbstractGetter(ABC):
     Abstract Getter class to store both options and any auxilary classes
     """
 
-    def __init__(self, domain_name, options, aux = None):
+    def __init__(self, domain_name, options, aux=None):
         super(AbstractGetter, self).__init__()
 
         self.domain_name = domain_name
         self.options = options
         self.aux = aux
 
+    @property
+    @abstractmethod
+    def _valid_info(self):
+        """ Returns list of info in getter """
+
     def query(self, info, options):
+        """ Returns the value of info """
         if info not in self._valid_info:
             raise RuntimeError("info name not in domain")
         return self._query(info, options)
@@ -66,15 +67,7 @@ class AbstractGetter(ABC):
                 # An option with "=" requires a value, unless it is a boolean
                 # option
                 if "=" not in i:
-                    if hasattr(self.options, i):
-                        if isinstance(getattr(self.options, i), bool):
-                            i = "{}=True".format(i)
-                        else:
-                            err = "option requires value: {}".format(i)
-                            raise RuntimeError(err)
-                    else:
-                        err = "no such option in domain: {}".format(i)
-                        raise RuntimeError(err)
+                    i = self._handle_missing_option_value(i)
 
                 k, v = i.split("=", 1)
 
@@ -85,7 +78,7 @@ class AbstractGetter(ABC):
                         raise RuntimeError(err)
 
                 if (hasattr(self.options, k) or
-                    hasattr(self.options, "{}_{}".format(info, k))):
+                        hasattr(self.options, "{}_{}".format(info, k))):
                     # Boolean options does not require the info name as part of
                     # the option
                     if v in ["True", "False"]:
@@ -102,17 +95,26 @@ class AbstractGetter(ABC):
 
         return opts
 
+    def _handle_missing_option_value(self, opt_name):
+        """ Handle options in format string if no value is given """
+        if hasattr(self.options, opt_name):
+            # Check if the option name is actually a boolean and set to true
+            if isinstance(getattr(self.options, opt_name), bool):
+                opt_name = "{}=True".format(opt_name)
+            else:
+                err = "option requires value: {}".format(opt_name)
+                raise RuntimeError(err)
+        else:
+            err = "no such option in domain: {}".format(opt_name)
+            raise RuntimeError(err)
+        return opt_name
+
     def __str__(self):
         """ The string representation of the getter would return all values """
         return "\n".join([
             "{}.{}: {}".format(self.domain_name, i, getattr(self, i))
             for i in self._valid_info
         ])
-
-    @property
-    @abstractmethod
-    def _valid_info(self):
-        """ Returns list of info in getter """
 
 
 class AbstractStorage(AbstractGetter):
@@ -133,10 +135,12 @@ class AbstractStorage(AbstractGetter):
         Abstract used method that returns Storage arguments to be implemented
         by subclass
         """
-        pass
 
     @property
     def used(self):
+        """
+        Returns a Storage class representing the amount used in storage
+        """
         value, prefix = self._used()
         used = Storage(value=value, prefix=prefix,
                        rounding=self.options.used_round)
@@ -149,10 +153,12 @@ class AbstractStorage(AbstractGetter):
         Abstract total method that returns Storage arguments to be implemented
         by subclass
         """
-        pass
 
     @property
     def total(self):
+        """
+        Returns a Storage class representing the total amount in storage
+        """
         value, prefix = self._total()
         total = Storage(value=value, prefix=prefix,
                         rounding=self.options.total_round)
@@ -416,7 +422,7 @@ class AbstractDisk(AbstractStorage):
             total = dict()
             for k, v in self.df_entries.items():
                 stor = Storage(value=int(v.blocks), prefix="KiB",
-                                rounding=self.options.total_round)
+                               rounding=self.options.total_round)
                 stor.prefix = self.options.total_prefix
                 total[k] = stor
         return total
@@ -638,9 +644,9 @@ class System(ABC):
     SHORT_DOMAINS = ("cpu", "mem", "swap", "disk",
                      "bat", "net", "date", "misc")
 
-    def __init__(self, options, aux = None, cpu = None, mem = None,
-                 swap = None, disk = None, bat = None, net = None,
-                 misc = None):
+    def __init__(self, options, aux=None, cpu=None, mem=None,
+                 swap=None, disk=None, bat=None, net=None,
+                 misc=None):
         super(System, self).__init__()
 
         self.options = options
