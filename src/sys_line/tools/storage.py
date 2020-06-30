@@ -2,7 +2,7 @@
 
 """ Storage module """
 
-from __future__ import annotations
+from .utils import _round
 
 
 class Storage():
@@ -10,16 +10,13 @@ class Storage():
 
     PREFIXES = ("B", "KiB", "MiB", "GiB", "TiB", "auto")
 
-    def __init__(self, value = 0, prefix = "B", rounding = -1):
+    def __init__(self, value=0, prefix="B", rounding=-1):
         self.value = value
         self.display_value = self.value
         self._prefix = prefix
         self.rounding = rounding
 
     def __repr__(self):
-        # Prevent cyclic import
-        from .utils import _round
-
         val = self.display_value
         rnd = self.rounding
         prf = self.prefix
