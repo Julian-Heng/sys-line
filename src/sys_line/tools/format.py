@@ -9,13 +9,18 @@ from abc import ABC, abstractmethod
 
 
 class FormatNode(ABC):
+    """ Abstract format node class """
 
     @abstractmethod
     def build(self):
-        pass
+        """
+        Abstract build method to construct the string repensentation of
+        this node
+        """
 
 
 class FormatTree(FormatNode):
+    """ A FormatTree class that contains multiple FormatNodes """
 
     def __init__(self, system, fmt):
         super(FormatTree, self).__init__()
@@ -34,6 +39,7 @@ class FormatTree(FormatNode):
 
 
 class FormatInfo(FormatNode):
+    """ A FormatInfo class that contains a domain and info to query from """
 
     EXTRACT_REGEX = re.compile(r"\{(?:(\w+)(?:\[([^\]]+)\])?\.(\w+))(?:\?)?")
 
@@ -71,11 +77,12 @@ class FormatInfo(FormatNode):
 
         return replace
 
-    def _build_alt(self, r):
-        return "".join([r if i.fmt == "{}" else i.build() for i in self.alt])
+    def _build_alt(self, replace):
+        return "".join([replace if i.fmt == "{}" else i.build() for i in self.alt])
 
 
 class FormatString(FormatNode):
+    """ A FormatString class that only contains a string """
 
     def __init__(self, string):
         super(FormatString, self).__init__()
@@ -86,8 +93,10 @@ class FormatString(FormatNode):
 
 
 class Tokenizer:
+    """ Tokenizer class to gather tokens in the format string """
 
     class State:
+        """ State class to store the tokenizer state """
         START = -1
         INSIDE = 0
         OUTSIDE = 1
