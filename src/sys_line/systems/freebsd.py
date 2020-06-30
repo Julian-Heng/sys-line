@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=abstract-method
 # pylint: disable=invalid-name
-# pylint: disable=no-member
-# pylint: disable=no-self-use
 
 """ FreeBSD specific module """
 
