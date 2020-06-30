@@ -71,18 +71,11 @@ class Memory(AbstractMemory):
         vm_stat = run(["vm_stat"]).strip().split("\n")[1:]
         vm_stat = (re.sub(r"Pages |\.", r"", i) for i in vm_stat)
         vm_stat = dict(i.split(":", 1) for i in vm_stat)
-        used = Storage(value=sum([int(vm_stat[i]) for i in words]) * 4096,
-                       rounding=self.options.used_round)
-        used.prefix = self.options.used_prefix
-
-        return used
+        value = sum([int(vm_stat[i]) for i in words]) * 4096
+        return value, "B"
 
     def _total(self):
-        total = Storage(value=int(self.aux.sysctl.query("hw.memsize")),
-                        rounding=self.options.total_round)
-        total.prefix = self.options.total_prefix
-
-        return total
+        return int(self.aux.sysctl.query("hw.memsize")), "B"
 
 
 class Swap(AbstractSwap):
@@ -105,21 +98,11 @@ class Swap(AbstractSwap):
 
         return value
 
-    @property
-    def used(self):
-        used = Storage(value=self._lookup_swap("used"),
-                       rounding=self.options.used_round)
-        used.prefix = self.options.used_prefix
+    def _used(self):
+        return self._lookup_swap("used"), "B"
 
-        return used
-
-    @property
-    def total(self):
-        total = Storage(value=self._lookup_swap("total"),
-                        rounding=self.options.total_round)
-        total.prefix = self.options.total_prefix
-
-        return total
+    def _total(self):
+        return self._lookup_swap("total"), "B"
 
 
 class Disk(AbstractDisk):

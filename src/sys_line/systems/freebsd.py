@@ -59,8 +59,7 @@ class Cpu(AbstractCpu):
 class Memory(AbstractMemory):
     """ FreeBSD implementation of AbstractMemory class """
 
-    @property
-    def used(self):
+    def _used(self):
         total = int(self.aux.sysctl.query("hw.realmem"))
         pagesize = int(self.aux.sysctl.query("hw.pagesize"))
 
@@ -68,40 +67,23 @@ class Memory(AbstractMemory):
                 for i in ["inactive", "free", "cache"]]
 
         used = total - sum([i * pagesize for i in keys])
-        used = Storage(value=used, prefix="B",
-                       rounding=self.options.used_round)
-        used.prefix = self.options.used_prefix
-        return used
+        return used, "B"
 
-    @property
-    def total(self):
-        total = int(self.aux.sysctl.query("hw.realmem"))
-        total = Storage(value=total, prefix="B",
-                        rounding=self.options.total_round)
-        total.prefix = self.options.total_prefix
-        return total
+    def _total(self):
+        return int(self.aux.sysctl.query("hw.realmem")), "B"
 
 
 class Swap(AbstractSwap):
     """ FreeBSD implementation of AbstractSwap class """
 
-    @property
-    def used(self):
+    def _used(self):
         extract = lambda i: int(i.split()[2])
         pstat = run(["pstat", "-s"]).strip().split("\n")[1:]
         pstat = sum([extract(i) for i in pstat])
-        used = Storage(value=pstat, prefix="KiB",
-                       rounding=self.options.used_round)
-        used.prefix = self.options.used_prefix
-        return used
+        return pstat, "KiB"
 
-    @property
-    def total(self):
-        total = int(self.aux.sysctl.query("vm.swap_total"))
-        total = Storage(value=total, prefix="B",
-                        rounding=self.options.total_round)
-        total.prefix = self.options.total_prefix
-        return total
+    def _total(self):
+        return int(self.aux.sysctl.query("vm.swap_total")), "B"
 
 
 class Disk(AbstractDisk):
@@ -114,7 +96,7 @@ class Disk(AbstractDisk):
     @property
     def name(self):
         """ Stub """
-        return None
+        return {i: None for i in self.original_dev.keys()}
 
     @property
     def partition(self):
