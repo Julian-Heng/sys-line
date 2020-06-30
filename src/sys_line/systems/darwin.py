@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-# pylint: disable=abstract-method
-# pylint: disable=invalid-name
-# pylint: disable=no-member
-# pylint: disable=no-self-use
 
 """ Darwin specific module """
 
@@ -122,7 +118,7 @@ class Disk(AbstractDisk):
             diskutil = dict()
             for dev in devs:
                 out = run(["diskutil", "info", dev]).split("\n")
-                out = (re.sub("r\s+", " ", i).strip() for i in out)
+                out = (re.sub(r"\s+", " ", i).strip() for i in out)
                 out = dict(i.split(": ", 1) for i in out if check(i))
                 diskutil[dev] = {k: trim_string(v) for k, v in out.items()}
 
