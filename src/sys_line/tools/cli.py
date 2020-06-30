@@ -141,47 +141,58 @@ def parse_cli():
                                 action="store", type=int, default=0,
                                 metavar="int")
 
-    result = parser.parse_args()
-
-    flatten = lambda l: list(itertools.chain(*l))
-    unique = lambda l: list(dict.fromkeys(l))
-
-    if result.format != [""]:
-        result.format = flatten(result.format[1:])
-    if result.disk:
-        result.disk = unique(flatten(result.disk))
-        if result.mount == ["/"]:
-            result.mount = list()
-    if result.mount != ["/"]:
-        result.mount = unique(flatten(result.mount[1:]))
-
-    result = process_args(result)
-    return result
+    return process_args(parser.parse_args())
 
 
-def dict_to_namespace(d):
+def flatten(_list):
+    """ Converts a list of lists into a single list """
+    return list(itertools.chain(*_list))
+
+
+def unique(_list):
+    """ Removes duplicate values in a list """
+    return list(dict.fromkeys(_list))
+
+
+def dict_to_namespace(_dict):
+    """ Converts a dictionary to a simple namespace recursively """
     ret = SimpleNamespace()
-    for k, v in d.items():
-        setattr(ret, k, dict_to_namespace(v) if isinstance(v, dict) else v)
+    for attr_name, attr_value in _dict.items():
+        if isinstance(attr_value, dict):
+            attr_value = dict_to_namespace(attr_value)
+        setattr(ret, attr_name, attr_value)
     return ret
 
 
 def process_args(args):
+    """
+    Converts the namespace from argparse.parse_args to a simple namespace
+    """
     options = dict()
-    for k, v in vars(args).items():
-        if k in ["format", "all"]:
-            options[k] = v
-        elif k in ["disk", "mount"]:
+
+    if args.format != [""]:
+        args.format = flatten(args.format[1:])
+    if args.disk:
+        args.disk = unique(flatten(args.disk))
+        if args.mount == ["/"]:
+            args.mount = list()
+    if args.mount != ["/"]:
+        args.mount = unique(flatten(args.mount[1:]))
+
+    for key, value in vars(args).items():
+        if key in ["format", "all"]:
+            options[key] = value
+        elif key in ["disk", "mount"]:
             if "disk" not in options:
                 options["disk"] = dict()
-            options["disk"][k] = v
-        elif k in ["date_format", "time_format"]:
+            options["disk"][key] = value
+        elif key in ["date_format", "time_format"]:
             if "date" not in options:
                 options["date"] = dict()
-            options["date"][k] = v
+            options["date"][key] = value
         else:
-            domain, info = k.split("_", 1)
+            domain, info = key.split("_", 1)
             if domain not in options:
                 options[domain] = dict()
-            options[domain][info] = v
+            options[domain][info] = value
     return dict_to_namespace(options)
