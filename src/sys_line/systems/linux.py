@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-# pylint: disable=abstract-method
-# pylint: disable=invalid-name
-# pylint: disable=no-member
-# pylint: disable=no-self-use
 
 """ Linux specific module """
 
@@ -10,6 +6,7 @@ import re
 import shlex
 import shutil
 
+from abc import abstractmethod
 from functools import lru_cache
 from pathlib import Path as p
 
@@ -70,11 +67,11 @@ class Cpu(AbstractCpu):
 
         temp = None
         files = (f for f in glob(Linux.FILES["sys_hwmon"])
-                    if check("{}/name".format(f)))
+                 if check("{}/name".format(f)))
 
         temp_dir = next(files, None)
         if temp_dir is not None:
-            files = sorted([f for f in p(temp_dir).glob("temp*_input")])
+            files = sorted(p(temp_dir).glob("temp*_input"))
             if files:
                 temp = float(open_read(str(files[0]))) / 1000
 
@@ -122,6 +119,9 @@ class Disk(AbstractDisk):
     @property
     @lru_cache(maxsize=1)
     def lsblk_entries(self):
+        """
+        Returns the output of lsblk in a dictionary with devices as keys
+        """
         lsblk_entries = None
         columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
         cmd = ["lsblk", "--output", ",".join(columns), "--paths", "--pairs"]
@@ -150,6 +150,21 @@ class Disk(AbstractDisk):
 
 class Battery(AbstractBattery):
     """ A Linux implementation of the AbstractBattery class """
+
+    @property
+    @abstractmethod
+    def current(self):
+        """ Abstract current class to be implemented """
+
+    @property
+    @abstractmethod
+    def full(self):
+        """ Abstract current class to be implemented """
+
+    @property
+    @abstractmethod
+    def drain(self):
+        """ Abstract current class to be implemented """
 
     @property
     @lru_cache(maxsize=1)
@@ -318,7 +333,7 @@ class Network(AbstractNetwork):
         check = lambda f: open_read("{}/operstate".format(f)).strip() == "up"
         find = lambda d: p(d).glob("[!v]*")
         return next((f.name for f in find(Linux.FILES["sys_net"])
-                        if check(f)), None)
+                     if check(f)), None)
 
     @property
     def _ssid(self):
