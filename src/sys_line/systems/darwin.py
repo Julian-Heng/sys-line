@@ -279,6 +279,7 @@ class Misc(AbstractMisc):
         def check(line):
             return "IODisplayParameters" in line
 
+        scr = None
         scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
         scr_out = next((i for i in scr_out if check(i)), None)
         if scr_out is not None:
