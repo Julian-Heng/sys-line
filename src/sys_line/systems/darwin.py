@@ -14,7 +14,7 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
 from ..tools.sysctl import Sysctl
-from ..tools.utils import percent, run, _round, trim_string
+from ..tools.utils import percent, run, _round
 
 
 class Cpu(AbstractCpu):
@@ -113,9 +113,6 @@ class Disk(AbstractDisk):
     @lru_cache(maxsize=1)
     def diskutil(self):
         """ Returns diskutil program output as a dict """
-        def check(line):
-            return line and len(line.split(": ", 1)) == 2
-
         devs = self.original_dev.values()
         diskutil = None
         if devs is not None:
