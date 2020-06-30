@@ -29,7 +29,7 @@ def run(cmd):
     """ Runs cmd and returns output as a string """
     stdout = subprocess.PIPE
     stderr = open(os.devnull, "w")
-    process = subprocess.run(cmd, stdout=stdout, stderr=stderr)
+    process = subprocess.run(cmd, stdout=stdout, stderr=stderr, check=False)
     return process.stdout.decode("utf-8")
 
 
@@ -57,4 +57,5 @@ def _round(num, rnd):
 
 
 def trim_string(string):
+    """ Trims the string of whitespaces """
     return re.sub(r"\s+", " ", string.strip())
