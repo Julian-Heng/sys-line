@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import setuptools
+
+from pathlib import Path
 
 
 class CleanCommand(setuptools.Command):
@@ -21,11 +22,11 @@ class CleanCommand(setuptools.Command):
                     find_files(j, "*", files)
                 files.append(j)
 
-        pattern = ("build", "dist", "*.pyc", "*.tgz", "src/*.egg-info")
-        files = []
+        patterns = ("build", "dist", "*.pyc", "*.tgz", "src/*.egg-info")
+        files = list()
 
-        for i in pattern:
-            find_files(".", i, files)
+        for pattern in patterns:
+            find_files(".", pattern, files)
 
         for i in files:
             if i.is_dir():
