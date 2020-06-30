@@ -2,6 +2,7 @@
 
 """ Darwin specific module """
 
+import plistlib
 import re
 import shutil
 import time
@@ -120,10 +121,8 @@ class Disk(AbstractDisk):
         if devs is not None:
             diskutil = dict()
             for dev in devs:
-                out = run(["diskutil", "info", dev]).split("\n")
-                out = (re.sub(r"\s+", " ", i).strip() for i in out)
-                out = dict(i.split(": ", 1) for i in out if check(i))
-                diskutil[dev] = {k: trim_string(v) for k, v in out.items()}
+                out = run(["diskutil", "info", "-plist", dev])
+                diskutil[dev] = plistlib.loads(out.encode("utf-8"))
 
         return diskutil
 
@@ -135,11 +134,11 @@ class Disk(AbstractDisk):
 
     @property
     def name(self):
-        return self._lookup_diskutil("Volume Name")
+        return self._lookup_diskutil("VolumeName")
 
     @property
     def partition(self):
-        return self._lookup_diskutil("File System Personality")
+        return self._lookup_diskutil("FilesystemName")
 
 
 class Battery(AbstractBattery):
