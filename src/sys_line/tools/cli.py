@@ -170,15 +170,22 @@ def process_args(args):
     """
     options = dict()
 
+    # Flatten the list of formats if it is not the default
     if args.format != [""]:
         args.format = flatten(args.format[1:])
+
+    # Flatten the list of disks if it is not the default
     if args.disk:
         args.disk = unique(flatten(args.disk))
+        # Clear mount list if it is default since disk is set
         if args.mount == ["/"]:
             args.mount = list()
-    if args.mount != ["/"]:
+
+    # Flatten the list of mounts if it is not default
+    if args.mount and args.mount != ["/"]:
         args.mount = unique(flatten(args.mount[1:]))
 
+    # Split the argparse namespace into multiple namespaces
     for key, value in vars(args).items():
         if key in ["format", "all"]:
             options[key] = value
@@ -195,4 +202,5 @@ def process_args(args):
             if domain not in options:
                 options[domain] = dict()
             options[domain][info] = value
+
     return dict_to_namespace(options)
