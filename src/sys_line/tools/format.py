@@ -78,7 +78,8 @@ class FormatInfo(FormatNode):
         return replace
 
     def _build_alt(self, replace):
-        return "".join([replace if i.fmt == "{}" else i.build() for i in self.alt])
+        nodes = [replace if i.fmt == "{}" else i.build() for i in self.alt]
+        return "".join(nodes)
 
 
 class FormatString(FormatNode):

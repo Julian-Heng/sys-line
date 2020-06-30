@@ -73,7 +73,9 @@ class Swap(AbstractSwap):
     """ FreeBSD implementation of AbstractSwap class """
 
     def _used(self):
-        extract = lambda i: int(i.split()[2])
+        def extract(line):
+            return int(line.split()[2])
+
         pstat = run(["pstat", "-s"]).strip().split("\n")[1:]
         pstat = sum([extract(i) for i in pstat])
         return pstat, "KiB"
@@ -176,9 +178,11 @@ class Network(AbstractNetwork):
 
     @property
     def dev(self):
+        def check(dev):
+            return active.search(run(self._LOCAL_IP_CMD + [dev]))
+
         active = re.compile(r"^\s+status: (associated|active)$", re.M)
         dev_list = run(self._LOCAL_IP_CMD + ["-l"]).split()
-        check = lambda i: active.search(run(self._LOCAL_IP_CMD + [i]))
         return next((i for i in dev_list if check(i)), None)
 
     @property
@@ -213,5 +217,6 @@ class FreeBSD(System):
     def __init__(self, options):
         super(FreeBSD, self).__init__(options,
                                       aux=SimpleNamespace(sysctl=Sysctl()),
-                                      cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
-                                      bat=Battery, net=Network, misc=Misc)
+                                      cpu=Cpu, mem=Memory, swap=Swap,
+                                      disk=Disk, bat=Battery, net=Network,
+                                      misc=Misc)

@@ -31,10 +31,12 @@ class Cpu(AbstractCpu):
         return len(re.findall(r"^processor", self.cpu_file, re.M))
 
     def _cpu_speed(self):
+        def check(_file):
+            return speed_reg.search(str(_file))
+
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
-        check = lambda f: speed_reg.search(str(f))
         speed_dir = Linux.FILES["sys_cpu"]
         speed = next((f for f in p(speed_dir).rglob("*") if check(f)), None)
 
@@ -62,8 +64,11 @@ class Cpu(AbstractCpu):
 
     @property
     def temp(self):
-        check = lambda f: p.exists(p(f)) and "temp" in open_read(f)
-        glob = lambda d: p(d).glob("*")
+        def check(_file):
+            return p(_file).exists() and "temp" in open_read(_file)
+
+        def glob(_dir):
+            return p(_dir).glob("*")
 
         temp = None
         files = (f for f in glob(Linux.FILES["sys_hwmon"])
@@ -140,12 +145,14 @@ class Disk(AbstractDisk):
     def name(self):
         labels = ["LABEL", "PARTLABEL"]
         return {k: next((v[i] for i in labels if v[i]), None)
-                for k, v in self.lsblk_entries.items() if k in self.original_dev}
+                for k, v in self.lsblk_entries.items()
+                if k in self.original_dev}
 
     @property
     def partition(self):
         return {k: v["FSTYPE"]
-                for k, v in self.lsblk_entries.items() if k in self.original_dev}
+                for k, v in self.lsblk_entries.items()
+                if k in self.original_dev}
 
 
 class Battery(AbstractBattery):
@@ -176,7 +183,8 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def current_charge(self):
         """ Returns cached battery current charge file """
-        return None if Linux.bat_dir() is None else int(open_read(self.current))
+        current = self.current
+        return None if Linux.bat_dir() is None else int(open_read(current))
 
     @property
     @lru_cache(maxsize=1)
@@ -330,8 +338,12 @@ class Network(AbstractNetwork):
 
     @property
     def dev(self):
-        check = lambda f: open_read("{}/operstate".format(f)).strip() == "up"
-        find = lambda d: p(d).glob("[!v]*")
+        def check(_file):
+            return open_read("{}/operstate".format(_file)).strip() == "up"
+
+        def find(_dir):
+            return p(_dir).glob("[!v]*")
+
         return next((f.name for f in find(Linux.FILES["sys_net"])
                      if check(f)), None)
 
@@ -365,8 +377,11 @@ class Misc(AbstractMisc):
 
     @property
     def vol(self):
-        check = lambda d: d.is_dir() and d.name.isdigit()
-        extract = lambda f: open_read("{}/cmdline".format(f))
+        def check(_dir):
+            return _dir.is_dir() and _dir.name.isdigit()
+
+        def extract(_file):
+            return open_read("{}/cmdline".format(_file))
 
         systems = {"pulseaudio": Linux.vol_pulseaudio}
 
@@ -374,7 +389,8 @@ class Misc(AbstractMisc):
 
         vol = None
         pids = (extract(i) for i in p("/proc").iterdir() if check(i))
-        audio = next((reg.search(i) for i in pids if i and reg.search(i)), None)
+        audio = next((reg.search(i) for i in pids if i and reg.search(i)),
+                     None)
 
         if audio is not None:
             try:
@@ -388,11 +404,13 @@ class Misc(AbstractMisc):
 
     @property
     def scr(self):
+        def check(_file):
+            return "kbd" not in _file and "backlight" in _file
+
         scr = None
         backlight_path = p(Linux.FILES["sys_backlight"])
 
         if backlight_path.exists():
-            check = lambda f: "kbd" not in f and "backlight" in f
             scr_files = (f for f in backlight_path.rglob("*") if check(f.name))
             scr_dir = next(scr_files, None)
 
@@ -451,7 +469,9 @@ class Linux(System):
     @lru_cache(maxsize=1)
     def bat_dir():
         """ Returns the path for the battery directory """
-        check = lambda f: p(f).exists() and bool(int(open_read(f)))
+        def check(_file):
+            return p(_file).exists() and bool(int(open_read(_file)))
+
         _bat_dir = p(Linux.FILES["sys_power_supply"]).glob("*BAT*")
         _bat_dir = (d for d in _bat_dir if check("{}/present".format(d)))
         return next(_bat_dir, None)
@@ -478,7 +498,8 @@ class Linux(System):
         So the purpose of this method is to determine which implementation it
         should use
         """
-        check = lambda d: p(d).exists()
+        def check(_dir):
+            return p(_dir).exists()
 
         avail = {
             "{}/charge_now".format(Linux.bat_dir()): BatteryAmp,

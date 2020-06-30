@@ -15,6 +15,7 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
 from ..tools.sysctl import Sysctl
 from ..tools.utils import percent, run, _round, trim_string
 
+
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
 
@@ -111,7 +112,9 @@ class Disk(AbstractDisk):
     @lru_cache(maxsize=1)
     def diskutil(self):
         """ Returns diskutil program output as a dict """
-        check = lambda i: i and len(i.split(": ", 1)) == 2
+        def check(line):
+            return line and len(line.split(": ", 1)) == 2
+
         devs = self.original_dev.values()
         diskutil = None
         if devs is not None:
@@ -188,7 +191,9 @@ class Battery(AbstractBattery):
         perc = None
 
         if self.is_present:
-            perc = percent(self._current_capacity, int(self.bat["MaxCapacity"]))
+            current_capacity = self._current_capacity
+            max_capacity = self.bat["MaxCapacity"]
+            perc = percent(current_capacity, max_capacity)
             perc = _round(perc, self.options.percent_round)
 
         return perc
@@ -226,9 +231,11 @@ class Network(AbstractNetwork):
 
     @property
     def dev(self):
+        def check(dev):
+            return active.search(run(self._LOCAL_IP_CMD + [dev]))
+
         active = re.compile(r"status: active")
         dev_reg = re.compile(r"Device: (.*)$")
-        check = lambda i: active.search(run(self._LOCAL_IP_CMD + [i]))
 
         dev_list = run(["networksetup", "-listallhardwareports"])
         dev_list = dev_list.strip().split("\n")
@@ -269,8 +276,11 @@ class Misc(AbstractMisc):
 
     @property
     def scr(self):
+        def check(line):
+            return "IODisplayParameters" in line
+
         scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
-        scr_out = next((i for i in scr_out if "IODisplayParameters" in i), None)
+        scr_out = next((i for i in scr_out if check(i)), None)
         if scr_out is not None:
             reg = r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)"
             scr = re.search(reg, scr_out)

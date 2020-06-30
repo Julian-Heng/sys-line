@@ -169,7 +169,10 @@ class AbstractStorage(AbstractGetter):
     def percent(self):
         """ Abstract percent property """
         perc = percent(self.used.value, self.total.value)
-        perc = 0.0 if perc is None else _round(perc, self.options.percent_round)
+        if perc is None:
+            perc = 0.0
+        else:
+            perc = _round(perc, self.options.percent_round)
         return perc
 
 
