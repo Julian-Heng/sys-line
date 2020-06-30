@@ -15,7 +15,6 @@ from types import SimpleNamespace
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
-from ..tools.storage import Storage
 from ..tools.sysctl import Sysctl
 from ..tools.utils import run, _round
 

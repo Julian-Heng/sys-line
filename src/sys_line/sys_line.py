@@ -10,7 +10,6 @@ from importlib import import_module
 
 from .tools.cli import parse_cli
 from .tools.format import FormatTree
-from .systems.abstract import System
 
 
 def init_system(options):

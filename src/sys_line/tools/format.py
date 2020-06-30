@@ -7,8 +7,6 @@ import re
 
 from abc import ABC, abstractmethod
 
-from ..systems.abstract import System
-
 
 class FormatNode(ABC):
 

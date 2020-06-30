@@ -8,10 +8,6 @@ import re
 import subprocess
 import sys
 
-from pathlib import Path
-
-from .storage import Storage
-
 
 def percent(num_1, num_2):
     """ Returns percent of 2 numbers """

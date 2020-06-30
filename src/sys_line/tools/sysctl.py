@@ -3,7 +3,6 @@
 
 """ Sysctl module """
 
-from functools import lru_cache
 from .utils import run
 
 
