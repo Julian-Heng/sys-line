@@ -1,0 +1,29 @@
+image: python:latest
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip
+    - venv/
+
+before_script:
+  - python -V
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+  - pip install -r test-requirements.txt
+
+stages:
+  - linting
+
+flake8:
+  stage: linting
+  script:
+    - python -m flake8 ./src/sys_line
+
+pylint:
+  stage: linting
+  script:
+    - python -m pylint --rcfile=./.pylintrc ./src/sys_line
