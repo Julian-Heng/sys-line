@@ -2,66 +2,80 @@
 
 """ Storage module """
 
+from math import log
+
 from .utils import _round
 
 
 class Storage():
     """ Storage class for storing values with data prefixes """
 
+    # List of supported prefixes
     PREFIXES = ("B", "KiB", "MiB", "GiB", "TiB", "auto")
 
-    def __init__(self, value=0, prefix="B", rounding=-1):
-        self.value = value
-        self.display_value = self.value
+    def __init__(self, value, prefix, rounding=-1):
+        if prefix not in Storage.PREFIXES:
+            raise TypeError("prefix '{}' not valid".format(prefix))
+
+        self._value = value
         self._prefix = prefix
-        self.rounding = rounding
+        self._rounding = rounding
+
+        self._bytes = None
 
     def __repr__(self):
-        val = self.display_value
-        rnd = self.rounding
-        prf = self.prefix
-        return "{} {}".format(_round(val, rnd) if rnd > -1 else val, prf)
+        if self.rounding > -1:
+            value = _round(self.value, self.rounding)
+        else:
+            value = self.value
+        return "{} {}".format(value, self.prefix)
 
     def __str__(self):
         return self.__repr__()
 
-    def _calc_prefix_delta(self, start, end):
-        return self.PREFIXES.index(end) - self.PREFIXES.index(start)
+    @property
+    def value(self):
+        """ Returns the value under the current prefix """
+        return self._value
 
     @property
     def prefix(self):
-        """ Returns prefix """
+        """ Returns the prefix """
         return self._prefix
 
     @prefix.setter
     def prefix(self, prefix):
-        """ Sets prefix and changes value """
-        if prefix == "auto":
-            count = 0
-            self.display_value = self.value
-            while self.display_value > 1024:
-                self.display_value /= 1024
-                count += 1
-            curr_index = self.PREFIXES.index(self._prefix) + count
-            self._prefix = self.PREFIXES[curr_index]
-        else:
-            try:
-                delta = self._calc_prefix_delta(self._prefix, prefix)
-                self.display_value = self.value
-                if delta != 0:
-                    # Convert the value
-                    self.display_value = self.display_value / pow(1024, delta)
-                    self._prefix = prefix
-            except ValueError:
-                pass
+        """ Sets the prefix and convert the value accordingly """
+        if prefix not in Storage.PREFIXES:
+            raise TypeError("prefix '{}' not valid".format(prefix))
 
-    def set_prefix_without_value(self, prefix):
-        """ Change the prefix without the value """
-        self.prefix = prefix
+        if prefix == "auto":
+            if self.bytes != 0:
+                index = int(log(self.bytes, 1024))
+                self._value = self.bytes / pow(1024, index)
+                self._prefix = Storage.PREFIXES[index]
+        else:
+            distance = Storage._distance_between("B", prefix)
+            if distance > 0:
+                self._value = self.bytes / pow(1024, distance)
+            self._prefix = prefix
+
+    @property
+    def rounding(self):
+        """ Returns the number of places to be rounded to """
+        return self._rounding
 
     @property
     def bytes(self):
-        """ Return storage amount in bytes """
-        val = self.value
-        delta = self._calc_prefix_delta(self.prefix, "B")
-        return int(val / pow(1024, delta))
+        """ Returns the value in bytes """
+        if self._bytes is None:
+            distance = Storage._distance_between("B", self.prefix)
+            if distance > 0:
+                self._bytes = self.value * pow(1024, distance)
+            else:
+                self._bytes = self.value
+        return self._bytes
+
+    @staticmethod
+    def _distance_between(i, j):
+        return Storage.PREFIXES.index(j) - Storage.PREFIXES.index(i)

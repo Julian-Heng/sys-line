@@ -168,7 +168,7 @@ class AbstractStorage(AbstractGetter):
     @property
     def percent(self):
         """ Abstract percent property """
-        perc = percent(self.used.value, self.total.value)
+        perc = percent(self.used.bytes, self.total.bytes)
         if perc is None:
             perc = 0.0
         else:
@@ -408,7 +408,7 @@ class AbstractDisk(AbstractStorage):
         if self.df_entries is not None:
             used = dict()
             for k, v in self.df_entries.items():
-                stor = Storage(value=int(v.used), prefix="KiB",
+                stor = Storage(int(v.used), "KiB",
                                rounding=self.options.used_round)
                 stor.prefix = self.options.used_prefix
                 used[k] = stor
@@ -424,7 +424,7 @@ class AbstractDisk(AbstractStorage):
         if self.df_entries is not None:
             total = dict()
             for k, v in self.df_entries.items():
-                stor = Storage(value=int(v.blocks), prefix="KiB",
+                stor = Storage(int(v.blocks), "KiB",
                                rounding=self.options.total_round)
                 stor.prefix = self.options.total_prefix
                 total[k] = stor
@@ -439,7 +439,7 @@ class AbstractDisk(AbstractStorage):
             used = self.used
             total = self.total
             for dev in self.original_dev.keys():
-                value = percent(used[dev].value, total[dev].value)
+                value = percent(used[dev].bytes, total[dev].bytes)
                 if value is None:
                     value = 0.0
                 else:
@@ -577,7 +577,7 @@ class AbstractNetwork(AbstractGetter):
     @property
     def download(self):
         """ Network download method """
-        download = Storage(value=self._bytes_rate("down"),
+        download = Storage(self._bytes_rate("down"), "B",
                            rounding=self.options.download_round)
         download.prefix = self.options.download_prefix
         return download
@@ -585,7 +585,7 @@ class AbstractNetwork(AbstractGetter):
     @property
     def upload(self):
         """ Network upload method """
-        upload = Storage(value=self._bytes_rate("up"),
+        upload = Storage(self._bytes_rate("up"), "B",
                          rounding=self.options.upload_round)
         upload.prefix = self.options.upload_prefix
         return upload
