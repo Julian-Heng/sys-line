@@ -93,7 +93,7 @@ class FormatString(FormatNode):
         return self.string
 
 
-class Tokenizer:
+class Tokenizer():
     """ Tokenizer class to gather tokens in the format string """
 
     class State:
