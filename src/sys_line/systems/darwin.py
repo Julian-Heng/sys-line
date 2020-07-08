@@ -155,6 +155,8 @@ class Battery(AbstractBattery):
         current = 0
         if self.is_present:
             current = int(self.bat["InstantAmperage"])
+
+            # Fix current if it underflows in ioreg
             current -= pow(2, 64) if len(str(current)) >= 20 else 0
             current = abs(current)
 
