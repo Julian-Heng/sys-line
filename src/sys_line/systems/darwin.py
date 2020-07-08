@@ -114,12 +114,11 @@ class Disk(AbstractDisk):
     def diskutil(self):
         """ Returns diskutil program output as a dict """
         devs = self.original_dev.values()
+        cmd = ["diskutil", "info", "-plist"]
         diskutil = None
         if devs is not None:
-            diskutil = dict()
-            for dev in devs:
-                out = run(["diskutil", "info", "-plist", dev])
-                diskutil[dev] = plistlib.loads(out.encode("utf-8"))
+            out = {dev: run(cmd + [dev]).encode("utf-8") for dev in devs}
+            diskutil = {k: plistlib.loads(v) for k, v in out.items()}
 
         return diskutil
 
