@@ -27,10 +27,11 @@ def open_read(filename):
 
 def run(cmd):
     """ Runs cmd and returns output as a string """
-    stdout = subprocess.PIPE
-    stderr = open(os.devnull, "w")
-    process = subprocess.run(cmd, stdout=stdout, stderr=stderr, check=False)
-    return process.stdout.decode("utf-8")
+    with open(os.devnull, "w") as stderr:
+        stdout = subprocess.PIPE
+        process = subprocess.run(cmd, stdout=stdout, stderr=stderr,
+                                 check=False)
+        return process.stdout.decode("utf-8")
 
 
 def unix_epoch_to_str(secs):
