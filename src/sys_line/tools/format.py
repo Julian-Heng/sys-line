@@ -14,8 +14,8 @@ class FormatNode(ABC):
     @abstractmethod
     def build(self):
         """
-        Abstract build method to construct the string repensentation of
-        this node
+        Abstract build method to construct the string representation of this
+        node
         """
 
 
