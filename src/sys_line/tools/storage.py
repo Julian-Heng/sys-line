@@ -4,7 +4,7 @@
 
 from math import log
 
-from .utils import _round
+from .utils import round_trim
 
 
 class Storage():
@@ -25,7 +25,7 @@ class Storage():
 
     def __repr__(self):
         if self.rounding > -1:
-            value = _round(self.value, self.rounding)
+            value = round_trim(self.value, self.rounding)
         else:
             value = self.value
         return "{} {}".format(value, self.prefix)

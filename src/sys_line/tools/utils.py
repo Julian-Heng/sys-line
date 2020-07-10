@@ -50,7 +50,7 @@ def unix_epoch_to_str(secs):
     return string if string else None
 
 
-def _round(num, rnd):
+def round_trim(num, rnd):
     """ Wrapper for round method to trim whole float numbers """
     ret = round(num, rnd)
     return int(ret) if rnd == 0 or ret == int(num) else ret

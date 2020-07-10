@@ -14,7 +14,7 @@ from functools import lru_cache
 from pathlib import Path as p
 
 from ..tools.storage import Storage
-from ..tools.utils import percent, run, unix_epoch_to_str, _round
+from ..tools.utils import percent, run, unix_epoch_to_str, round_trim
 from ..tools.df import DfEntry
 
 
@@ -172,7 +172,7 @@ class AbstractStorage(AbstractGetter):
         if perc is None:
             perc = 0.0
         else:
-            perc = _round(perc, self.options.percent_round)
+            perc = round_trim(perc, self.options.percent_round)
         return perc
 
 
@@ -232,7 +232,7 @@ class AbstractCpu(AbstractGetter):
         cores = self.cores
         ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
         cpu_usage = sum([float(i) for i in ps_out]) / cores
-        return _round(cpu_usage, self.options.usage_round)
+        return round_trim(cpu_usage, self.options.usage_round)
 
     @property
     @abstractmethod
@@ -443,7 +443,7 @@ class AbstractDisk(AbstractStorage):
                 if value is None:
                     value = 0.0
                 else:
-                    value = _round(value, self.options.percent_round)
+                    value = round_trim(value, self.options.percent_round)
                 perc[dev] = value
         return perc
 
