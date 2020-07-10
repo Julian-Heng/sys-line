@@ -26,16 +26,17 @@ class FormatTree(FormatNode):
         super(FormatTree, self).__init__()
         self.system = system
         self.fmt = fmt
-        self.nodes = list()
+        self.tokens = Tokenizer.tokenize(self.fmt)
 
     def build(self):
-        for i in Tokenizer.tokenize(self.fmt):
+        nodes = list()
+        for i in self.tokens:
             if i.startswith("{"):
-                self.nodes.append(FormatInfo(self.system, i))
+                nodes.append(FormatInfo(self.system, i))
             else:
-                self.nodes.append(FormatString(i))
+                nodes.append(FormatString(i))
 
-        return "".join([i.build() for i in self.nodes])
+        return "".join([i.build() for i in nodes])
 
 
 class FormatInfo(FormatNode):
