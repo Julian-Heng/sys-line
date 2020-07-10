@@ -17,6 +17,7 @@ before_script:
 
 stages:
   - lint
+  - test
 
 flake8:
   stage: lint
@@ -27,3 +28,9 @@ pylint:
   stage: lint
   script:
     - python -m pylint --rcfile=./.pylintrc ./src/sys_line
+
+unittest:
+  stage: test
+  script:
+    - cd ./src
+    - python3 -m unittest -v
