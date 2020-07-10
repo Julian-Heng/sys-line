@@ -7,7 +7,7 @@ from ..tools.storage import Storage as Storage
 
 class TestStorage(unittest.TestCase):
 
-    def test_constructor(self):
+    def test__storage_constructor(self):
         stor = Storage(0, "B")
         self.assertEqual(stor.value, 0)
         self.assertEqual(stor.prefix, "B")
@@ -26,7 +26,7 @@ class TestStorage(unittest.TestCase):
         self.assertEqual(stor.rounding, 3)
         self.assertEqual(stor._bytes, None)
 
-    def test_bytes(self):
+    def test__storage_bytes(self):
         stor = Storage(1, "B")
         self.assertEqual(stor.bytes, 1)
 
@@ -39,7 +39,7 @@ class TestStorage(unittest.TestCase):
         stor = Storage(1, "GiB")
         self.assertEqual(stor.bytes, 1024 * 1024 * 1024)
 
-    def test_prefix(self):
+    def test__storage_prefix(self):
         stor = Storage(1024, "KiB")
         stor.prefix = "MiB"
         self.assertEqual(stor.value, 1)
@@ -56,7 +56,7 @@ class TestStorage(unittest.TestCase):
         stor.prefix = "KiB"
         self.assertEqual(stor.value, 1024 * 1024)
 
-    def test_string(self):
+    def test__storage_string(self):
         self.assertEqual(str(Storage(1, "B")), "1 B")
         self.assertEqual(str(Storage(1, "KiB")), "1 KiB")
         self.assertEqual(str(Storage(1.511, "KiB", rounding=2)), "1.51 KiB")
