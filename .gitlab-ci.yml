@@ -16,14 +16,14 @@ before_script:
   - pip install -r test-requirements.txt
 
 stages:
-  - linting
+  - lint
 
 flake8:
-  stage: linting
+  stage: lint
   script:
     - python -m flake8 ./src/sys_line
 
 pylint:
-  stage: linting
+  stage: lint
   script:
     - python -m pylint --rcfile=./.pylintrc ./src/sys_line
