@@ -5,7 +5,6 @@ import unittest
 from unittest.mock import MagicMock
 
 from ..tools.format import FormatTree, FormatInfo, Tokenizer
-from ..systems.abstract import System
 
 
 class TestTokenizer(unittest.TestCase):
