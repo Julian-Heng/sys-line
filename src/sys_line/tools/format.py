@@ -140,6 +140,7 @@ class Tokenizer():
             else:
                 curr += i
 
-        tokens.append(curr)
+        if curr:
+            tokens.append(curr)
 
         return tokens
