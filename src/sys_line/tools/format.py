@@ -11,6 +11,10 @@ from abc import ABC, abstractmethod
 class FormatNode(ABC):
     """ Abstract format node class """
 
+    def __init__(self, system, fmt):
+        self.system = system
+        self.fmt = fmt
+
     @abstractmethod
     def build(self):
         """
@@ -23,9 +27,7 @@ class FormatTree(FormatNode):
     """ A FormatTree class that contains multiple FormatNodes """
 
     def __init__(self, system, fmt):
-        super(FormatTree, self).__init__()
-        self.system = system
-        self.fmt = fmt
+        super(FormatTree, self).__init__(system, fmt)
         self.tokens = Tokenizer.tokenize(self.fmt)
 
     def build(self):
@@ -45,10 +47,7 @@ class FormatInfo(FormatNode):
     EXTRACT_REGEX = re.compile(r"\{(?:(\w+)(?:\[([^\]]+)\])?\.(\w+))(?:\?)?")
 
     def __init__(self, system, fmt):
-        super(FormatInfo, self).__init__()
-
-        self.system = system
-        self.fmt = fmt
+        super(FormatInfo, self).__init__(system, fmt)
         self.nodes = list()
 
         extract = self.EXTRACT_REGEX.search(self.fmt)
@@ -88,11 +87,10 @@ class FormatString(FormatNode):
     """ A FormatString class that only contains a string """
 
     def __init__(self, string):
-        super(FormatString, self).__init__()
-        self.string = string
+        super(FormatString, self).__init__(None, string)
 
     def build(self):
-        return self.string
+        return self.fmt
 
 
 class Tokenizer():
