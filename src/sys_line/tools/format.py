@@ -56,10 +56,10 @@ class FormatInfo(FormatNode):
         self.info = extract.group(3)
 
         if self.fmt.find("?") > -1:
-            alt = self.fmt[(self.fmt.find("?") + 1):-1]
-            self.alt = [FormatTree(self.system, i)
-                        for i in Tokenizer.tokenize(alt)]
+            self.alt_fmt = self.fmt[(self.fmt.find("?") + 1):-1]
+            self.alt = Tokenizer.tokenize(self.alt_fmt)
         else:
+            self.alt_fmt = None
             self.alt = None
 
     def build(self):
@@ -78,7 +78,8 @@ class FormatInfo(FormatNode):
         return replace
 
     def _build_alt(self, replace):
-        nodes = [replace if i.fmt == "{}" else i.build() for i in self.alt]
+        nodes = [FormatTree(self.system, i) for i in self.alt]
+        nodes = [replace if i.fmt == "{}" else i.build() for i in nodes]
         return "".join(nodes)
 
 
