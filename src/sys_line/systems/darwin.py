@@ -188,7 +188,7 @@ class Battery(AbstractBattery):
 
         if self.is_present:
             current_capacity = self._current_capacity
-            max_capacity = self.bat["MaxCapacity"]
+            max_capacity = int(self.bat["MaxCapacity"])
             perc = percent(current_capacity, max_capacity)
             perc = round_trim(perc, self.options.percent_round)
 
