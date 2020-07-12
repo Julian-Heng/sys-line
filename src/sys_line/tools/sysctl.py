@@ -14,6 +14,7 @@ class Sysctl():
 
     @property
     def sysctl(self):
+        """ Returns a dictionary of all sysctl keys and values """
         if self._sysctl is None:
             sysctl = run(["sysctl", "-A", "-e"]).strip().split("\n")
             self._sysctl = dict(i.split("=", 1)
@@ -23,7 +24,7 @@ class Sysctl():
 
     def query(self, key):
         """ Fetch a sysctl variable """
+        value = None
         if key in self.sysctl:
-            return self.sysctl[key]
-        else:
-            return None
+            value = self.sysctl[key]
+        return value
