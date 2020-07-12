@@ -1,0 +1,8 @@
+[flake8]
+jobs = auto
+
+count = True
+format = default
+show-source = True
+
+exclude = *test*

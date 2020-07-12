@@ -14,7 +14,7 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
 from ..tools.sysctl import Sysctl
-from ..tools.utils import percent, run, _round
+from ..tools.utils import percent, run, round_trim
 
 
 class Cpu(AbstractCpu):
@@ -48,7 +48,7 @@ class Cpu(AbstractCpu):
             regex = r"CPU: ((\d+\.)?\d+)"
             match = re.search(regex, run(["osx-cpu-temp", "-f", "-c"]))
             temp = float(match.group(1)) if match else 0.0
-            temp = _round(temp, self.options.temp_round)
+            temp = round_trim(temp, self.options.temp_round)
 
         return temp
 
@@ -191,7 +191,7 @@ class Battery(AbstractBattery):
             current_capacity = self._current_capacity
             max_capacity = int(self.bat["MaxCapacity"])
             perc = percent(current_capacity, max_capacity)
-            perc = _round(perc, self.options.percent_round)
+            perc = round_trim(perc, self.options.percent_round)
 
         return perc
 
@@ -214,7 +214,7 @@ class Battery(AbstractBattery):
         if self.is_present:
             voltage = int(self.bat["Voltage"])
             power = (self._current * voltage) / 1e6
-            power = _round(power, self.options.power_round)
+            power = round_trim(power, self.options.power_round)
 
         return power
 
@@ -269,7 +269,7 @@ class Misc(AbstractMisc):
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
-        return _round(vol, self.options.volume_round)
+        return round_trim(vol, self.options.volume_round)
 
     @property
     def scr(self):
@@ -286,7 +286,7 @@ class Misc(AbstractMisc):
                 reg = r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)"
                 scr = re.search(reg, scr_out)
             scr = percent(int(scr.group(2)), int(scr.group(1)))
-            scr = _round(scr, self.options.screen_round)
+            scr = round_trim(scr, self.options.screen_round)
 
         return scr
 

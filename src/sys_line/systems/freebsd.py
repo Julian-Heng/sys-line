@@ -13,7 +13,7 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
 from ..tools.sysctl import Sysctl
-from ..tools.utils import run, _round
+from ..tools.utils import run, round_trim
 
 
 class Cpu(AbstractCpu):
@@ -29,7 +29,7 @@ class Cpu(AbstractCpu):
         speed = self.aux.sysctl.query("hw.cpuspeed")
         if speed is None:
             speed = self.aux.sysctl.query("hw.clockrate")
-        return cpu, _round(int(speed) / 1000, 2)
+        return cpu, round_trim(int(speed) / 1000, 2)
 
     def _load_avg(self):
         return self.aux.sysctl.query("vm.loadavg").split()[1:4]

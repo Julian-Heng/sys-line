@@ -11,11 +11,15 @@ from abc import ABC, abstractmethod
 class FormatNode(ABC):
     """ Abstract format node class """
 
+    def __init__(self, system, fmt):
+        self.system = system
+        self.fmt = fmt
+
     @abstractmethod
     def build(self):
         """
-        Abstract build method to construct the string repensentation of
-        this node
+        Abstract build method to construct the string representation of this
+        node
         """
 
 
@@ -23,19 +27,18 @@ class FormatTree(FormatNode):
     """ A FormatTree class that contains multiple FormatNodes """
 
     def __init__(self, system, fmt):
-        super(FormatTree, self).__init__()
-        self.system = system
-        self.fmt = fmt
-        self.nodes = list()
+        super(FormatTree, self).__init__(system, fmt)
+        self.tokens = Tokenizer.tokenize(self.fmt)
 
     def build(self):
-        for i in Tokenizer.tokenize(self.fmt):
+        nodes = list()
+        for i in self.tokens:
             if i.startswith("{"):
-                self.nodes.append(FormatInfo(self.system, i))
+                nodes.append(FormatInfo(self.system, i))
             else:
-                self.nodes.append(FormatString(i))
+                nodes.append(FormatString(i))
 
-        return "".join([i.build() for i in self.nodes])
+        return "".join([i.build() for i in nodes])
 
 
 class FormatInfo(FormatNode):
@@ -44,10 +47,7 @@ class FormatInfo(FormatNode):
     EXTRACT_REGEX = re.compile(r"\{(?:(\w+)(?:\[([^\]]+)\])?\.(\w+))(?:\?)?")
 
     def __init__(self, system, fmt):
-        super(FormatInfo, self).__init__()
-
-        self.system = system
-        self.fmt = fmt
+        super(FormatInfo, self).__init__(system, fmt)
         self.nodes = list()
 
         extract = self.EXTRACT_REGEX.search(self.fmt)
@@ -56,10 +56,10 @@ class FormatInfo(FormatNode):
         self.info = extract.group(3)
 
         if self.fmt.find("?") > -1:
-            alt = self.fmt[(self.fmt.find("?") + 1):-1]
-            self.alt = [FormatTree(self.system, i)
-                        for i in Tokenizer.tokenize(alt)]
+            self.alt_fmt = self.fmt[(self.fmt.find("?") + 1):-1]
+            self.alt = Tokenizer.tokenize(self.alt_fmt)
         else:
+            self.alt_fmt = None
             self.alt = None
 
     def build(self):
@@ -78,7 +78,8 @@ class FormatInfo(FormatNode):
         return replace
 
     def _build_alt(self, replace):
-        nodes = [replace if i.fmt == "{}" else i.build() for i in self.alt]
+        nodes = [FormatTree(self.system, i) for i in self.alt]
+        nodes = [replace if i.fmt == "{}" else i.build() for i in nodes]
         return "".join(nodes)
 
 
@@ -86,11 +87,10 @@ class FormatString(FormatNode):
     """ A FormatString class that only contains a string """
 
     def __init__(self, string):
-        super(FormatString, self).__init__()
-        self.string = string
+        super(FormatString, self).__init__(None, string)
 
     def build(self):
-        return self.string
+        return self.fmt
 
 
 class Tokenizer():
@@ -139,6 +139,7 @@ class Tokenizer():
             else:
                 curr += i
 
-        tokens.append(curr)
+        if curr:
+            tokens.append(curr)
 
         return tokens

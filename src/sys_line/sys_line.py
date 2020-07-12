@@ -33,7 +33,7 @@ def init_system(options):
 
 def main():
     """ Main method """
-    options = parse_cli()
+    options = parse_cli(sys.argv[1:])
     system = init_system(options)
 
     if system is not None:

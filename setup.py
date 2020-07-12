@@ -43,7 +43,7 @@ setuptools.setup(
     author="Julian Heng",
     author_email="julianhengwl@gmail.com",
     description="a simple status line generator",
-    packages=setuptools.find_packages("src"),
+    packages=setuptools.find_packages("src", exclude=["*.test"]),
     package_dir={"": "src"},
     entry_points={
         "console_scripts": ["sys-line = sys_line.__main__:main"]

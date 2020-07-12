@@ -13,7 +13,7 @@ from pathlib import Path as p
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
-from ..tools.utils import open_read, run, percent, _round
+from ..tools.utils import open_read, run, percent, round_trim
 
 
 class Cpu(AbstractCpu):
@@ -42,7 +42,7 @@ class Cpu(AbstractCpu):
 
         if speed is not None:
             speed = float(open_read(speed))
-            speed = _round(speed / 1e6, 2)
+            speed = round_trim(speed / 1e6, 2)
 
         return cpu, speed
 
@@ -223,7 +223,7 @@ class Battery(AbstractBattery):
             full_charge = self.full_charge
 
             perc = percent(current_charge, full_charge)
-            perc = _round(perc, self.options.percent_round)
+            perc = round_trim(perc, self.options.percent_round)
 
         return perc
 
@@ -270,7 +270,7 @@ class BatteryAmp(Battery):
         if Linux.bat_dir() is not None:
             voltage = int(open_read("{}/voltage_now".format(Linux.bat_dir())))
             power = (self.drain_rate * voltage) / 1e12
-            power = _round(power, self.options.power_round)
+            power = round_trim(power, self.options.power_round)
 
         return power
 
@@ -298,7 +298,7 @@ class BatteryWatt(Battery):
 
     @property
     def power(self):
-        return _round(self.drain_rate / 1e6, self.options.power_round)
+        return round_trim(self.drain_rate / 1e6, self.options.power_round)
 
 
 class BatteryStub(AbstractBattery):
@@ -396,7 +396,7 @@ class Misc(AbstractMisc):
             try:
                 vol = systems[audio.group(0)]()
                 if vol is not None:
-                    vol = _round(vol, self.options.volume_round)
+                    vol = round_trim(vol, self.options.volume_round)
             except KeyError:
                 vol = None
 
@@ -418,7 +418,7 @@ class Misc(AbstractMisc):
                 curr = int(open_read("{}/brightness".format(scr_dir)))
                 max_scr = int(open_read("{}/max_brightness".format(scr_dir)))
                 scr = percent(curr, max_scr)
-                scr = _round(scr, self.options.screen_round)
+                scr = round_trim(scr, self.options.screen_round)
 
         return scr
 

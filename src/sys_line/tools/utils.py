@@ -27,10 +27,11 @@ def open_read(filename):
 
 def run(cmd):
     """ Runs cmd and returns output as a string """
-    stdout = subprocess.PIPE
-    stderr = open(os.devnull, "w")
-    process = subprocess.run(cmd, stdout=stdout, stderr=stderr, check=False)
-    return process.stdout.decode("utf-8")
+    with open(os.devnull, "w") as stderr:
+        stdout = subprocess.PIPE
+        process = subprocess.run(cmd, stdout=stdout, stderr=stderr,
+                                 check=False)
+        return process.stdout.decode("utf-8")
 
 
 def unix_epoch_to_str(secs):
@@ -50,7 +51,7 @@ def unix_epoch_to_str(secs):
     return string if string else None
 
 
-def _round(num, rnd):
+def round_trim(num, rnd):
     """ Wrapper for round method to trim whole float numbers """
     ret = round(num, rnd)
     return int(ret) if rnd == 0 or ret == int(num) else ret
