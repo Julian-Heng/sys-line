@@ -9,14 +9,14 @@ from ..tools.cli import flatten, unique, dict_to_namespace
 
 class TestFlatten(unittest.TestCase):
 
-    def test__flatten(self):
+    def test__cli_flatten(self):
         self.assertEqual(flatten(["a"]), ["a"])
         self.assertEqual(flatten(["a", ["a"]]), ["a", "a"])
 
 
 class TestUnique(unittest.TestCase):
 
-    def test__unique(self):
+    def test__cli_unique(self):
         self.assertEqual(unique([""]), [""])
         self.assertEqual(unique(["a"]), ["a"])
         self.assertEqual(unique(["a", "b"]), ["a", "b"])
@@ -25,7 +25,7 @@ class TestUnique(unittest.TestCase):
 
 class TestDictToNamespace(unittest.TestCase):
 
-    def test__dict_to_namespace(self):
+    def test__cli_dict_to_namespace(self):
         inputs = [
             {},
             {"a": "b"},

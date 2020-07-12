@@ -7,24 +7,24 @@ from ..tools.utils import (percent, run, unix_epoch_to_str, round_trim,
 
 class TestPercent(unittest.TestCase):
 
-    def test__percent_valid(self):
+    def test__utils_percent_valid(self):
         self.assertEqual(percent(1, 2), 50.0)
         self.assertEqual(percent(-1, 2), -50.0)
         self.assertAlmostEqual(percent(1, 3), 33.33, places=2)
 
-    def test__percent_zero(self):
+    def test__utils_percent_zero(self):
         self.assertEqual(percent(1, 0), None)
 
 
 class TestRun(unittest.TestCase):
 
-    def test__run(self):
+    def test__utils_run(self):
         self.assertEqual(run(["echo", "asdf"]), "asdf\n")
 
 
 class TestUnixEpochToString(unittest.TestCase):
 
-    def test__unix_epoch_to_string(self):
+    def test__utils_unix_epoch_to_string(self):
         self.assertEqual(unix_epoch_to_str(0), None)
         self.assertEqual(unix_epoch_to_str(1), "1s")
         self.assertEqual(unix_epoch_to_str(60), "1m")
@@ -39,7 +39,7 @@ class TestUnixEpochToString(unittest.TestCase):
 
 class TestRoundTrim(unittest.TestCase):
 
-    def test__round_trim_valid(self):
+    def test__utils_round_trim_valid(self):
         self.assertEqual(round_trim(11.111, 1), 11.1)
         self.assertEqual(round_trim(11.111, 0), 11)
         self.assertEqual(round_trim(11.0, 1), 11)
@@ -53,7 +53,7 @@ class TestRoundTrim(unittest.TestCase):
 
 class TestTrimString(unittest.TestCase):
 
-    def test__trim_string(self):
+    def test__utils_trim_string(self):
         self.assertEqual(trim_string(""), "")
         self.assertEqual(trim_string(" "), "")
         self.assertEqual(trim_string(" a"), "a")
