@@ -14,7 +14,7 @@ from .storage import Storage
 from ..systems.abstract import System
 
 
-def parse_cli():
+def parse_cli(args):
     """ Parse the program arguments """
     fmt = argparse.RawDescriptionHelpFormatter
     desc = "a simple status line generator"
@@ -141,7 +141,7 @@ def parse_cli():
                                 action="store", type=int, default=0,
                                 metavar="int")
 
-    return process_args(parser.parse_args())
+    return process_args(parser.parse_args(args))
 
 
 def flatten(_list):
