@@ -111,7 +111,7 @@ class Tokenizer():
         """
 
         tokens = list()
-        curr = ""
+        token = ""
         state = Tokenizer.State.START
         level = 0
 
@@ -120,27 +120,27 @@ class Tokenizer():
                 level += 1
                 if state == Tokenizer.State.START:
                     state = Tokenizer.State.INSIDE
-                    if curr:
-                        tokens.append(curr)
-                    curr = ""
+                    if token:
+                        tokens.append(token)
+                    token = ""
                 elif state == Tokenizer.State.OUTSIDE:
                     state = Tokenizer.State.INSIDE
-                    if curr:
-                        tokens.append(curr)
-                    curr = ""
-                curr += i
+                    if token:
+                        tokens.append(token)
+                    token = ""
+                token += i
             elif i == "}":
                 level -= 1
-                curr += i
+                token += i
                 if level == 0:
                     state = Tokenizer.State.OUTSIDE
-                    if curr:
-                        tokens.append(curr)
-                    curr = ""
+                    if token:
+                        tokens.append(token)
+                    token = ""
             else:
-                curr += i
+                token += i
 
-        if curr:
-            tokens.append(curr)
+        if token:
+            tokens.append(token)
 
         return tokens
