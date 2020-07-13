@@ -16,7 +16,7 @@ class TestTokenizer(unittest.TestCase):
             ("a b", ["a b"]),
             ("a {a.b}", ["a ", "{a.b}"]),
             ("a {a.b?{c.d}}", ["a ", "{a.b?{c.d}}"]),
-            ("a {a[z].b?{c.d}}", ["a ", "{a[z].b?{c.d}}"]),
+            ("a {a.b[z]?{c.d}}", ["a ", "{a.b[z]?{c.d}}"]),
             ("a {a.b} {c.d}", ["a ", "{a.b}", " ", "{c.d}"])
         ]
 
@@ -91,14 +91,14 @@ class TestFormatInfo(TestFormatBase):
                 "info": "b",
                 "alt_fmt": None
             },
-            "{a[c].b}": {
+            "{a.b[c]}": {
                 "system": self.system_mock,
                 "domain": "a",
                 "options": "c",
                 "info": "b",
                 "alt_fmt": None
             },
-            "{a[c].b?d}": {
+            "{a.b[c]?d}": {
                 "system": self.system_mock,
                 "domain": "a",
                 "options": "c",
@@ -141,6 +141,6 @@ class TestFormatInfo(TestFormatBase):
         self.assertEqual(self.system_mock.c.query.call_args.args, ("d", None))
 
         self.system_mock.a.query.return_value = "options"
-        ft = FormatInfo(self.system_mock, "{a[c].b}")
+        ft = FormatInfo(self.system_mock, "{a.b[c]}")
         self.assertEqual(ft.build(), "options")
         self.assertEqual(self.system_mock.a.query.call_args.args, ("b", "c"))

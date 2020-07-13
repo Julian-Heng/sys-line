@@ -44,16 +44,17 @@ class FormatTree(FormatNode):
 class FormatInfo(FormatNode):
     """ A FormatInfo class that contains a domain and info to query from """
 
-    EXTRACT_REGEX = re.compile(r"\{(?:(\w+)(?:\[([^\]]+)\])?\.(\w+))(?:\?)?")
+    EXTRACT_REGEX = re.compile(r"\{(?:(\w+)\.(\w+)(?:\[([^\]]+)\])?)(?:\?)?")
 
     def __init__(self, system, fmt):
         super(FormatInfo, self).__init__(system, fmt)
         self.nodes = list()
 
-        extract = self.EXTRACT_REGEX.search(self.fmt)
+        extract = FormatInfo.EXTRACT_REGEX.search(self.fmt)
+
         self.domain = extract.group(1)
-        self.options = extract.group(2)
-        self.info = extract.group(3)
+        self.info = extract.group(2)
+        self.options = extract.group(3)
 
         if self.fmt.find("?") > -1:
             self.alt_fmt = self.fmt[(self.fmt.find("?") + 1):-1]
