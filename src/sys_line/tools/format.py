@@ -58,7 +58,7 @@ class FormatInfo(FormatNode):
 
         if self.fmt.find("?") > -1:
             self.alt_fmt = self.fmt[(self.fmt.find("?") + 1):-1]
-            self.alt = Tokenizer.tokenize(self.alt_fmt)
+            self.alt = FormatTree(self.system, self.alt_fmt)
         else:
             self.alt_fmt = None
             self.alt = None
@@ -68,20 +68,15 @@ class FormatInfo(FormatNode):
                                                           self.options)
         if replace is not None:
             if isinstance(replace, bool):
-                replace = self._build_alt(replace) if replace else ""
+                replace = self.alt.build() if replace else ""
             else:
                 replace = str(replace)
                 if self.alt is not None:
-                    replace = self._build_alt(replace)
+                    replace = self.alt.build().replace("{}", replace)
         else:
             replace = ""
 
         return replace
-
-    def _build_alt(self, replace):
-        nodes = [FormatTree(self.system, i) for i in self.alt]
-        nodes = [replace if i.fmt == "{}" else i.build() for i in nodes]
-        return "".join(nodes)
 
 
 class FormatString(FormatNode):
