@@ -13,150 +13,155 @@ class TestDarwin(unittest.TestCase):
     def setUp(self):
         super(TestDarwin, self).setUp()
         self.system = Darwin(parse_cli([]))
-        self.system.aux.sysctl = MagicMock()
+
+        self.sysctl_patch = patch("sys_line.systems.darwin.Sysctl").start()
+        self.which_patch = patch("shutil.which").start()
+        self.run_patch = patch("sys_line.systems.darwin.run").start()
+        self.time_patch = patch("time.time").start()
+
+    def tearDown(self):
+        super(TestDarwin, self).tearDown()
+        patch.stopall()
 
 
 class TestDarwinCpu(TestDarwin):
 
     def test__darwin_cpu_cores(self):
-        self.system.aux.sysctl.query.return_value = "4"
+        self.sysctl_patch.query.return_value = "4"
         self.assertEqual(self.system.cpu.cores, 4)
-        self.assertEqual(self.system.aux.sysctl.query.call_args.args,
+        self.assertEqual(self.sysctl_patch.query.call_args.args,
                          ("hw.logicalcpu_max",))
 
     def test__darwin_cpu_speed(self):
-        self.system.aux.sysctl.query.return_value = "Cpu string"
+        self.sysctl_patch.query.return_value = "Cpu string"
         self.assertEqual(self.system.cpu._cpu_speed(), ("Cpu string", None))
-        self.assertEqual(self.system.aux.sysctl.query.call_args.args,
+        self.assertEqual(self.sysctl_patch.query.call_args.args,
                          ("machdep.cpu.brand_string",))
 
     def test__darwin_cpu_load_avg(self):
-        self.system.aux.sysctl.query.return_value = "{ 1.27 1.31 1.36 }"
+        self.sysctl_patch.query.return_value = "{ 1.27 1.31 1.36 }"
         self.assertEqual(self.system.cpu._load_avg(),
                          ["1.27", "1.31", "1.36"])
-        self.assertEqual(self.system.aux.sysctl.query.call_args.args,
+        self.assertEqual(self.sysctl_patch.query.call_args.args,
                          ("vm.loadavg",))
 
-    def test__darwin_cpu_fan(self):
-        with patch("shutil.which", return_value=False):
-            self.assertEqual(self.system.cpu.fan, None)
+    def test__darwin_cpu_fan_no_prog(self):
+        self.which_patch.return_value = False
+        self.assertEqual(self.system.cpu.fan, None)
 
-        with patch("shutil.which", return_value=True) as which_patch, \
-             patch("sys_line.systems.darwin.run") as run_patch:
+    def test__darwin_cpu_fan_have_prog_zero_rpm(self):
+        self.which_patch.return_value = True
 
-            out = [
-                "CPU: 50.1°C",
-                "Num fans: 1",
-                "Fan 0 - Right Side   at 0 RPM (0%)"
-            ]
+        out = [
+            "CPU: 50.1°C",
+            "Num fans: 1",
+            "Fan 0 - Right Side   at 0 RPM (0%)"
+        ]
 
-            run_patch.return_value = "\n".join(out)
-            self.assertEqual(self.system.cpu.fan, 0)
+        self.run_patch.return_value = "\n".join(out)
+        self.assertEqual(self.system.cpu.fan, 0)
 
-        with patch("shutil.which", return_value=True) as which_patch, \
-             patch("sys_line.systems.darwin.run") as run_patch:
+    def test__darwin_cpu_fan_have_prog_non_zero_rpm(self):
+        self.which_patch.return_value = True
 
-            out = [
-                "CPU: 71.2°C",
-                "Num fans: 1",
-                "Fan 0 - Right Side   at 1359 RPM (28%)"
-            ]
+        out = [
+            "CPU: 71.2°C",
+            "Num fans: 1",
+            "Fan 0 - Right Side   at 1359 RPM (28%)"
+        ]
 
-            run_patch.return_value = "\n".join(out)
-            self.assertEqual(self.system.cpu.fan, 1359)
-            self.assertEqual(run_patch.called, True)
+        self.run_patch.return_value = "\n".join(out)
+        self.assertEqual(self.system.cpu.fan, 1359)
+        self.assertEqual(self.run_patch.called, True)
 
-    def test__darwin_cpu_temp(self):
-        with patch("shutil.which", return_value=False):
-            self.assertEqual(self.system.cpu.temp, None)
+    def test__darwin_cpu_temp_no_prog(self):
+        self.which_patch.return_value = False
+        self.assertEqual(self.system.cpu.temp, None)
 
-        with patch("shutil.which", return_value=True) as which_patch, \
-             patch("sys_line.systems.darwin.run") as run_patch:
+    def test__darwin_cpu_temp_have_prog(self):
+        self.which_patch.return_value = True
 
-            out = [
-                "CPU: 50.1°C",
-                "Num fans: 1",
-                "Fan 0 - Right Side   at 0 RPM (0%)"
-            ]
+        out = [
+            "CPU: 50.1°C",
+            "Num fans: 1",
+            "Fan 0 - Right Side   at 0 RPM (0%)"
+        ]
 
-            run_patch.return_value = "\n".join(out)
-            self.assertEqual(self.system.cpu.temp, 50.1)
+        self.run_patch.return_value = "\n".join(out)
+        self.assertEqual(self.system.cpu.temp, 50.1)
 
     def test__darwin_cpu_uptime(self):
         value = "{ sec = 1594371260, usec = 995858 } Fri Jul 10 16:54:20 2020"
-        self.system.aux.sysctl.query.return_value = value
-
-        with patch("time.time", return_value=1594371300):
-            self.assertEqual(self.system.cpu._uptime(), 40)
+        self.sysctl_patch.query.return_value = value
+        self.time_patch.return_value = 1594371300
+        self.assertEqual(self.system.cpu._uptime(), 40)
 
 
 class TestDarwinMemory(TestDarwin):
 
     def test__darwin_mem_used(self):
-        with patch("sys_line.systems.darwin.run") as run_patch:
-            out = [
-                "Mach Virtual Memory Statistics: (page size of 4096 bytes)",
-                "Pages free:                             1577393.",
-                "Pages active:                           1081107.",
-                "Pages inactive:                          672072.",
-                "Pages speculative:                       411970.",
-                "Pages throttled:                              0.",
-                "Pages wired down:                        451416.",
-                "Pages purgeable:                         187505.",
-                "\"Translation faults\":                 492319022.",
-                "Pages copy-on-write:                   80312468.",
-                "Pages zero filled:                    145510247.",
-                "Pages reactivated:                        19757.",
-                "Pages purged:                            720495.",
-                "File-backed pages:                       897697.",
-                "Anonymous pages:                        1267452.",
-                "Pages stored in compressor:                   0.",
-                "Pages occupied by compressor:                 0.",
-                "Decompressions:                               0.",
-                "Compressions:                                 0.",
-                "Pageins:                                 748457.",
-                "Pageouts:                                     0.",
-                "Swapins:                                      0.",
-                "Swapouts:                                     0."
-            ]
+        out = [
+            "Mach Virtual Memory Statistics: (page size of 4096 bytes)",
+            "Pages free:                             1577393.",
+            "Pages active:                           1081107.",
+            "Pages inactive:                          672072.",
+            "Pages speculative:                       411970.",
+            "Pages throttled:                              0.",
+            "Pages wired down:                        451416.",
+            "Pages purgeable:                         187505.",
+            "\"Translation faults\":                 492319022.",
+            "Pages copy-on-write:                   80312468.",
+            "Pages zero filled:                    145510247.",
+            "Pages reactivated:                        19757.",
+            "Pages purged:                            720495.",
+            "File-backed pages:                       897697.",
+            "Anonymous pages:                        1267452.",
+            "Pages stored in compressor:                   0.",
+            "Pages occupied by compressor:                 0.",
+            "Decompressions:                               0.",
+            "Compressions:                                 0.",
+            "Pageins:                                 748457.",
+            "Pageouts:                                     0.",
+            "Swapins:                                      0.",
+            "Swapouts:                                     0."
+        ]
 
-            run_patch.return_value = "\n".join(out)
-            self.assertEqual(self.system.mem._used(), (6277214208, "B"))
+        self.run_patch.return_value = "\n".join(out)
+        self.assertEqual(self.system.mem._used(), (6277214208, "B"))
 
     def test__darwin_mem_total(self):
-        self.system.aux.sysctl.query.return_value = "17179869184"
+        self.sysctl_patch.query.return_value = "17179869184"
         self.assertEqual(self.system.mem._total(), (17179869184, "B"))
-        self.assertEqual(self.system.aux.sysctl.query.call_args.args,
+        self.assertEqual(self.sysctl_patch.query.call_args.args,
                          ("hw.memsize",))
 
 
 class TestDarwinSwap(TestDarwin):
 
-    def test__darwin_swap_used(self):
-        with patch("sys_line.systems.darwin.Swap.swapusage",
-                   new_callable=PropertyMock) as swapusage_mock:
-            ret = "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)"
-            swapusage_mock.return_value = ret
-            self.assertEqual(self.system.swap._used(), (0, "B"))
+    def setUp(self):
+        super(TestDarwinSwap, self).setUp()
+        self.swapusage_mock = patch("sys_line.systems.darwin.Swap.swapusage",
+                                    new_callable=PropertyMock).start()
 
-        with patch("sys_line.systems.darwin.Swap.swapusage",
-                   new_callable=PropertyMock) as swapusage_mock:
-            ret = "total = 2048.00M  used = 100.00M  free = 0.00M  (encrypted)"
-            swapusage_mock.return_value = ret
-            self.assertEqual(self.system.swap._used(), (104857600, "B"))
+    def test__darwin_swap_used_not_in_use(self):
+        ret = "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)"
+        self.swapusage_mock.return_value = ret
+        self.assertEqual(self.system.swap._used(), (0, "B"))
 
-    def test__darwin_swap_total(self):
-        with patch("sys_line.systems.darwin.Swap.swapusage",
-                   new_callable=PropertyMock) as swapusage_mock:
-            ret = "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)"
-            swapusage_mock.return_value = ret
-            self.assertEqual(self.system.swap._used(), (0, "B"))
+    def test__darwin_swap_used_in_use(self):
+        ret = "total = 2048.00M  used = 100.00M  free = 0.00M  (encrypted)"
+        self.swapusage_mock.return_value = ret
+        self.assertEqual(self.system.swap._used(), (104857600, "B"))
 
-        with patch("sys_line.systems.darwin.Swap.swapusage",
-                   new_callable=PropertyMock) as swapusage_mock:
-            ret = "total = 2048.00M  used = 100.00M  free = 0.00M  (encrypted)"
-            swapusage_mock.return_value = ret
-            self.assertEqual(self.system.swap._total(), (2147483648, "B"))
+    def test__darwin_swap_total_not_in_use(self):
+        ret = "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)"
+        self.swapusage_mock.return_value = ret
+        self.assertEqual(self.system.swap._used(), (0, "B"))
+
+    def test__darwin_swap_total_in_use(self):
+        ret = "total = 2048.00M  used = 100.00M  free = 0.00M  (encrypted)"
+        self.swapusage_mock.return_value = ret
+        self.assertEqual(self.system.swap._total(), (2147483648, "B"))
 
 
 class TestDarwinDisk(TestDarwin):
@@ -444,10 +449,6 @@ class TestDarwinDisk(TestDarwin):
         self.dev_patch = patch("sys_line.systems.darwin.Disk.original_dev",
                                new_callable=PropertyMock).start()
         self.run_patch = patch("sys_line.systems.darwin.run").start()
-
-    def tearDown(self):
-        super(TestDarwinDisk, self).tearDown()
-        patch.stopall()
 
 
 class TestDarwinDiskDiskutil(TestDarwinDisk):
