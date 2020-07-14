@@ -34,3 +34,9 @@ unittest:
   script:
     - cd ./src
     - python3 -m unittest -v
+
+run_test:
+  stage: test
+  script:
+    - cd ./src
+    - python3 -m sys_line -a
