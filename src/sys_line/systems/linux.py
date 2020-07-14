@@ -450,7 +450,7 @@ class Linux(System):
     }
 
     def __init__(self, options):
-        super(Linux, self).__init__(options, aux=None, cpu=Cpu, mem=Memory,
+        super(Linux, self).__init__(options, cpu=Cpu, mem=Memory,
                                     swap=Swap, disk=Disk,
                                     bat=Linux.detect_battery(),
                                     net=Network, misc=Misc)

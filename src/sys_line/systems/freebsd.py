@@ -22,17 +22,17 @@ class Cpu(AbstractCpu):
     @property
     @lru_cache(maxsize=1)
     def cores(self):
-        return int(self.aux.sysctl.query("hw.ncpu"))
+        return int(Sysctl.query("hw.ncpu"))
 
     def _cpu_speed(self):
-        cpu = self.aux.sysctl.query("hw.model")
-        speed = self.aux.sysctl.query("hw.cpuspeed")
+        cpu = Sysctl.query("hw.model")
+        speed = Sysctl.query("hw.cpuspeed")
         if speed is None:
-            speed = self.aux.sysctl.query("hw.clockrate")
+            speed = Sysctl.query("hw.clockrate")
         return cpu, round_trim(int(speed) / 1000, 2)
 
     def _load_avg(self):
-        return self.aux.sysctl.query("vm.loadavg").split()[1:4]
+        return Sysctl.query("vm.loadavg").split()[1:4]
 
     @property
     def fan(self):
@@ -41,12 +41,12 @@ class Cpu(AbstractCpu):
 
     @property
     def temp(self):
-        temp = self.aux.sysctl.query("dev.cpu.0.temperature")
+        temp = Sysctl.query("dev.cpu.0.temperature")
         return float(re.search(r"\d+\.?\d+", temp).group(0)) if temp else None
 
     def _uptime(self):
         reg = re.compile(r"sec = (\d+),")
-        sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
+        sec = reg.search(Sysctl.query("kern.boottime")).group(1)
         sec = int(time.time()) - int(sec)
 
         return sec
@@ -56,17 +56,17 @@ class Memory(AbstractMemory):
     """ FreeBSD implementation of AbstractMemory class """
 
     def _used(self):
-        total = int(self.aux.sysctl.query("hw.realmem"))
-        pagesize = int(self.aux.sysctl.query("hw.pagesize"))
+        total = int(Sysctl.query("hw.realmem"))
+        pagesize = int(Sysctl.query("hw.pagesize"))
 
-        keys = [int(self.aux.sysctl.query("vm.stats.vm.v_{}_count".format(i)))
+        keys = [int(Sysctl.query("vm.stats.vm.v_{}_count".format(i)))
                 for i in ["inactive", "free", "cache"]]
 
         used = total - sum([i * pagesize for i in keys])
         return used, "B"
 
     def _total(self):
-        return int(self.aux.sysctl.query("hw.realmem")), "B"
+        return int(Sysctl.query("hw.realmem")), "B"
 
 
 class Swap(AbstractSwap):
@@ -81,7 +81,7 @@ class Swap(AbstractSwap):
         return pstat, "KiB"
 
     def _total(self):
-        return int(self.aux.sysctl.query("vm.swap_total")), "B"
+        return int(Sysctl.query("vm.swap_total")), "B"
 
 
 class Disk(AbstractDisk):
@@ -216,7 +216,6 @@ class FreeBSD(System):
 
     def __init__(self, options):
         super(FreeBSD, self).__init__(options,
-                                      aux=SimpleNamespace(sysctl=Sysctl()),
                                       cpu=Cpu, mem=Memory, swap=Swap,
                                       disk=Disk, bat=Battery, net=Network,
                                       misc=Misc)

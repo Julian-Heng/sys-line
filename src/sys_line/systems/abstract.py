@@ -20,15 +20,15 @@ from ..tools.df import DfEntry
 
 class AbstractGetter(ABC):
     """
-    Abstract Getter class to store both options and any auxilary classes
+    Abstract Getter class to store both options and the implementations for the
+    information under the getter
     """
 
-    def __init__(self, domain_name, options, aux=None):
+    def __init__(self, domain_name, options):
         super(AbstractGetter, self).__init__()
 
         self.domain_name = domain_name
         self.options = options
-        self.aux = aux
 
     @property
     @abstractmethod
@@ -122,8 +122,8 @@ class AbstractStorage(AbstractGetter):
     AbstractStorage for info that fetches used, total and percent attributes
     """
 
-    def __init__(self, domain_name, options, aux):
-        super(AbstractStorage, self).__init__(domain_name, options, aux=aux)
+    def __init__(self, domain_name, options):
+        super(AbstractStorage, self).__init__(domain_name, options)
 
     @property
     def _valid_info(self):
@@ -281,8 +281,8 @@ class AbstractSwap(AbstractStorage):
 class AbstractDisk(AbstractStorage):
     """ Abstract disk class to be implemented by subclass """
 
-    def __init__(self, domain_name, options, aux):
-        super(AbstractDisk, self).__init__(domain_name, options, aux=aux)
+    def __init__(self, domain_name, options):
+        super(AbstractDisk, self).__init__(domain_name, options)
         self._df_entries = None
 
     @property
@@ -647,13 +647,11 @@ class System(ABC):
     SHORT_DOMAINS = ("cpu", "mem", "swap", "disk",
                      "bat", "net", "date", "misc")
 
-    def __init__(self, options, aux=None, cpu=None, mem=None,
-                 swap=None, disk=None, bat=None, net=None,
-                 misc=None):
+    def __init__(self, options, cpu=None, mem=None, swap=None, disk=None,
+                 bat=None, net=None, misc=None):
         super(System, self).__init__()
 
         self.options = options
-        self.aux = aux
 
         self._getters = {
             "cpu": cpu, "mem": mem, "swap": swap, "disk": disk,
@@ -664,46 +662,46 @@ class System(ABC):
     @lru_cache(maxsize=1)
     def cpu(self):
         """ Return an instance of AbstractCpu """
-        return self._getters["cpu"]("cpu", self.options.cpu, self.aux)
+        return self._getters["cpu"]("cpu", self.options.cpu)
 
     @property
     @lru_cache(maxsize=1)
     def mem(self):
         """ Return an instance of AbstractMemory """
-        return self._getters["mem"]("mem", self.options.mem, self.aux)
+        return self._getters["mem"]("mem", self.options.mem)
 
     @property
     @lru_cache(maxsize=1)
     def swap(self):
         """ Return an instance of AbstractSwap """
-        return self._getters["swap"]("swap", self.options.swap, self.aux)
+        return self._getters["swap"]("swap", self.options.swap)
 
     @property
     @lru_cache(maxsize=1)
     def disk(self):
         """ Return an instance of AbstractDisk """
-        return self._getters["disk"]("disk", self.options.disk, self.aux)
+        return self._getters["disk"]("disk", self.options.disk)
 
     @property
     @lru_cache(maxsize=1)
     def bat(self):
         """ Return an instance of AbstractBattery """
-        return self._getters["bat"]("bat", self.options.bat, self.aux)
+        return self._getters["bat"]("bat", self.options.bat)
 
     @property
     @lru_cache(maxsize=1)
     def net(self):
         """ Return an instance of AbstractNetwork """
-        return self._getters["net"]("net", self.options.net, self.aux)
+        return self._getters["net"]("net", self.options.net)
 
     @property
     @lru_cache(maxsize=1)
     def date(self):
         """ Return an instance of Date """
-        return self._getters["date"]("date", self.options.date, self.aux)
+        return self._getters["date"]("date", self.options.date)
 
     @property
     @lru_cache(maxsize=1)
     def misc(self):
         """ Return an instance of AbstractMisc """
-        return self._getters["misc"]("misc", self.options.misc, self.aux)
+        return self._getters["misc"]("misc", self.options.misc)

@@ -23,13 +23,13 @@ class Cpu(AbstractCpu):
     @property
     @lru_cache(maxsize=1)
     def cores(self):
-        return int(self.aux.sysctl.query("hw.logicalcpu_max"))
+        return int(Sysctl.query("hw.logicalcpu_max"))
 
     def _cpu_speed(self):
-        return self.aux.sysctl.query("machdep.cpu.brand_string"), None
+        return Sysctl.query("machdep.cpu.brand_string"), None
 
     def _load_avg(self):
-        return self.aux.sysctl.query("vm.loadavg").split()[1:4]
+        return Sysctl.query("vm.loadavg").split()[1:4]
 
     @property
     def fan(self):
@@ -54,7 +54,7 @@ class Cpu(AbstractCpu):
 
     def _uptime(self):
         reg = re.compile(r"sec = (\d+),")
-        sec = reg.search(self.aux.sysctl.query("kern.boottime")).group(1)
+        sec = reg.search(Sysctl.query("kern.boottime")).group(1)
         sec = int(time.time()) - int(sec)
 
         return sec
@@ -72,7 +72,7 @@ class Memory(AbstractMemory):
         return value, "B"
 
     def _total(self):
-        return int(self.aux.sysctl.query("hw.memsize")), "B"
+        return int(Sysctl.query("hw.memsize")), "B"
 
 
 class Swap(AbstractSwap):
@@ -82,7 +82,7 @@ class Swap(AbstractSwap):
     @lru_cache(maxsize=1)
     def swapusage(self):
         """ Returns swapusage from sysctl """
-        return self.aux.sysctl.query("vm.swapusage").strip()
+        return Sysctl.query("vm.swapusage").strip()
 
     def _lookup_swap(self, search):
         value = 0
@@ -296,6 +296,5 @@ class Darwin(System):
 
     def __init__(self, options):
         super(Darwin, self).__init__(options,
-                                     aux=SimpleNamespace(sysctl=Sysctl()),
                                      cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
                                      bat=Battery, net=Network, misc=Misc)
