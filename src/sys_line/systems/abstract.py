@@ -599,13 +599,13 @@ class Date(AbstractGetter):
         return ["date", "time"]
 
     @property
-    def now(self):
+    def _now(self):
         """ Return current date and time """
         return datetime.now()
 
     def _format(self, fmt):
         """ Wrapper for printing date and time format """
-        return "{{:{}}}".format(fmt).format(self.now)
+        return "{{:{}}}".format(fmt).format(self._now)
 
     @property
     def date(self):
