@@ -122,9 +122,6 @@ class AbstractStorage(AbstractGetter):
     AbstractStorage for info that fetches used, total and percent attributes
     """
 
-    def __init__(self, domain_name, options):
-        super(AbstractStorage, self).__init__(domain_name, options)
-
     @property
     def _valid_info(self):
         return ["used", "total", "percent"]
