@@ -128,11 +128,14 @@ class Disk(AbstractDisk):
         Returns the output of lsblk in a dictionary with devices as keys
         """
         lsblk_entries = None
-        columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
-        cmd = ["lsblk", "--output", ",".join(columns), "--paths", "--pairs"]
-        lsblk_out = run(cmd).strip().split("\n")
+        lsblk_out = None
+        if shutil.which("lsblk"):
+            columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
+            cmd = ["lsblk", "--output", ",".join(columns), "--paths",
+                   "--pairs"]
+            lsblk_out = run(cmd).strip().split("\n")
 
-        if lsblk_out:
+        if lsblk_out is not None and lsblk_out:
             lsblk_entries = dict()
             for line in lsblk_out:
                 out = shlex.split(line)
@@ -144,15 +147,27 @@ class Disk(AbstractDisk):
     @property
     def name(self):
         labels = ["LABEL", "PARTLABEL"]
-        return {k: next((v[i] for i in labels if v[i]), None)
-                for k, v in self.lsblk_entries.items()
-                if k in self.original_dev}
+        lsblk_entries = self.lsblk_entries
+        names = {k: None for k in self.original_dev}
+
+        if lsblk_entries is not None:
+            names = {k: next((v[i] for i in labels if v[i]), None)
+                     for k, v in self.lsblk_entries.items()
+                     if k in self.original_dev}
+
+        return names
 
     @property
     def partition(self):
-        return {k: v["FSTYPE"]
-                for k, v in self.lsblk_entries.items()
-                if k in self.original_dev}
+        lsblk_entries = self.lsblk_entries
+        partitions = {k: None for k in self.original_dev}
+
+        if lsblk_entries is not None:
+            partitions = {k: v["FSTYPE"]
+                          for k, v in self.lsblk_entries.items()
+                          if k in self.original_dev}
+
+        return partitions
 
 
 class Battery(AbstractBattery):
