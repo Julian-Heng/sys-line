@@ -7,7 +7,6 @@ import re
 import time
 
 from functools import lru_cache
-from types import SimpleNamespace
 
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
