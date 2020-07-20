@@ -40,11 +40,6 @@ class AbstractGetter(ABC):
 
     def query(self, info, options):
         """ Returns the value of info """
-        if info not in self._valid_info:
-            raise RuntimeError("info name not in domain")
-        return self._query(info, options)
-
-    def _query(self, info, options):
         if options is None:
             val = getattr(self, info)
         else:
@@ -290,7 +285,7 @@ class AbstractDisk(AbstractStorage):
         return super(AbstractDisk, self).valid_info + ["dev", "mount",
                                                        "name", "partition"]
 
-    def _query(self, info, options):
+    def query(self, info, options):
         # Key for which device to get information from
         key = None
         new_opts = list()
@@ -321,7 +316,7 @@ class AbstractDisk(AbstractStorage):
         if not p(key).is_block_device():
             key = self._mount_to_devname(key)
 
-        return super(AbstractDisk, self)._query(info, new_opts)[key]
+        return super(AbstractDisk, self).query(info, new_opts)[key]
 
     def _mount_to_devname(self, mount_path):
         return next(k for k, v in self.mount.items() if mount_path == v)
@@ -647,16 +642,11 @@ class System(ABC):
     SHORT_DOMAINS = ("cpu", "mem", "swap", "disk",
                      "bat", "net", "date", "misc")
 
-    def __init__(self, options, cpu=None, mem=None, swap=None, disk=None,
-                 bat=None, net=None, misc=None):
+    def __init__(self, options, **kwargs):
         super(System, self).__init__()
-
-        self.options = options
-
-        self._getters = {
-            "cpu": cpu, "mem": mem, "swap": swap, "disk": disk,
-            "bat": bat, "net": net, "date": Date, "misc": misc
-        }
+        self._getters = dict(kwargs, date=Date)
+        self.options = {k: getattr(options, k) for k in self._getters}
+        self._getters_cache = {k: None for k in self._getters}
 
     @staticmethod
     def create_instance(options):
@@ -680,50 +670,19 @@ class System(ABC):
 
         return system
 
-    @property
-    @lru_cache(maxsize=1)
-    def cpu(self):
-        """ Return an instance of AbstractCpu """
-        return self._getters["cpu"]("cpu", self.options.cpu)
+    def query(self, domain, info, options):
+        """ Queries a system for a domain and info """
+        if domain not in self._getters.keys():
+            err = "domain name '{}' not in system".format(domain)
+            raise RuntimeError(err)
 
-    @property
-    @lru_cache(maxsize=1)
-    def mem(self):
-        """ Return an instance of AbstractMemory """
-        return self._getters["mem"]("mem", self.options.mem)
+        if self._getters_cache[domain] is None:
+            opts = self.options[domain]
+            self._getters_cache[domain] = self._getters[domain](domain, opts)
+        dom = self._getters_cache[domain]
 
-    @property
-    @lru_cache(maxsize=1)
-    def swap(self):
-        """ Return an instance of AbstractSwap """
-        return self._getters["swap"]("swap", self.options.swap)
+        if info not in dom.valid_info:
+            err = "info name '{}' not in domain '{}'".format(info, domain)
+            raise RuntimeError(err)
 
-    @property
-    @lru_cache(maxsize=1)
-    def disk(self):
-        """ Return an instance of AbstractDisk """
-        return self._getters["disk"]("disk", self.options.disk)
-
-    @property
-    @lru_cache(maxsize=1)
-    def bat(self):
-        """ Return an instance of AbstractBattery """
-        return self._getters["bat"]("bat", self.options.bat)
-
-    @property
-    @lru_cache(maxsize=1)
-    def net(self):
-        """ Return an instance of AbstractNetwork """
-        return self._getters["net"]("net", self.options.net)
-
-    @property
-    @lru_cache(maxsize=1)
-    def date(self):
-        """ Return an instance of Date """
-        return self._getters["date"]("date", self.options.date)
-
-    @property
-    @lru_cache(maxsize=1)
-    def misc(self):
-        """ Return an instance of AbstractMisc """
-        return self._getters["misc"]("misc", self.options.misc)
+        return dom.query(info, options)

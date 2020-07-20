@@ -64,8 +64,7 @@ class FormatInfo(FormatNode):
             self.alt = None
 
     def build(self):
-        replace = getattr(self.system, self.domain).query(self.info,
-                                                          self.options)
+        replace = self.system.query(self.domain, self.info, self.options)
         if replace is not None:
             if isinstance(replace, bool):
                 replace = self.alt.build() if replace else ""
