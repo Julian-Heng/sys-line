@@ -26,6 +26,16 @@ class TestUnique(unittest.TestCase):
 class TestDictToNamespace(unittest.TestCase):
 
     def test__cli_dict_to_namespace(self):
+        def validate(nspace, attr_dict):
+            self.assertEqual(isinstance(nspace, SimpleNamespace), True)
+            for key in attr_dict.keys():
+                self.assertEqual(hasattr(nspace, key), True)
+                value = getattr(nspace, key)
+                if isinstance(value, SimpleNamespace):
+                    validate(value, attr_dict[key])
+                else:
+                    self.assertEqual(value, attr_dict[key])
+
         inputs = [
             {},
             {"a": "b"},
@@ -34,14 +44,4 @@ class TestDictToNamespace(unittest.TestCase):
         ]
 
         for i in inputs:
-            self._validate(dict_to_namespace(i), i)
-
-    def _validate(self, nspace, attr_dict):
-        self.assertEqual(isinstance(nspace, SimpleNamespace), True)
-        for key in attr_dict.keys():
-            self.assertEqual(hasattr(nspace, key), True)
-            value = getattr(nspace, key)
-            if isinstance(value, SimpleNamespace):
-                self._validate(value, attr_dict[key])
-            else:
-                self.assertEqual(value, attr_dict[key])
+            validate(dict_to_namespace(i), i)
