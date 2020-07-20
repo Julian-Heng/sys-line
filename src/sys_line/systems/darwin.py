@@ -194,7 +194,6 @@ class Battery(AbstractBattery):
 
         return perc
 
-    @property
     def _time(self):
         charge = 0
 
@@ -240,7 +239,6 @@ class Network(AbstractNetwork):
 
         return next((i for i in dev_list if check(i)), None)
 
-    @property
     def _ssid(self):
         ssid_cmd_path = ["System", "Library", "PrivateFrameworks",
                          "Apple80211.framework", "Versions", "Current",

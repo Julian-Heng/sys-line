@@ -478,7 +478,6 @@ class AbstractBattery(AbstractGetter):
     def percent(self):
         """ Abstract battery percent method to be implemented by subclass """
 
-    @property
     @abstractmethod
     def _time(self):
         """
@@ -488,7 +487,7 @@ class AbstractBattery(AbstractGetter):
     @property
     def time(self):
         """ Battery time method """
-        return unix_epoch_to_str(self._time)
+        return unix_epoch_to_str(self._time())
 
     @property
     @abstractmethod
@@ -516,7 +515,6 @@ class AbstractNetwork(AbstractGetter):
     def dev(self):
         """ Abstract network device method to be implemented by subclass """
 
-    @property
     @abstractmethod
     def _ssid(self):
         """ Abstract ssid resource method to be implemented by subclass """
@@ -525,7 +523,7 @@ class AbstractNetwork(AbstractGetter):
     def ssid(self):
         """ Network ssid method """
         ssid = None
-        cmd, reg = self._ssid
+        cmd, reg = self._ssid()
         if not (cmd is None or reg is None):
             ssid = (reg.match(i.strip()) for i in run(cmd).split("\n"))
             ssid = next((i.group(1) for i in ssid if i), None)
@@ -600,24 +598,20 @@ class Date(AbstractGetter):
     def _valid_info(self):
         return ["date", "time"]
 
-    @property
-    def _now(self):
-        """ Return current date and time """
-        return datetime.now()
-
-    def _format(self, fmt):
+    @staticmethod
+    def _format(fmt):
         """ Wrapper for printing date and time format """
-        return "{{:{}}}".format(fmt).format(self._now)
+        return "{{:{}}}".format(fmt).format(datetime.now())
 
     @property
     def date(self):
         """ Returns the date as a string from a specified format """
-        return self._format(self.options.date_format)
+        return Date._format(self.options.date_format)
 
     @property
     def time(self):
         """ Returns the time as a string from a specified format """
-        return self._format(self.options.time_format)
+        return Date._format(self.options.time_format)
 
 
 class AbstractMisc(AbstractGetter):

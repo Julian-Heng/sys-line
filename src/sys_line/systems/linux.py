@@ -242,7 +242,6 @@ class Battery(AbstractBattery):
 
         return perc
 
-    @property
     def _time(self):
         remaining = 0
         if Linux.bat_dir() is not None and self.drain_rate:
@@ -335,7 +334,6 @@ class BatteryStub(AbstractBattery):
     def percent(self):
         return None
 
-    @property
     def _time(self):
         return 0
 
@@ -362,7 +360,6 @@ class Network(AbstractNetwork):
         return next((f.name for f in find(Linux.FILES["sys_net"])
                      if check(f)), None)
 
-    @property
     def _ssid(self):
         ssid_cmd = None
         ssid_reg = None

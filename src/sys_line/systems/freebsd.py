@@ -147,7 +147,6 @@ class Battery(AbstractBattery):
             ret = int(self.bat["Remaining capacity"][:-1])
         return ret
 
-    @property
     def _time(self):
         secs = 0
         if self.is_present:
@@ -184,7 +183,6 @@ class Network(AbstractNetwork):
         dev_list = run(self._LOCAL_IP_CMD + ["-l"]).split()
         return next((i for i in dev_list if check(i)), None)
 
-    @property
     def _ssid(self):
         ssid_cmd = tuple(self._LOCAL_IP_CMD + [self.dev])
         ssid_reg = re.compile(r"ssid (.*) channel")
