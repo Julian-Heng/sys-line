@@ -26,28 +26,32 @@ class TestDarwin(unittest.TestCase):
 
 class TestDarwinCpu(TestDarwin):
 
+    def setUp(self):
+        super(TestDarwinCpu, self).setUp()
+        self.cpu = self.system.query("cpu")
+
     def test__darwin_cpu_cores(self):
         self.sysctl_patch.query.return_value = "4"
-        self.assertEqual(self.system.cpu.cores, 4)
+        self.assertEqual(self.cpu.query("cores", None), 4)
         self.assertEqual(self.sysctl_patch.query.call_args.args,
                          ("hw.logicalcpu_max",))
 
     def test__darwin_cpu_speed(self):
         self.sysctl_patch.query.return_value = "Cpu string"
-        self.assertEqual(self.system.cpu._cpu_speed(), ("Cpu string", None))
+        self.assertEqual(self.cpu._cpu_speed(), ("Cpu string", None))
         self.assertEqual(self.sysctl_patch.query.call_args.args,
                          ("machdep.cpu.brand_string",))
 
     def test__darwin_cpu_load_avg(self):
         self.sysctl_patch.query.return_value = "{ 1.27 1.31 1.36 }"
-        self.assertEqual(self.system.cpu._load_avg(),
+        self.assertEqual(self.cpu._load_avg(),
                          ["1.27", "1.31", "1.36"])
         self.assertEqual(self.sysctl_patch.query.call_args.args,
                          ("vm.loadavg",))
 
     def test__darwin_cpu_fan_no_prog(self):
         self.which_patch.return_value = False
-        self.assertEqual(self.system.cpu.fan, None)
+        self.assertEqual(self.cpu.fan, None)
 
     def test__darwin_cpu_fan_have_prog_zero_rpm(self):
         self.which_patch.return_value = True
@@ -59,7 +63,7 @@ class TestDarwinCpu(TestDarwin):
         ]
 
         self.run_patch.return_value = "\n".join(out)
-        self.assertEqual(self.system.cpu.fan, 0)
+        self.assertEqual(self.cpu.fan, 0)
 
     def test__darwin_cpu_fan_have_prog_non_zero_rpm(self):
         self.which_patch.return_value = True
@@ -71,12 +75,12 @@ class TestDarwinCpu(TestDarwin):
         ]
 
         self.run_patch.return_value = "\n".join(out)
-        self.assertEqual(self.system.cpu.fan, 1359)
+        self.assertEqual(self.cpu.fan, 1359)
         self.assertEqual(self.run_patch.called, True)
 
     def test__darwin_cpu_temp_no_prog(self):
         self.which_patch.return_value = False
-        self.assertEqual(self.system.cpu.temp, None)
+        self.assertEqual(self.cpu.temp, None)
 
     def test__darwin_cpu_temp_have_prog(self):
         self.which_patch.return_value = True
@@ -88,16 +92,20 @@ class TestDarwinCpu(TestDarwin):
         ]
 
         self.run_patch.return_value = "\n".join(out)
-        self.assertEqual(self.system.cpu.temp, 50.1)
+        self.assertEqual(self.cpu.temp, 50.1)
 
     def test__darwin_cpu_uptime(self):
         value = "{ sec = 1594371260, usec = 995858 } Fri Jul 10 16:54:20 2020"
         self.sysctl_patch.query.return_value = value
         self.time_patch.return_value = 1594371300
-        self.assertEqual(self.system.cpu._uptime(), 40)
+        self.assertEqual(self.cpu._uptime(), 40)
 
 
 class TestDarwinMemory(TestDarwin):
+
+    def setUp(self):
+        super(TestDarwinMemory, self).setUp()
+        self.mem = self.system.query("mem")
 
     def test__darwin_mem_used(self):
         out = [
@@ -127,11 +135,11 @@ class TestDarwinMemory(TestDarwin):
         ]
 
         self.run_patch.return_value = "\n".join(out)
-        self.assertEqual(self.system.mem._used(), (6277214208, "B"))
+        self.assertEqual(self.mem._used(), (6277214208, "B"))
 
     def test__darwin_mem_total(self):
         self.sysctl_patch.query.return_value = "17179869184"
-        self.assertEqual(self.system.mem._total(), (17179869184, "B"))
+        self.assertEqual(self.mem._total(), (17179869184, "B"))
         self.assertEqual(self.sysctl_patch.query.call_args.args,
                          ("hw.memsize",))
 
@@ -140,34 +148,37 @@ class TestDarwinSwap(TestDarwin):
 
     def setUp(self):
         super(TestDarwinSwap, self).setUp()
+        self.swap = self.system.query("swap")
         self.swapusage_mock = patch("sys_line.systems.darwin.Swap.swapusage",
                                     new_callable=PropertyMock).start()
 
     def test__darwin_swap_used_not_in_use(self):
         ret = "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)"
         self.swapusage_mock.return_value = ret
-        self.assertEqual(self.system.swap._used(), (0, "B"))
+        self.assertEqual(self.swap._used(), (0, "B"))
 
     def test__darwin_swap_used_in_use(self):
         ret = "total = 2048.00M  used = 100.00M  free = 0.00M  (encrypted)"
         self.swapusage_mock.return_value = ret
-        self.assertEqual(self.system.swap._used(), (104857600, "B"))
+        self.assertEqual(self.swap._used(), (104857600, "B"))
 
     def test__darwin_swap_total_not_in_use(self):
         ret = "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)"
         self.swapusage_mock.return_value = ret
-        self.assertEqual(self.system.swap._used(), (0, "B"))
+        self.assertEqual(self.swap._used(), (0, "B"))
 
     def test__darwin_swap_total_in_use(self):
         ret = "total = 2048.00M  used = 100.00M  free = 0.00M  (encrypted)"
         self.swapusage_mock.return_value = ret
-        self.assertEqual(self.system.swap._total(), (2147483648, "B"))
+        self.assertEqual(self.swap._total(), (2147483648, "B"))
 
 
 class TestDarwinDisk(TestDarwin):
 
     def setUp(self):
         super(TestDarwinDisk, self).setUp()
+
+        self.disk = self.system.query("disk")
 
         self.original_dev_mock_single = {
             "/dev/disk1s5": "/dev/disk1s5"
@@ -459,7 +470,7 @@ class TestDarwinDiskDiskutil(TestDarwinDisk):
         self.run_patch.side_effect = self.diskutil_mock_multiple
 
     def test__darwin_disk_diskutil(self):
-        diskutil = self.system.disk.diskutil
+        diskutil = self.disk.diskutil
         entry = next(iter(diskutil.values()))
 
         self.assertEqual(diskutil is not None, True)
@@ -475,11 +486,11 @@ class TestDarwinDiskSingle(TestDarwinDisk):
 
     def test__darwin_disk_name_single(self):
         expected = {"/dev/disk1s5": "Macintosh HD"}
-        self.assertEqual(self.system.disk.name, expected)
+        self.assertEqual(self.disk.name, expected)
 
     def test__darwin_disk_partition_single(self):
         expected = {"/dev/disk1s5": "APFS"}
-        self.assertEqual(self.system.disk.partition, expected)
+        self.assertEqual(self.disk.partition, expected)
 
 
 class TestDarwinDiskMultiple(TestDarwinDisk):
@@ -495,7 +506,7 @@ class TestDarwinDiskMultiple(TestDarwinDisk):
             "/dev/disk1s1": "Macintosh HD — Data"
         }
 
-        self.assertEqual(self.system.disk.name, expected)
+        self.assertEqual(self.disk.name, expected)
 
     def test__darwin_disk_partition_multiple(self):
         expected = {
@@ -503,4 +514,4 @@ class TestDarwinDiskMultiple(TestDarwinDisk):
             "/dev/disk1s1": "APFS"
         }
 
-        self.assertEqual(self.system.disk.partition, expected)
+        self.assertEqual(self.disk.partition, expected)

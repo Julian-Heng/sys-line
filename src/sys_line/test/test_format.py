@@ -29,45 +29,59 @@ class TestFormatBase(unittest.TestCase):
 
     def setUp(self):
         self.system_mock = MagicMock()
+        self.test_mock_a = MagicMock()
+        self.test_mock_c = MagicMock()
 
 
 class TestFormatTree(TestFormatBase):
 
-    def test__format_tree_contructor(self):
+    def test__format_tree_contructor_empty(self):
         ft = FormatTree(self.system_mock, "")
         self.assertEqual(ft.system, self.system_mock)
         self.assertEqual(ft.fmt, "")
         self.assertEqual(ft.tokens, [])
 
+    def test__format_tree_contructor_string(self):
         string = "this is a string"
         ft = FormatTree(self.system_mock, string)
         self.assertEqual(ft.fmt, string)
         self.assertEqual(ft.tokens, [string])
 
+    def test__format_tree_contructor_string_info(self):
         string = "this has info {a.b}"
         ft = FormatTree(self.system_mock, string)
         self.assertEqual(ft.fmt, string)
         self.assertEqual(ft.tokens, ["this has info ", "{a.b}"])
 
     def test__format_tree_build(self):
-        self.system_mock.a.query.return_value = "a_b"
+        self.test_mock_a.query.return_value = "a_b"
+        self.system_mock.query.return_value = self.test_mock_a
         ft = FormatTree(self.system_mock, "| {a.b} |")
         self.assertEqual(ft.build(), "| a_b |")
 
-        self.system_mock.a.query.return_value = False
+    def test__format_tree_build_invalid(self):
+        self.test_mock_a.query.return_value = False
+        self.system_mock.query.return_value = self.test_mock_a
         ft = FormatTree(self.system_mock, "| {a.b} |")
         self.assertEqual(ft.build(), "|  |")
 
-        self.system_mock.a.query.return_value = False
+    def test__format_tree_build_invalid_with_alt(self):
+        self.test_mock_a.query.return_value = False
+        self.system_mock.query.return_value = self.test_mock_a
         ft = FormatTree(self.system_mock, "| {a.b?sub} |")
         self.assertEqual(ft.build(), "|  |")
 
-        self.system_mock.a.query.return_value = True
+    def test__format_tree_build_valid_with_alt(self):
+        self.test_mock_a.query.return_value = True
+        self.system_mock.query.return_value = self.test_mock_a
         ft = FormatTree(self.system_mock, "| {a.b?sub} |")
         self.assertEqual(ft.build(), "| sub |")
 
-        self.system_mock.a.query.return_value = "a_b"
-        self.system_mock.c.query.return_value = "c_d"
+    def test__format_tree_build_multiple_info(self):
+        self.test_mock_a.query.return_value = "a_b"
+        self.test_mock_c.query.return_value = "c_d"
+        self.system_mock.query.side_effect = [self.test_mock_a,
+                                              self.test_mock_c]
         ft = FormatTree(self.system_mock, "| {a.b?a: {}, c: {c.d}} |")
         self.assertEqual(ft.build(), "| a: a_b, c: c_d |")
 
@@ -111,36 +125,54 @@ class TestFormatInfo(TestFormatBase):
             ft = FormatInfo(value["system"], key)
             validate(ft, value["system"], key, value)
 
-    def test__format_info_build(self):
-        self.system_mock.a.query.return_value = "testing"
+    def test__format_info_build_simple(self):
+        self.test_mock_a.query.return_value = "testing"
+        self.system_mock.query.return_value = self.test_mock_a
         ft = FormatInfo(self.system_mock, "{a.b}")
         self.assertEqual(ft.build(), "testing")
-        self.assertEqual(self.system_mock.a.query.call_args.args, ("b", None))
+        self.assertEqual(self.system_mock.query.call_args.args, ("a",))
+        self.assertEqual(self.test_mock_a.query.call_args.args, ("b", None))
 
-        self.system_mock.a.query.return_value = False
+    def test__format_info_build_invalid(self):
+        self.test_mock_a.query.return_value = False
+        self.system_mock.query.return_value = self.test_mock_a
+        ft = FormatInfo(self.system_mock, "{a.b}")
+        self.assertEqual(ft.build(), "")
+        self.test_mock_a.query.return_value = None
         ft = FormatInfo(self.system_mock, "{a.b}")
         self.assertEqual(ft.build(), "")
 
-        self.system_mock.a.query.return_value = False
-        ft = FormatInfo(self.system_mock, "{a.b?this should not appear}")
-        self.assertEqual(ft.build(), "")
-
-        self.system_mock.a.query.return_value = "valid"
+    def test__format_info_build_alternate(self):
+        self.test_mock_a.query.return_value = "valid"
+        self.system_mock.query.return_value = self.test_mock_a
         ft = FormatInfo(self.system_mock, "{a.b?this is valid}")
         self.assertEqual(ft.build(), "this is valid")
 
-        self.system_mock.a.query.return_value = "valid"
+    def test__format_info_build_alternate_ignore(self):
+        self.test_mock_a.query.return_value = False
+        self.system_mock.query.return_value = self.test_mock_a
+        ft = FormatInfo(self.system_mock, "{a.b?this should not appear}")
+        self.assertEqual(ft.build(), "")
+
+    def test__format_info_build_alternate_with_info(self):
+        self.test_mock_a.query.return_value = "valid"
+        self.system_mock.query.return_value = self.test_mock_a
         ft = FormatInfo(self.system_mock, "{a.b?this is also valid: {}}")
         self.assertEqual(ft.build(), "this is also valid: valid")
 
-        self.system_mock.a.query.return_value = "a_valid"
-        self.system_mock.c.query.return_value = "c_valid"
+    def test__format_info_build_alternate_with_info_and_other_info(self):
+        self.test_mock_a.query.return_value = "a_valid"
+        self.test_mock_c.query.return_value = "c_valid"
+        self.system_mock.query.side_effect = [self.test_mock_a,
+                                              self.test_mock_c]
         ft = FormatInfo(self.system_mock, "{a.b?{} {c.d}}")
         self.assertEqual(ft.build(), "a_valid c_valid")
-        self.assertEqual(self.system_mock.a.query.call_args.args, ("b", None))
-        self.assertEqual(self.system_mock.c.query.call_args.args, ("d", None))
+        self.assertEqual(self.test_mock_a.query.call_args.args, ("b", None))
+        self.assertEqual(self.test_mock_c.query.call_args.args, ("d", None))
 
-        self.system_mock.a.query.return_value = "options"
+    def test__format_info_build_with_options(self):
+        self.test_mock_a.query.return_value = "options"
+        self.system_mock.query.return_value = self.test_mock_a
         ft = FormatInfo(self.system_mock, "{a.b[c]}")
         self.assertEqual(ft.build(), "options")
-        self.assertEqual(self.system_mock.a.query.call_args.args, ("b", "c"))
+        self.assertEqual(self.test_mock_a.query.call_args.args, ("b", "c"))
