@@ -562,7 +562,7 @@ class AbstractNetwork(AbstractGetter):
         # Timeout after 2 seconds
         while (self._bytes_delta(self.dev, mode) <= start and
                time.time() - start_time < 2):
-            pass
+            time.sleep(0.01)
 
         end = self._bytes_delta(self.dev, mode)
         if end == start:
