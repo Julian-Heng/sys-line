@@ -35,7 +35,7 @@ class AbstractGetter(ABC):
 
     @property
     @abstractmethod
-    def _valid_info(self):
+    def valid_info(self):
         """ Returns list of info in getter """
 
     def query(self, info, options):
@@ -116,7 +116,7 @@ class AbstractGetter(ABC):
         """ The string representation of the getter would return all values """
         return "\n".join([
             "{}.{}: {}".format(self.domain_name, i, getattr(self, i))
-            for i in self._valid_info
+            for i in self.valid_info
         ])
 
 
@@ -126,7 +126,7 @@ class AbstractStorage(AbstractGetter):
     """
 
     @property
-    def _valid_info(self):
+    def valid_info(self):
         return ["used", "total", "percent"]
 
     @abstractmethod
@@ -180,7 +180,7 @@ class AbstractCpu(AbstractGetter):
     """ Abstract cpu class to be implemented by subclass """
 
     @property
-    def _valid_info(self):
+    def valid_info(self):
         return ["cores", "cpu", "load_avg",
                 "cpu_usage", "fan", "temp", "uptime"]
 
@@ -286,9 +286,9 @@ class AbstractDisk(AbstractStorage):
         self._df_entries = None
 
     @property
-    def _valid_info(self):
-        return super(AbstractDisk, self)._valid_info + ["dev", "mount",
-                                                        "name", "partition"]
+    def valid_info(self):
+        return super(AbstractDisk, self).valid_info + ["dev", "mount",
+                                                       "name", "partition"]
 
     def _query(self, info, options):
         # Key for which device to get information from
@@ -452,7 +452,7 @@ class AbstractBattery(AbstractGetter):
     """ Abstract battery class to be implemented by subclass """
 
     @property
-    def _valid_info(self):
+    def valid_info(self):
         return ["is_present", "is_charging", "is_full", "percent",
                 "time", "power"]
 
@@ -500,7 +500,7 @@ class AbstractNetwork(AbstractGetter):
     """ Abstract network class to be implemented by subclass """
 
     @property
-    def _valid_info(self):
+    def valid_info(self):
         return ["dev", "ssid", "local_ip", "download", "upload"]
 
     @property
@@ -595,7 +595,7 @@ class Date(AbstractGetter):
     """ Date class to fetch date and time """
 
     @property
-    def _valid_info(self):
+    def valid_info(self):
         return ["date", "time"]
 
     @property
@@ -622,7 +622,7 @@ class AbstractMisc(AbstractGetter):
     """ Misc class for fetching miscellaneous information """
 
     @property
-    def _valid_info(self):
+    def valid_info(self):
         return ["vol", "scr"]
 
     @property
