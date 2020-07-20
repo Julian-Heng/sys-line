@@ -148,7 +148,6 @@ class Battery(AbstractBattery):
         bat = dict(i.split(" = ", 1) for i in bat if i.strip())
         return bat if bat else None
 
-    @property
     @lru_cache(maxsize=1)
     def _current(self):
         current = 0
@@ -161,7 +160,6 @@ class Battery(AbstractBattery):
 
         return current
 
-    @property
     @lru_cache(maxsize=1)
     def _current_capacity(self):
         return int(self.bat["CurrentCapacity"]) if self.is_present else None
@@ -187,7 +185,7 @@ class Battery(AbstractBattery):
         perc = None
 
         if self.is_present:
-            current_capacity = self._current_capacity
+            current_capacity = self._current_capacity()
             max_capacity = int(self.bat["MaxCapacity"])
             perc = percent(current_capacity, max_capacity)
             perc = round_trim(perc, self.options.percent_round)
@@ -197,11 +195,11 @@ class Battery(AbstractBattery):
     def _time(self):
         charge = 0
 
-        if self.is_present and self._current != 0:
-            charge = self._current_capacity
+        if self.is_present and self._current() != 0:
+            charge = self._current_capacity()
             if self.is_charging:
                 charge = int(self.bat["MaxCapacity"]) - charge
-            charge = int((charge / self._current) * 3600)
+            charge = int((charge / self._current()) * 3600)
 
         return charge
 
@@ -211,7 +209,7 @@ class Battery(AbstractBattery):
 
         if self.is_present:
             voltage = int(self.bat["Voltage"])
-            power = (self._current * voltage) / 1e6
+            power = (self._current() * voltage) / 1e6
             power = round_trim(power, self.options.power_round)
 
         return power
