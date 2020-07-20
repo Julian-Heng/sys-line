@@ -4,13 +4,16 @@
 
 """ Abstract classes for getting system info """
 
+import os
 import re
+import sys
 import time
 
 from abc import ABC, abstractmethod
 from copy import copy
 from datetime import datetime
 from functools import lru_cache
+from importlib import import_module
 from pathlib import Path as p
 
 from ..tools.storage import Storage
@@ -654,6 +657,28 @@ class System(ABC):
             "cpu": cpu, "mem": mem, "swap": swap, "disk": disk,
             "bat": bat, "net": net, "date": Date, "misc": misc
         }
+
+    @staticmethod
+    def create_instance(options):
+        """
+        Instantialises an implementation of the System class by dynamically
+        importing the module
+        """
+        os_name = os.uname().sysname
+
+        # Module system files format is the output of "uname -s" in lowercase
+        mod_prefix = __name__.split(".")[:-1]
+        mod_name = ".".join(mod_prefix + [os_name.lower()])
+        system = None
+
+        try:
+            mod = import_module(mod_name)
+            system = getattr(mod, os_name)(options)
+        except ModuleNotFoundError:
+            print("Unknown system: {}\nExiting...".format(os_name),
+                  file=sys.stderr)
+
+        return system
 
     @property
     @lru_cache(maxsize=1)
