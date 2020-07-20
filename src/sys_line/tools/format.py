@@ -64,12 +64,13 @@ class FormatInfo(FormatNode):
             self.alt = None
 
     def build(self):
-        replace = self.system.query(self.domain, self.info, self.options)
-        if replace is not None:
-            if isinstance(replace, bool):
+        domain = self.system.query(self.domain)
+        info = domain.query(self.info, self.options)
+        if info is not None:
+            if isinstance(info, bool):
                 replace = self.alt.build() if replace else ""
             else:
-                replace = str(replace)
+                replace = str(info)
                 if self.alt is not None:
                     replace = self.alt.build().replace("{}", replace)
         else:

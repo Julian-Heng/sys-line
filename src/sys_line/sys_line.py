@@ -19,7 +19,7 @@ def main():
         if options.all is not None:
             domains = options.all if options.all else system.SHORT_DOMAINS
             for domain in domains:
-                print(getattr(system, domain))
+                print(system.query(domain))
         elif options.format:
             for fmt in options.format:
                 print(FormatTree(system, fmt).build())

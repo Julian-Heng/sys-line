@@ -35,10 +35,16 @@ class AbstractGetter(ABC):
 
     @property
     @abstractmethod
-    def valid_info(self):
+    def _valid_info(self):
         """ Returns list of info in getter """
 
     def query(self, info, options):
+        """ Returns the value of info """
+        if info not in self._valid_info:
+            raise RuntimeError("info name not in domain")
+        return self._query(info, options)
+
+    def _query(self, info, options):
         """ Returns the value of info """
         if options is None:
             val = getattr(self, info)
@@ -111,7 +117,7 @@ class AbstractGetter(ABC):
         """ The string representation of the getter would return all values """
         return "\n".join([
             "{}.{}: {}".format(self.domain_name, i, getattr(self, i))
-            for i in self.valid_info
+            for i in self._valid_info
         ])
 
 
@@ -121,7 +127,7 @@ class AbstractStorage(AbstractGetter):
     """
 
     @property
-    def valid_info(self):
+    def _valid_info(self):
         return ["used", "total", "percent"]
 
     @abstractmethod
@@ -175,7 +181,7 @@ class AbstractCpu(AbstractGetter):
     """ Abstract cpu class to be implemented by subclass """
 
     @property
-    def valid_info(self):
+    def _valid_info(self):
         return ["cores", "cpu", "load_avg",
                 "cpu_usage", "fan", "temp", "uptime"]
 
@@ -281,11 +287,11 @@ class AbstractDisk(AbstractStorage):
         self._df_entries = None
 
     @property
-    def valid_info(self):
-        return super(AbstractDisk, self).valid_info + ["dev", "mount",
-                                                       "name", "partition"]
+    def _valid_info(self):
+        return super(AbstractDisk, self)._valid_info + ["dev", "mount",
+                                                        "name", "partition"]
 
-    def query(self, info, options):
+    def _query(self, info, options):
         # Key for which device to get information from
         key = None
         new_opts = list()
@@ -316,7 +322,7 @@ class AbstractDisk(AbstractStorage):
         if not p(key).is_block_device():
             key = self._mount_to_devname(key)
 
-        return super(AbstractDisk, self).query(info, new_opts)[key]
+        return super(AbstractDisk, self)._query(info, new_opts)[key]
 
     def _mount_to_devname(self, mount_path):
         return next(k for k, v in self.mount.items() if mount_path == v)
@@ -447,7 +453,7 @@ class AbstractBattery(AbstractGetter):
     """ Abstract battery class to be implemented by subclass """
 
     @property
-    def valid_info(self):
+    def _valid_info(self):
         return ["is_present", "is_charging", "is_full", "percent",
                 "time", "power"]
 
@@ -495,7 +501,7 @@ class AbstractNetwork(AbstractGetter):
     """ Abstract network class to be implemented by subclass """
 
     @property
-    def valid_info(self):
+    def _valid_info(self):
         return ["dev", "ssid", "local_ip", "download", "upload"]
 
     @property
@@ -590,7 +596,7 @@ class Date(AbstractGetter):
     """ Date class to fetch date and time """
 
     @property
-    def valid_info(self):
+    def _valid_info(self):
         return ["date", "time"]
 
     @property
@@ -617,7 +623,7 @@ class AbstractMisc(AbstractGetter):
     """ Misc class for fetching miscellaneous information """
 
     @property
-    def valid_info(self):
+    def _valid_info(self):
         return ["vol", "scr"]
 
     @property
@@ -670,7 +676,7 @@ class System(ABC):
 
         return system
 
-    def query(self, domain, info, options):
+    def query(self, domain):
         """ Queries a system for a domain and info """
         if domain not in self._getters.keys():
             err = "domain name '{}' not in system".format(domain)
@@ -679,10 +685,5 @@ class System(ABC):
         if self._getters_cache[domain] is None:
             opts = self.options[domain]
             self._getters_cache[domain] = self._getters[domain](domain, opts)
-        dom = self._getters_cache[domain]
 
-        if info not in dom.valid_info:
-            err = "info name '{}' not in domain '{}'".format(info, domain)
-            raise RuntimeError(err)
-
-        return dom.query(info, options)
+        return self._getters_cache[domain]
