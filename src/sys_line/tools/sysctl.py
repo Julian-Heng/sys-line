@@ -15,4 +15,5 @@ class Sysctl():
     @lru_cache()
     def query(key):
         """ Fetch a sysctl variable """
-        return run(["sysctl", "-n", key]).strip()
+        out = run(["sysctl", "-n", key]).strip()
+        return out if out else None
