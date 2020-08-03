@@ -92,11 +92,10 @@ class FormatString(FormatNode):
 class Tokenizer():
     """ Tokenizer class to gather tokens in the format string """
 
-    class State:
-        """ State class to store the tokenizer state """
-        START = -1
-        INSIDE = 0
-        OUTSIDE = 1
+    # State enums to store the tokenizer state
+    START = -1
+    INSIDE = 0
+    OUTSIDE = 1
 
     @staticmethod
     def tokenize(string):
@@ -107,19 +106,19 @@ class Tokenizer():
 
         tokens = list()
         token = ""
-        state = Tokenizer.State.START
+        state = Tokenizer.START
         level = 0
 
         for i in string:
             if i == "{":
                 level += 1
-                if state == Tokenizer.State.START:
-                    state = Tokenizer.State.INSIDE
+                if state == Tokenizer.START:
+                    state = Tokenizer.INSIDE
                     if token:
                         tokens.append(token)
                     token = ""
-                elif state == Tokenizer.State.OUTSIDE:
-                    state = Tokenizer.State.INSIDE
+                elif state == Tokenizer.OUTSIDE:
+                    state = Tokenizer.INSIDE
                     if token:
                         tokens.append(token)
                     token = ""
@@ -128,7 +127,7 @@ class Tokenizer():
                 level -= 1
                 token += i
                 if level == 0:
-                    state = Tokenizer.State.OUTSIDE
+                    state = Tokenizer.OUTSIDE
                     if token:
                         tokens.append(token)
                     token = ""
