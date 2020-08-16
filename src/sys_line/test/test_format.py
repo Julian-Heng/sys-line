@@ -129,9 +129,14 @@ class TestFormatInfo(TestFormatBase):
         self.test_mock_a.query.return_value = "testing"
         self.system_mock.query.return_value = self.test_mock_a
         ft = FormatInfo(self.system_mock, "{a.b}")
+
         self.assertEqual(ft.build(), "testing")
-        self.assertEqual(self.system_mock.query.call_args.args, ("a",))
-        self.assertEqual(self.test_mock_a.query.call_args.args, ("b", None))
+
+        args_system, _ = self.system_mock.query.call_args
+        args_a, _ = self.test_mock_a.query.call_args
+
+        self.assertEqual(args_system, ("a",))
+        self.assertEqual(args_a, ("b", None))
 
     def test__format_info_build_invalid(self):
         self.test_mock_a.query.return_value = False
@@ -166,13 +171,20 @@ class TestFormatInfo(TestFormatBase):
         self.system_mock.query.side_effect = [self.test_mock_a,
                                               self.test_mock_c]
         ft = FormatInfo(self.system_mock, "{a.b?{} {c.d}}")
+
         self.assertEqual(ft.build(), "a_valid c_valid")
-        self.assertEqual(self.test_mock_a.query.call_args.args, ("b", None))
-        self.assertEqual(self.test_mock_c.query.call_args.args, ("d", None))
+
+        args_a, _ = self.test_mock_a.query.call_args
+        args_c, _ = self.test_mock_c.query.call_args
+
+        self.assertEqual(args_a, ("b", None))
+        self.assertEqual(args_c, ("d", None))
 
     def test__format_info_build_with_options(self):
         self.test_mock_a.query.return_value = "options"
         self.system_mock.query.return_value = self.test_mock_a
         ft = FormatInfo(self.system_mock, "{a.b[c]}")
+
         self.assertEqual(ft.build(), "options")
-        self.assertEqual(self.test_mock_a.query.call_args.args, ("b", "c"))
+        args, _ = self.test_mock_a.query.call_args
+        self.assertEqual(args, ("b", "c"))

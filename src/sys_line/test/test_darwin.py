@@ -33,21 +33,21 @@ class TestDarwinCpu(TestDarwin):
     def test__darwin_cpu_cores(self):
         self.sysctl_patch.query.return_value = "4"
         self.assertEqual(self.cpu.query("cores", None), 4)
-        self.assertEqual(self.sysctl_patch.query.call_args.args,
-                         ("hw.logicalcpu_max",))
+        args, _ = self.sysctl_patch.query.call_args
+        self.assertEqual(args, ("hw.logicalcpu_max",))
 
     def test__darwin_cpu_speed(self):
         self.sysctl_patch.query.return_value = "Cpu string"
         self.assertEqual(self.cpu._cpu_speed(), ("Cpu string", None))
-        self.assertEqual(self.sysctl_patch.query.call_args.args,
-                         ("machdep.cpu.brand_string",))
+        args, _ = self.sysctl_patch.query.call_args
+        self.assertEqual(args, ("machdep.cpu.brand_string",))
 
     def test__darwin_cpu_load_avg(self):
         self.sysctl_patch.query.return_value = "{ 1.27 1.31 1.36 }"
         self.assertEqual(self.cpu._load_avg(),
                          ["1.27", "1.31", "1.36"])
-        self.assertEqual(self.sysctl_patch.query.call_args.args,
-                         ("vm.loadavg",))
+        args, _ = self.sysctl_patch.query.call_args
+        self.assertEqual(args, ("vm.loadavg",))
 
     def test__darwin_cpu_fan_no_prog(self):
         self.which_patch.return_value = False
@@ -140,8 +140,8 @@ class TestDarwinMemory(TestDarwin):
     def test__darwin_mem_total(self):
         self.sysctl_patch.query.return_value = "17179869184"
         self.assertEqual(self.mem._total(), (17179869184, "B"))
-        self.assertEqual(self.sysctl_patch.query.call_args.args,
-                         ("hw.memsize",))
+        args, _ = self.sysctl_patch.query.call_args
+        self.assertEqual(args, ("hw.memsize",))
 
 
 class TestDarwinSwap(TestDarwin):
