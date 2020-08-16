@@ -1,5 +1,3 @@
-image: python:latest
-
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
@@ -40,10 +38,22 @@ pylint:
     - cd ./src
     - python3 -m sys_line -a
 
-unittest:
+unittest:latest:
+  image: python:latest
   stage: test
   <<: *unittest_definition
 
-runtime_test:
+unittest:minimum:
+  image: python:3.6.11
+  stage: test
+  <<: *unittest_definition
+
+runtime_test:latest:
+  image: python:latest
+  stage: test
+  <<: *runtime_definition
+
+runtime_test:minimum:
+  image: python:3.6.11
   stage: test
   <<: *runtime_definition
