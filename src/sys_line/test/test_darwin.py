@@ -190,268 +190,262 @@ class TestDarwinDisk(TestDarwin):
         }
 
         out = [
-            [
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
-                "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" "
-                "\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">",
-                "<plist version=\"1.0\">",
-                "<dict>",
-                "	<key>AESHardware</key>",
-                "	<false/>",
-                "	<key>APFSContainerFree</key>",
-                "	<integer>198572486656</integer>",
-                "	<key>APFSContainerReference</key>",
-                "	<string>disk1</string>",
-                "	<key>APFSContainerSize</key>",
-                "	<integer>250790436864</integer>",
-                "	<key>APFSPhysicalStores</key>",
-                "	<array>",
-                "		<dict>",
-                "			<key>APFSPhysicalStore</key>",
-                "			<string>disk0s2</string>",
-                "		</dict>",
-                "	</array>",
-                "	<key>APFSVolumeGroupID</key>",
-                "	<string>34544CD1-0205-44F3-885C-7E1C28DAE1BB</string>",
-                "	<key>Bootable</key>",
-                "	<true/>",
-                "	<key>BooterDeviceIdentifier</key>",
-                "	<string>disk1s2</string>",
-                "	<key>BusProtocol</key>",
-                "	<string>PCI</string>",
-                "	<key>CanBeMadeBootable</key>",
-                "	<false/>",
-                "	<key>CanBeMadeBootableRequiresDestroy</key>",
-                "	<false/>",
-                "	<key>Content</key>",
-                "	<string>41504653-0000-11AA-AA11-00306543ECAC</string>",
-                "	<key>DeviceBlockSize</key>",
-                "	<integer>4096</integer>",
-                "	<key>DeviceIdentifier</key>",
-                "	<string>disk1s5</string>",
-                "	<key>DeviceNode</key>",
-                "	<string>/dev/disk1s5</string>",
-                "	<key>DeviceTreePath</key>",
-                "	<string>IODeviceTree:"
-                "/PCI0@0/RP06@1C,5/SSD0@0/PRT0@0/PMP@0</string>",
-                "	<key>DiskUUID</key>",
-                "	<string>A0DB31C6-609F-439A-A883-AD5F057A2A20</string>",
-                "	<key>Ejectable</key>",
-                "	<false/>",
-                "	<key>EjectableMediaAutomaticUnderSoftwareControl</key>",
-                "	<false/>",
-                "	<key>EjectableOnly</key>",
-                "	<false/>",
-                "	<key>Encryption</key>",
-                "	<true/>",
-                "	<key>FileVault</key>",
-                "	<true/>",
-                "	<key>FilesystemName</key>",
-                "	<string>APFS</string>",
-                "	<key>FilesystemType</key>",
-                "	<string>apfs</string>",
-                "	<key>FilesystemUserVisibleName</key>",
-                "	<string>APFS</string>",
-                "	<key>FreeSpace</key>",
-                "	<integer>0</integer>",
-                "	<key>Fusion</key>",
-                "	<false/>",
-                "	<key>GlobalPermissionsEnabled</key>",
-                "	<true/>",
-                "	<key>IOKitSize</key>",
-                "	<integer>250790436864</integer>",
-                "	<key>IORegistryEntryName</key>",
-                "	<string>Macintosh HD</string>",
-                "	<key>Internal</key>",
-                "	<true/>",
-                "	<key>Locked</key>",
-                "	<false/>",
-                "	<key>MediaName</key>",
-                "	<string></string>",
-                "	<key>MediaType</key>",
-                "	<string>Generic</string>",
-                "	<key>MountPoint</key>",
-                "	<string>/</string>",
-                "	<key>ParentWholeDisk</key>",
-                "	<string>disk1</string>",
-                "	<key>PartitionMapPartition</key>",
-                "	<false/>",
-                "	<key>RAIDMaster</key>",
-                "	<false/>",
-                "	<key>RAIDSlice</key>",
-                "	<false/>",
-                "	<key>RecoveryDeviceIdentifier</key>",
-                "	<string>disk1s3</string>",
-                "	<key>Removable</key>",
-                "	<false/>",
-                "	<key>RemovableMedia</key>",
-                "	<false/>",
-                "	<key>RemovableMediaOrExternalDevice</key>",
-                "	<false/>",
-                "	<key>SMARTDeviceSpecificKeysMayVaryNotGuaranteed</key>",
-                "	<dict/>",
-                "	<key>SMARTStatus</key>",
-                "	<string>Verified</string>",
-                "	<key>Size</key>",
-                "	<integer>250790436864</integer>",
-                "	<key>SolidState</key>",
-                "	<true/>",
-                "	<key>SupportsGlobalPermissionsDisable</key>",
-                "	<true/>",
-                "	<key>SystemImage</key>",
-                "	<false/>",
-                "	<key>TotalSize</key>",
-                "	<integer>250790436864</integer>",
-                "	<key>VolumeAllocationBlockSize</key>",
-                "	<integer>4096</integer>",
-                "	<key>VolumeName</key>",
-                "	<string>Macintosh HD</string>",
-                "	<key>VolumeSize</key>",
-                "	<integer>0</integer>",
-                "	<key>VolumeUUID</key>",
-                "	<string>A0DB31C6-609F-439A-A883-AD5F057A2A20</string>",
-                "	<key>WholeDisk</key>",
-                "	<false/>",
-                "	<key>Writable</key>",
-                "	<false/>",
-                "	<key>WritableMedia</key>",
-                "	<true/>",
-                "	<key>WritableVolume</key>",
-                "	<false/>",
-                "</dict>",
-                "</plist>"
-            ],
-            [
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
-                "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" "
-                "\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">",
-                "<plist version=\"1.0\">",
-                "<dict>",
-                "	<key>AESHardware</key>",
-                "	<false/>",
-                "	<key>APFSContainerFree</key>",
-                "	<integer>198560165888</integer>",
-                "	<key>APFSContainerReference</key>",
-                "	<string>disk1</string>",
-                "	<key>APFSContainerSize</key>",
-                "	<integer>250790436864</integer>",
-                "	<key>APFSPhysicalStores</key>",
-                "	<array>",
-                "		<dict>",
-                "			<key>APFSPhysicalStore</key>",
-                "			<string>disk0s2</string>",
-                "		</dict>",
-                "	</array>",
-                "	<key>APFSVolumeGroupID</key>",
-                "	<string>34544CD1-0205-44F3-885C-7E1C28DAE1BB</string>",
-                "	<key>Bootable</key>",
-                "	<true/>",
-                "	<key>BooterDeviceIdentifier</key>",
-                "	<string>disk1s2</string>",
-                "	<key>BusProtocol</key>",
-                "	<string>PCI</string>",
-                "	<key>CanBeMadeBootable</key>",
-                "	<false/>",
-                "	<key>CanBeMadeBootableRequiresDestroy</key>",
-                "	<false/>",
-                "	<key>Content</key>",
-                "	<string>41504653-0000-11AA-AA11-00306543ECAC</string>",
-                "	<key>DeviceBlockSize</key>",
-                "	<integer>4096</integer>",
-                "	<key>DeviceIdentifier</key>",
-                "	<string>disk1s1</string>",
-                "	<key>DeviceNode</key>",
-                "	<string>/dev/disk1s1</string>",
-                "	<key>DeviceTreePath</key>",
-                "	<string>IODeviceTree"
-                ":/PCI0@0/RP06@1C,5/SSD0@0/PRT0@0/PMP@0</string>",
-                "	<key>DiskUUID</key>",
-                "	<string>34544CD1-0205-44F3-885C-7E1C28DAE1BB</string>",
-                "	<key>Ejectable</key>",
-                "	<false/>",
-                "	<key>EjectableMediaAutomaticUnderSoftwareControl</key>",
-                "	<false/>",
-                "	<key>EjectableOnly</key>",
-                "	<false/>",
-                "	<key>Encryption</key>",
-                "	<true/>",
-                "	<key>FileVault</key>",
-                "	<true/>",
-                "	<key>FilesystemName</key>",
-                "	<string>APFS</string>",
-                "	<key>FilesystemType</key>",
-                "	<string>apfs</string>",
-                "	<key>FilesystemUserVisibleName</key>",
-                "	<string>APFS</string>",
-                "	<key>FreeSpace</key>",
-                "	<integer>0</integer>",
-                "	<key>Fusion</key>",
-                "	<false/>",
-                "	<key>GlobalPermissionsEnabled</key>",
-                "	<true/>",
-                "	<key>IOKitSize</key>",
-                "	<integer>250790436864</integer>",
-                "	<key>IORegistryEntryName</key>",
-                "	<string>Macintosh HD — Data</string>",
-                "	<key>Internal</key>",
-                "	<true/>",
-                "	<key>Locked</key>",
-                "	<false/>",
-                "	<key>MediaName</key>",
-                "	<string></string>",
-                "	<key>MediaType</key>",
-                "	<string>Generic</string>",
-                "	<key>MountPoint</key>",
-                "	<string>/System/Volumes/Data</string>",
-                "	<key>ParentWholeDisk</key>",
-                "	<string>disk1</string>",
-                "	<key>PartitionMapPartition</key>",
-                "	<false/>",
-                "	<key>RAIDMaster</key>",
-                "	<false/>",
-                "	<key>RAIDSlice</key>",
-                "	<false/>",
-                "	<key>RecoveryDeviceIdentifier</key>",
-                "	<string>disk1s3</string>",
-                "	<key>Removable</key>",
-                "	<false/>",
-                "	<key>RemovableMedia</key>",
-                "	<false/>",
-                "	<key>RemovableMediaOrExternalDevice</key>",
-                "	<false/>",
-                "	<key>SMARTDeviceSpecificKeysMayVaryNotGuaranteed</key>",
-                "	<dict/>",
-                "	<key>SMARTStatus</key>",
-                "	<string>Verified</string>",
-                "	<key>Size</key>",
-                "	<integer>250790436864</integer>",
-                "	<key>SolidState</key>",
-                "	<true/>",
-                "	<key>SupportsGlobalPermissionsDisable</key>",
-                "	<true/>",
-                "	<key>SystemImage</key>",
-                "	<false/>",
-                "	<key>TotalSize</key>",
-                "	<integer>250790436864</integer>",
-                "	<key>VolumeAllocationBlockSize</key>",
-                "	<integer>4096</integer>",
-                "	<key>VolumeName</key>",
-                "	<string>Macintosh HD — Data</string>",
-                "	<key>VolumeSize</key>",
-                "	<integer>0</integer>",
-                "	<key>VolumeUUID</key>",
-                "	<string>34544CD1-0205-44F3-885C-7E1C28DAE1BB</string>",
-                "	<key>WholeDisk</key>",
-                "	<false/>",
-                "	<key>Writable</key>",
-                "	<true/>",
-                "	<key>WritableMedia</key>",
-                "	<true/>",
-                "	<key>WritableVolume</key>",
-                "	<true/>",
-                "</dict>",
-                "</plist>"
-            ]
+            # Output of 'diskutil info -plist /dev/disk1s5'
+            """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AESHardware</key>
+	<false/>
+	<key>APFSContainerFree</key>
+	<integer>198511091712</integer>
+	<key>APFSContainerReference</key>
+	<string>disk1</string>
+	<key>APFSContainerSize</key>
+	<integer>250790436864</integer>
+	<key>APFSPhysicalStores</key>
+	<array>
+		<dict>
+			<key>APFSPhysicalStore</key>
+			<string>disk0s2</string>
+		</dict>
+	</array>
+	<key>APFSVolumeGroupID</key>
+	<string>34544CD1-0205-44F3-885C-7E1C28DAE1BB</string>
+	<key>Bootable</key>
+	<true/>
+	<key>BooterDeviceIdentifier</key>
+	<string>disk1s2</string>
+	<key>BusProtocol</key>
+	<string>PCI</string>
+	<key>CanBeMadeBootable</key>
+	<false/>
+	<key>CanBeMadeBootableRequiresDestroy</key>
+	<false/>
+	<key>Content</key>
+	<string>41504653-0000-11AA-AA11-00306543ECAC</string>
+	<key>DeviceBlockSize</key>
+	<integer>4096</integer>
+	<key>DeviceIdentifier</key>
+	<string>disk1s5</string>
+	<key>DeviceNode</key>
+	<string>/dev/disk1s5</string>
+	<key>DeviceTreePath</key>
+	<string>IODeviceTree:/PCI0@0/RP06@1C,5/SSD0@0/PRT0@0/PMP@0</string>
+	<key>DiskUUID</key>
+	<string>A0DB31C6-609F-439A-A883-AD5F057A2A20</string>
+	<key>Ejectable</key>
+	<false/>
+	<key>EjectableMediaAutomaticUnderSoftwareControl</key>
+	<false/>
+	<key>EjectableOnly</key>
+	<false/>
+	<key>Encryption</key>
+	<true/>
+	<key>FileVault</key>
+	<true/>
+	<key>FilesystemName</key>
+	<string>APFS</string>
+	<key>FilesystemType</key>
+	<string>apfs</string>
+	<key>FilesystemUserVisibleName</key>
+	<string>APFS</string>
+	<key>FreeSpace</key>
+	<integer>0</integer>
+	<key>Fusion</key>
+	<false/>
+	<key>GlobalPermissionsEnabled</key>
+	<true/>
+	<key>IOKitSize</key>
+	<integer>250790436864</integer>
+	<key>IORegistryEntryName</key>
+	<string>Macintosh HD</string>
+	<key>Internal</key>
+	<true/>
+	<key>Locked</key>
+	<false/>
+	<key>MediaName</key>
+	<string></string>
+	<key>MediaType</key>
+	<string>Generic</string>
+	<key>MountPoint</key>
+	<string>/</string>
+	<key>ParentWholeDisk</key>
+	<string>disk1</string>
+	<key>PartitionMapPartition</key>
+	<false/>
+	<key>RAIDMaster</key>
+	<false/>
+	<key>RAIDSlice</key>
+	<false/>
+	<key>RecoveryDeviceIdentifier</key>
+	<string>disk1s3</string>
+	<key>Removable</key>
+	<false/>
+	<key>RemovableMedia</key>
+	<false/>
+	<key>RemovableMediaOrExternalDevice</key>
+	<false/>
+	<key>SMARTDeviceSpecificKeysMayVaryNotGuaranteed</key>
+	<dict/>
+	<key>SMARTStatus</key>
+	<string>Verified</string>
+	<key>Size</key>
+	<integer>250790436864</integer>
+	<key>SolidState</key>
+	<true/>
+	<key>SupportsGlobalPermissionsDisable</key>
+	<true/>
+	<key>SystemImage</key>
+	<false/>
+	<key>TotalSize</key>
+	<integer>250790436864</integer>
+	<key>VolumeAllocationBlockSize</key>
+	<integer>4096</integer>
+	<key>VolumeName</key>
+	<string>Macintosh HD</string>
+	<key>VolumeSize</key>
+	<integer>0</integer>
+	<key>VolumeUUID</key>
+	<string>A0DB31C6-609F-439A-A883-AD5F057A2A20</string>
+	<key>WholeDisk</key>
+	<false/>
+	<key>Writable</key>
+	<false/>
+	<key>WritableMedia</key>
+	<true/>
+	<key>WritableVolume</key>
+	<false/>
+</dict>
+</plist>""".split("\n"),
+            # Output of 'diskutil info -plist /dev/disk1s1'
+            """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AESHardware</key>
+	<false/>
+	<key>APFSContainerFree</key>
+	<integer>198501175296</integer>
+	<key>APFSContainerReference</key>
+	<string>disk1</string>
+	<key>APFSContainerSize</key>
+	<integer>250790436864</integer>
+	<key>APFSPhysicalStores</key>
+	<array>
+		<dict>
+			<key>APFSPhysicalStore</key>
+			<string>disk0s2</string>
+		</dict>
+	</array>
+	<key>APFSVolumeGroupID</key>
+	<string>34544CD1-0205-44F3-885C-7E1C28DAE1BB</string>
+	<key>Bootable</key>
+	<true/>
+	<key>BooterDeviceIdentifier</key>
+	<string>disk1s2</string>
+	<key>BusProtocol</key>
+	<string>PCI</string>
+	<key>CanBeMadeBootable</key>
+	<false/>
+	<key>CanBeMadeBootableRequiresDestroy</key>
+	<false/>
+	<key>Content</key>
+	<string>41504653-0000-11AA-AA11-00306543ECAC</string>
+	<key>DeviceBlockSize</key>
+	<integer>4096</integer>
+	<key>DeviceIdentifier</key>
+	<string>disk1s1</string>
+	<key>DeviceNode</key>
+	<string>/dev/disk1s1</string>
+	<key>DeviceTreePath</key>
+	<string>IODeviceTree:/PCI0@0/RP06@1C,5/SSD0@0/PRT0@0/PMP@0</string>
+	<key>DiskUUID</key>
+	<string>34544CD1-0205-44F3-885C-7E1C28DAE1BB</string>
+	<key>Ejectable</key>
+	<false/>
+	<key>EjectableMediaAutomaticUnderSoftwareControl</key>
+	<false/>
+	<key>EjectableOnly</key>
+	<false/>
+	<key>Encryption</key>
+	<true/>
+	<key>FileVault</key>
+	<true/>
+	<key>FilesystemName</key>
+	<string>APFS</string>
+	<key>FilesystemType</key>
+	<string>apfs</string>
+	<key>FilesystemUserVisibleName</key>
+	<string>APFS</string>
+	<key>FreeSpace</key>
+	<integer>0</integer>
+	<key>Fusion</key>
+	<false/>
+	<key>GlobalPermissionsEnabled</key>
+	<true/>
+	<key>IOKitSize</key>
+	<integer>250790436864</integer>
+	<key>IORegistryEntryName</key>
+	<string>Macintosh HD — Data</string>
+	<key>Internal</key>
+	<true/>
+	<key>Locked</key>
+	<false/>
+	<key>MediaName</key>
+	<string></string>
+	<key>MediaType</key>
+	<string>Generic</string>
+	<key>MountPoint</key>
+	<string>/System/Volumes/Data</string>
+	<key>ParentWholeDisk</key>
+	<string>disk1</string>
+	<key>PartitionMapPartition</key>
+	<false/>
+	<key>RAIDMaster</key>
+	<false/>
+	<key>RAIDSlice</key>
+	<false/>
+	<key>RecoveryDeviceIdentifier</key>
+	<string>disk1s3</string>
+	<key>Removable</key>
+	<false/>
+	<key>RemovableMedia</key>
+	<false/>
+	<key>RemovableMediaOrExternalDevice</key>
+	<false/>
+	<key>SMARTDeviceSpecificKeysMayVaryNotGuaranteed</key>
+	<dict/>
+	<key>SMARTStatus</key>
+	<string>Verified</string>
+	<key>Size</key>
+	<integer>250790436864</integer>
+	<key>SolidState</key>
+	<true/>
+	<key>SupportsGlobalPermissionsDisable</key>
+	<true/>
+	<key>SystemImage</key>
+	<false/>
+	<key>TotalSize</key>
+	<integer>250790436864</integer>
+	<key>VolumeAllocationBlockSize</key>
+	<integer>4096</integer>
+	<key>VolumeName</key>
+	<string>Macintosh HD — Data</string>
+	<key>VolumeSize</key>
+	<integer>0</integer>
+	<key>VolumeUUID</key>
+	<string>34544CD1-0205-44F3-885C-7E1C28DAE1BB</string>
+	<key>WholeDisk</key>
+	<false/>
+	<key>Writable</key>
+	<true/>
+	<key>WritableMedia</key>
+	<true/>
+	<key>WritableVolume</key>
+	<true/>
+</dict>
+</plist>""".split("\n")
         ]
 
         self.diskutil_mock_multiple = ["\n".join(i) for i in out]
