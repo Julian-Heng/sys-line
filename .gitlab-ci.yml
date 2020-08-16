@@ -29,14 +29,20 @@ pylint:
   script:
     - python -m pylint --rcfile=./.pylintrc ./src/sys_line
 
-unittest:
-  stage: test
+.unittest_template: &unittest_definition
   script:
     - cd ./src
     - python3 -m unittest -v
 
-run_test:
-  stage: test
+.runtime_template: &runtime_definition
   script:
     - cd ./src
     - python3 -m sys_line -a
+
+unittest:
+  stage: test
+  <<: *unittest_definition
+
+runtime_test:
+  stage: test
+  <<: *runtime_definition
