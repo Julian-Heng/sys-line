@@ -86,9 +86,10 @@ def parse_cli(args):
                                 metavar="int")
 
     groups["disk"].add_argument("-dd", "--disk", nargs="*", action="append",
-                                default=[], metavar="disk")
+                                default=[], metavar="disk", dest="disk_disk")
     groups["disk"].add_argument("-dm", "--mount", nargs="*", action="append",
-                                default=["/"], metavar="mount")
+                                default=["/"], metavar="mount",
+                                dest="disk_mount")
     groups["disk"].add_argument("-dsd", "--disk-short-dev",
                                 action="store_true", default=False)
     groups["disk"].add_argument("-dup", "--disk-used-prefix",
@@ -129,10 +130,10 @@ def parse_cli(args):
 
     groups["date"].add_argument("-tdf", "--date-format",
                                 action="store", type=str, default="%a, %d %h",
-                                metavar="str")
+                                metavar="str", dest="date_date_format")
     groups["date"].add_argument("-tf", "--time-format",
                                 action="store", type=str, default="%H:%M",
-                                metavar="str")
+                                metavar="str", dest="date_time_format")
 
     groups["misc"].add_argument("-mvr", "--misc-volume-round",
                                 action="store", type=int, default=0,
@@ -170,37 +171,37 @@ def process_args(args):
     """
     options = dict()
 
-    # Flatten the list of formats if it is not the default
-    if args.format != [""]:
-        args.format = flatten(args.format[1:])
-
-    # Flatten the list of disks if it is not the default
-    if args.disk:
-        args.disk = unique(flatten(args.disk))
-        # Clear mount list if it is default since disk is set
-        if args.mount == ["/"]:
-            args.mount = list()
-
-    # Flatten the list of mounts if it is not default
-    if args.mount and args.mount != ["/"]:
-        args.mount = unique(flatten(args.mount[1:]))
-
     # Split the argparse namespace into multiple namespaces
     for key, value in vars(args).items():
         if key in ["format", "all"]:
             options[key] = value
-        elif key in ["disk", "mount"]:
-            if "disk" not in options:
-                options["disk"] = dict()
-            options["disk"][key] = value
-        elif key in ["date_format", "time_format"]:
-            if "date" not in options:
-                options["date"] = dict()
-            options["date"][key] = value
         else:
             domain, info = key.split("_", 1)
             if domain not in options:
                 options[domain] = dict()
             options[domain][info] = value
 
-    return dict_to_namespace(options)
+    result = dict_to_namespace(options)
+
+    # Flatten the list of formats if it is not the default
+    if result.format != [""]:
+        result.format = flatten(result.format[1:])
+
+    disk = result.disk.disk
+    mount = result.disk.mount
+
+    # Flatten the list of disks if it is not the default
+    if disk:
+        disk = unique(flatten(disk))
+        # Clear mount list if it is default since disk is set
+        if mount == ["/"]:
+            mount = list()
+
+    # Flatten the list of mounts if it is not default
+    if mount and mount != ["/"]:
+        mount = unique(flatten(mount[1:]))
+
+    result.disk.disk = disk
+    result.disk.mount = mount
+
+    return result
