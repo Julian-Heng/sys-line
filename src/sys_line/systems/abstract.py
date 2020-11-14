@@ -616,6 +616,38 @@ class Date(AbstractGetter):
         return Date._format(self.options.time_format)
 
 
+class AbstractWindowManager(AbstractGetter):
+    """ Abstract window manager class to be implemented by subclass """
+
+    @property
+    def _valid_info(self):
+        return ["desktop_index", "desktop_name", "app_name", "window_name"]
+
+    @property
+    @abstractmethod
+    def desktop_index(self):
+        """ Abstract desktop index method to be implemented by subclass """
+
+    @property
+    @abstractmethod
+    def desktop_name(self):
+        """ Abstract desktop name method to be implemented by subclass """
+
+    @property
+    @abstractmethod
+    def app_name(self):
+        """
+        Abstract focused application name method to be implemented by subclass
+        """
+
+    @property
+    @abstractmethod
+    def window_name(self):
+        """
+        Abstract focused window name method to be implemented by subclass
+        """
+
+
 class AbstractMisc(AbstractGetter):
     """ Misc class for fetching miscellaneous information """
 
@@ -668,9 +700,9 @@ class System(ABC):
     """
 
     DOMAINS = ("cpu", "memory", "swap", "disk",
-               "battery", "network", "date", "misc")
+               "battery", "network", "date", "window manager", "misc")
     SHORT_DOMAINS = ("cpu", "mem", "swap", "disk",
-                     "bat", "net", "date", "misc")
+                     "bat", "net", "date", "wm", "misc")
 
     def __init__(self, options, **kwargs):
         super(System, self).__init__()
@@ -699,6 +731,11 @@ class System(ABC):
                   sep="\n", file=sys.stderr)
 
         return system
+
+    @staticmethod
+    @abstractmethod
+    def detect_window_manager():
+        """ Abstract static method to detect the system's window manager """
 
     def query(self, domain):
         """ Queries a system for a domain and info """
