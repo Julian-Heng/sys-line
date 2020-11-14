@@ -86,7 +86,7 @@ class Swap(AbstractSwap):
     def _lookup_swap(self, search):
         value = 0
 
-        regex = r"{} = (\d+\.\d+)M".format(search)
+        regex = fr"{search} = (\d+\.\d+)M"
         match = re.search(regex, self.swapusage)
 
         if match:

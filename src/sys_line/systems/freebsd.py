@@ -58,7 +58,7 @@ class Memory(AbstractMemory):
         total = int(Sysctl.query("hw.realmem"))
         pagesize = int(Sysctl.query("hw.pagesize"))
 
-        keys = [int(Sysctl.query("vm.stats.vm.v_{}_count".format(i)))
+        keys = [int(Sysctl.query(f"vm.stats.vm.v_{i}_count"))
                 for i in ["inactive", "free", "cache"]]
 
         used = total - sum([i * pagesize for i in keys])

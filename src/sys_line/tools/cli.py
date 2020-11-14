@@ -16,21 +16,25 @@ from ..systems.abstract import System
 
 def parse_cli(args):
     """ Parse the program arguments """
+    domains = ", ".join(System.SHORT_DOMAINS)
+    prefixes = ", ".join(Storage.PREFIXES)
+
     fmt = argparse.RawDescriptionHelpFormatter
     desc = "a simple status line generator"
-    epilog = textwrap.dedent("""
+    epilog = textwrap.dedent(f"""
         list of domains:
-            {}
+            {domains}
 
         list of prefixes:
-            {}
-    """.format(", ".join(System.SHORT_DOMAINS), ", ".join(Storage.PREFIXES)))
+            {prefixes}
+    """)
+
+    py_impl = python_implementation()
+    py_ver = python_version()
+    py_build = " ".join(python_build())
 
     usage_msg = "%(prog)s [options] format..."
-    ver = "%(prog)s ("
-
-    ver = "{}{} {}, {})".format(ver, python_implementation(), python_version(),
-                                " ".join(python_build()))
+    ver = f"%(prog)s ({py_impl} {py_ver}, {py_build})"
 
     parser = argparse.ArgumentParser(description=desc, epilog=epilog,
                                      usage=usage_msg,

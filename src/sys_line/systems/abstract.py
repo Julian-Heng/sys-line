@@ -41,7 +41,7 @@ class AbstractGetter(ABC):
     def query(self, info, options):
         """ Returns the value of info """
         if info not in self._valid_info:
-            msg = "info name '{}' is not in domain".format(info)
+            msg = f"info name '{info}' is not in domain"
             raise RuntimeError(msg)
         return self._query(info, options)
 
@@ -79,11 +79,11 @@ class AbstractGetter(ABC):
                 # A prefix option needs to be one of the prefixes
                 if k == "prefix":
                     if v not in Storage.PREFIXES:
-                        msg = "invalid value for prefix: {}".format(v)
+                        msg = f"invalid value for prefix: {v}"
                         raise RuntimeError(msg)
 
                 if (hasattr(self.options, k) or
-                        hasattr(self.options, "{}_{}".format(info, k))):
+                        hasattr(self.options, f"{info}_{k}")):
                     # Boolean options does not require the info name as part of
                     # the option
                     if v in ["True", "False"]:
@@ -92,10 +92,10 @@ class AbstractGetter(ABC):
                     else:
                         if v.isnumeric():
                             v = int(v)
-                        key = "{}_{}".format(info, k)
+                        key = f"{info}_{k}"
                     opts[key] = v
                 else:
-                    msg = "no such option in domain: {}".format(i)
+                    msg = f"no such option in domain: {i}"
                     raise RuntimeError(msg)
 
         return opts
@@ -105,19 +105,19 @@ class AbstractGetter(ABC):
         if hasattr(self.options, opt_name):
             # Check if the option name is actually a boolean and set to true
             if isinstance(getattr(self.options, opt_name), bool):
-                opt_name = "{}=True".format(opt_name)
+                opt_name = f"{opt_name}=True"
             else:
-                msg = "option requires value: {}".format(opt_name)
+                msg = f"option requires value: {opt_name}"
                 raise RuntimeError(msg)
         else:
-            msg = "no such option in domain: {}".format(opt_name)
+            msg = f"no such option in domain: {opt_name}"
             raise RuntimeError(msg)
         return opt_name
 
     def __str__(self):
         """ The string representation of the getter would return all values """
         return "\n".join([
-            "{}.{}: {}".format(self.domain_name, i, getattr(self, i))
+            f"{self.domain_name}.{i}: {getattr(self, i)}"
             for i in self._valid_info
         ])
 
@@ -208,10 +208,10 @@ class AbstractCpu(AbstractGetter):
         cpu = trim_reg.sub("", cpu.strip())
 
         if speed is not None:
-            fmt = r" ({}) @ {}GHz".format(cores, speed)
+            fmt = fr" ({cores}) @ {speed}GHz"
             cpu = cpu_reg.sub(fmt, cpu)
         else:
-            fmt = r"({}) @".format(cores)
+            fmt = fr"({cores}) @"
             cpu = re.sub(r"@", fmt, cpu)
 
         cpu = re.sub(r"\s+", " ", cpu)
@@ -351,9 +351,11 @@ class AbstractDisk(AbstractStorage):
 
         reg = list()
         if self.options.disk:
-            reg.append(r"^({})".format(r"|".join(self.options.disk)))
+            disks = r"|".join(self.options.disk)
+            reg.append(fr"^({disks})")
         if self.options.mount:
-            reg.append(r"({})$".format(r"|".join(self.options.mount)))
+            mounts = r"|".join(self.options.mount)
+            reg.append(fr"({mounts})$")
         reg = re.compile(r"|".join(reg))
 
         if self._df is not None:
@@ -666,15 +668,15 @@ class System(ABC):
             mod = import_module(mod_name)
             system = getattr(mod, os_name)(options)
         except ModuleNotFoundError:
-            print("Unknown system: {}\nExiting...".format(os_name),
-                  file=sys.stderr)
+            print(f"Unknown system: '{os_name}'", "Exiting...",
+                  sep="\n", file=sys.stderr)
 
         return system
 
     def query(self, domain):
         """ Queries a system for a domain and info """
         if domain not in self._getters.keys():
-            msg = "domain name '{}' not in system".format(domain)
+            msg = f"domain name '{domain}' not in system"
             raise RuntimeError(msg)
 
         if self._getters_cache[domain] is None:

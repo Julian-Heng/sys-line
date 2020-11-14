@@ -72,7 +72,7 @@ class Cpu(AbstractCpu):
 
         temp = None
         files = (f for f in glob(Linux.FILES["sys_hwmon"])
-                 if check("{}/name".format(f)))
+                 if check(f"{f}/name"))
 
         temp_dir = next(files, None)
         if temp_dir is not None:
@@ -192,7 +192,7 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def status(self):
         """ Returns cached battery status file """
-        return open_read("{}/status".format(Linux.bat_dir())).strip()
+        return open_read(f"{Linux.bat_dir()}/status").strip()
 
     @property
     @lru_cache(maxsize=1)
@@ -264,25 +264,25 @@ class BatteryAmp(Battery):
     @lru_cache(maxsize=1)
     def current(self):
         """ Returns current charge filename """
-        return "{}/charge_now".format(Linux.bat_dir())
+        return f"{Linux.bat_dir()}/charge_now"
 
     @property
     @lru_cache(maxsize=1)
     def full(self):
         """ Returns full charge filename """
-        return "{}/charge_full".format(Linux.bat_dir())
+        return f"{Linux.bat_dir()}/charge_full"
 
     @property
     @lru_cache(maxsize=1)
     def drain(self):
         """ Returns current filename """
-        return "{}/current_now".format(Linux.bat_dir())
+        return f"{Linux.bat_dir()}/current_now"
 
     @property
     def power(self):
         power = None
         if Linux.bat_dir() is not None:
-            voltage = int(open_read("{}/voltage_now".format(Linux.bat_dir())))
+            voltage = int(open_read(f"{Linux.bat_dir()}/voltage_now"))
             power = (self.drain_rate * voltage) / 1e12
             power = round_trim(power, self.options.power_round)
 
@@ -296,19 +296,19 @@ class BatteryWatt(Battery):
     @lru_cache(maxsize=1)
     def current(self):
         """ Returns current energy filename """
-        return "{}/energy_now".format(Linux.bat_dir())
+        return f"{Linux.bat_dir()}/energy_now"
 
     @property
     @lru_cache(maxsize=1)
     def full(self):
         """ Returns full energy filename """
-        return "{}/energy_full".format(Linux.bat_dir())
+        return f"{Linux.bat_dir()}/energy_full"
 
     @property
     @lru_cache(maxsize=1)
     def drain(self):
         """ Returns power filename """
-        return "{}/power_now".format(Linux.bat_dir())
+        return f"{Linux.bat_dir()}/power_now"
 
     @property
     def power(self):
@@ -352,7 +352,7 @@ class Network(AbstractNetwork):
     @property
     def dev(self):
         def check(_file):
-            return open_read("{}/operstate".format(_file)).strip() == "up"
+            return open_read(f"{_file}/operstate").strip() == "up"
 
         def find(_dir):
             return p(_dir).glob("[!v]*")
@@ -379,8 +379,9 @@ class Network(AbstractNetwork):
         return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
-        net = "{}/{}/statistics/{{}}_bytes".format(Linux.FILES["sys_net"], dev)
-        stat_file = net.format("tx" if mode == "up" else "rx")
+        net = Linux.FILES["sys_net"]
+        mode = "tx" if mode == "up" else "rx"
+        stat_file = f"{net}/{dev}/statistics/{mode}_bytes"
         return int(open_read(stat_file))
 
 
@@ -393,7 +394,7 @@ class Misc(AbstractMisc):
             return _dir.is_dir() and _dir.name.isdigit()
 
         def extract(_file):
-            return open_read("{}/cmdline".format(_file))
+            return open_read(f"{_file}/cmdline")
 
         systems = {"pulseaudio": Linux.vol_pulseaudio}
 
@@ -427,8 +428,8 @@ class Misc(AbstractMisc):
             scr_dir = next(scr_files, None)
 
             if scr_dir is not None:
-                curr = int(open_read("{}/brightness".format(scr_dir)))
-                max_scr = int(open_read("{}/max_brightness".format(scr_dir)))
+                curr = int(open_read(f"{scr_dir}/brightness"))
+                max_scr = int(open_read(f"{scr_dir}/max_brightness"))
                 scr = percent(curr, max_scr)
                 scr = round_trim(scr, self.options.screen_round)
 
@@ -485,7 +486,7 @@ class Linux(System):
             return p(_file).exists() and bool(int(open_read(_file)))
 
         _bat_dir = p(Linux.FILES["sys_power_supply"]).glob("*BAT*")
-        _bat_dir = (d for d in _bat_dir if check("{}/present".format(d)))
+        _bat_dir = (d for d in _bat_dir if check(f"{d}/present"))
         return next(_bat_dir, None)
 
     @staticmethod
@@ -514,8 +515,8 @@ class Linux(System):
             return p(_dir).exists()
 
         avail = {
-            "{}/charge_now".format(Linux.bat_dir()): BatteryAmp,
-            "{}/energy_now".format(Linux.bat_dir()): BatteryWatt
+            f"{Linux.bat_dir()}/charge_now": BatteryAmp,
+            f"{Linux.bat_dir()}/energy_now": BatteryWatt
         }
 
         return next((v for k, v in avail.items() if check(k)), BatteryStub)
@@ -530,7 +531,7 @@ class Linux(System):
         vol = None
         default = default_reg.search(pac_dump)
         if default is not None:
-            vol_reg = r"^set-sink-volume {} 0x(.*)$".format(default.group(1))
+            vol_reg = fr"^set-sink-volume {default.group(1)} 0x(.*)$"
             vol_reg = re.compile(vol_reg, re.M)
             vol = vol_reg.search(pac_dump)
             if vol is not None:

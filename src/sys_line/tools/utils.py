@@ -40,13 +40,13 @@ def unix_epoch_to_str(secs):
     hours = int((secs / 3600) % 24)
     mins = int((secs / 60) % 60)
     secs = (secs % 60) % 60
-    string = "{} {} {} {}".format(
-        "{}d".format(days) if days else "",
-        "{}h".format(hours) if hours else "",
-        "{}m".format(mins) if mins else "",
-        "{}s".format(secs) if secs else ""
-    )
 
+    days = f"{days}d" if days else ""
+    hours = f"{hours}h" if hours else ""
+    mins = f"{mins}m" if mins else ""
+    secs = f"{secs}s" if secs else ""
+
+    string = f"{days} {hours} {mins} {secs}"
     string = trim_string(string)
     return string if string else None
 

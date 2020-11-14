@@ -15,7 +15,7 @@ class Storage():
 
     def __init__(self, value, prefix, rounding=-1):
         if prefix not in Storage.PREFIXES:
-            raise TypeError("prefix '{}' not valid".format(prefix))
+            raise TypeError(f"prefix '{prefix}' not valid")
 
         self._value = value
         self._prefix = prefix
@@ -28,7 +28,7 @@ class Storage():
             value = round_trim(self.value, self.rounding)
         else:
             value = self.value
-        return "{} {}".format(value, self.prefix)
+        return f"{value} {self.prefix}"
 
     def __str__(self):
         return self.__repr__()
@@ -47,7 +47,7 @@ class Storage():
     def prefix(self, prefix):
         """ Sets the prefix and convert the value accordingly """
         if prefix not in Storage.PREFIXES:
-            raise TypeError("prefix '{}' not valid".format(prefix))
+            raise TypeError(f"prefix '{prefix}' not valid")
 
         if prefix == "auto":
             if self.bytes != 0:
