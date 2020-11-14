@@ -9,6 +9,7 @@ import time
 
 from functools import lru_cache
 
+from . import wm
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
@@ -292,4 +293,17 @@ class Darwin(System):
     def __init__(self, options):
         super(Darwin, self).__init__(options,
                                      cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
-                                     bat=Battery, net=Network, misc=Misc)
+                                     bat=Battery, net=Network,
+                                     wm=Darwin.detect_window_manager(),
+                                     misc=Misc)
+
+    @staticmethod
+    def detect_window_manager():
+        wms = {
+            "yabai": wm.Yabai,
+        }
+
+        ps_out = run(["ps", "-e", "-o", "command"])
+
+        return next((v for k, v in wms.items() if k in ps_out),
+                    wm.WindowManagerStub)
