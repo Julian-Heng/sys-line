@@ -12,7 +12,7 @@ from pathlib import Path as p
 
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
-                       AbstractMisc)
+                       AbstractMisc, BatteryStub)
 from ..tools.utils import open_read, run, percent, round_trim
 
 
@@ -315,33 +315,6 @@ class BatteryWatt(Battery):
         return round_trim(self.drain_rate / 1e6, self.options.power_round)
 
 
-class BatteryStub(AbstractBattery):
-    """ Sub-Battery class for systems that has no battery """
-
-    @property
-    def is_present(self):
-        return False
-
-    @property
-    def is_charging(self):
-        return None
-
-    @property
-    def is_full(self):
-        return None
-
-    @property
-    def percent(self):
-        return None
-
-    def _time(self):
-        return 0
-
-    @property
-    def power(self):
-        return None
-
-
 class Network(AbstractNetwork):
     """ A Linux implementation of the AbstractNetwork class """
 
@@ -511,15 +484,13 @@ class Linux(System):
         So the purpose of this method is to determine which implementation it
         should use
         """
-        def check(_dir):
-            return p(_dir).exists()
-
         avail = {
             f"{Linux.bat_dir()}/charge_now": BatteryAmp,
             f"{Linux.bat_dir()}/energy_now": BatteryWatt
         }
 
-        return next((v for k, v in avail.items() if check(k)), BatteryStub)
+        return next((v for k, v in avail.items() if p(k).exists()),
+                    BatteryStub)
 
     @staticmethod
     @lru_cache(maxsize=1)

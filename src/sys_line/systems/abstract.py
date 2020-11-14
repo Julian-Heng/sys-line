@@ -634,6 +634,33 @@ class AbstractMisc(AbstractGetter):
         """ Abstract screen brightness method to be implemented by subclass """
 
 
+class BatteryStub(AbstractBattery):
+    """ Sub-Battery class for systems that has no battery """
+
+    @property
+    def is_present(self):
+        return False
+
+    @property
+    def is_charging(self):
+        return None
+
+    @property
+    def is_full(self):
+        return None
+
+    @property
+    def percent(self):
+        return None
+
+    def _time(self):
+        return 0
+
+    @property
+    def power(self):
+        return None
+
+
 class System(ABC):
     """
     Abstract System class to store all the assigned getters from the sub class
