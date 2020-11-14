@@ -10,6 +10,7 @@ from abc import abstractmethod
 from functools import lru_cache
 from pathlib import Path as p
 
+from . import wm
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc, BatteryStub)
@@ -436,10 +437,11 @@ class Linux(System):
     }
 
     def __init__(self, options):
-        super(Linux, self).__init__(options, cpu=Cpu, mem=Memory,
-                                    swap=Swap, disk=Disk,
-                                    bat=Linux.detect_battery(),
-                                    net=Network, misc=Misc)
+        super(Linux, self).__init__(options,
+                                    cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
+                                    bat=Linux.detect_battery(), net=Network,
+                                    wm=Linux.detect_window_manager(),
+                                    misc=Misc)
 
     @staticmethod
     @lru_cache(maxsize=1)
@@ -491,6 +493,10 @@ class Linux(System):
 
         return next((v for k, v in avail.items() if p(k).exists()),
                     BatteryStub)
+
+    @staticmethod
+    def detect_window_manager():
+        return wm.WindowManagerStub
 
     @staticmethod
     @lru_cache(maxsize=1)
