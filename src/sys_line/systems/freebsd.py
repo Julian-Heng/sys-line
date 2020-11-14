@@ -8,6 +8,7 @@ import time
 
 from functools import lru_cache
 
+from . import wm
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
@@ -215,4 +216,9 @@ class FreeBSD(System):
         super(FreeBSD, self).__init__(options,
                                       cpu=Cpu, mem=Memory, swap=Swap,
                                       disk=Disk, bat=Battery, net=Network,
+                                      wm=FreeBSD.detect_window_manager(),
                                       misc=Misc)
+
+    @staticmethod
+    def detect_window_manager():
+        return wm.WindowManagerStub
