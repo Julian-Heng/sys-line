@@ -235,9 +235,11 @@ class FreeBSD(System):
         super(FreeBSD, self).__init__(options,
                                       cpu=Cpu, mem=Memory, swap=Swap,
                                       disk=Disk, bat=Battery, net=Network,
-                                      wm=FreeBSD.detect_window_manager(),
+                                      wm=self.detect_window_manager(),
                                       misc=Misc)
 
-    @staticmethod
-    def detect_window_manager():
-        return wm.WindowManagerStub
+    @property
+    def _SUPPORTED_WMS(self):
+        return {
+            "Xorg": wm.Xorg,
+        }

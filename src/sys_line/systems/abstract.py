@@ -749,6 +749,14 @@ class System(ABC):
         self.options = {k: getattr(options, k, None) for k in self._getters}
         self._getters_cache = {k: None for k in self._getters}
 
+    @property
+    @abstractmethod
+    def _SUPPORTED_WMS(self):
+        """
+        Abstract property containing the list of supported window managers for
+        this system
+        """
+
     @staticmethod
     def create_instance(options):
         """
@@ -771,10 +779,11 @@ class System(ABC):
 
         return system
 
-    @staticmethod
-    @abstractmethod
-    def detect_window_manager():
-        """ Abstract static method to detect the system's window manager """
+    def detect_window_manager(self):
+        """ Detects which supported window manager is currently running """
+        ps_out = run(["ps", "-e", "-o", "command"])
+        return next((v for k, v in self._SUPPORTED_WMS.items() if k in ps_out),
+                    WindowManagerStub)
 
     def query(self, domain):
         """ Queries a system for a domain and info """

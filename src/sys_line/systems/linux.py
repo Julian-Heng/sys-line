@@ -458,7 +458,7 @@ class Linux(System):
         super(Linux, self).__init__(options,
                                     cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
                                     bat=Linux.detect_battery(), net=Network,
-                                    wm=Linux.detect_window_manager(),
+                                    wm=self.detect_window_manager(),
                                     misc=Misc)
 
     @staticmethod
@@ -512,9 +512,11 @@ class Linux(System):
         return next((v for k, v in avail.items() if p(k).exists()),
                     BatteryStub)
 
-    @staticmethod
-    def detect_window_manager():
-        return wm.WindowManagerStub
+    @property
+    def _SUPPORTED_WMS(self):
+        return {
+            "Xorg": wm.Xorg,
+        }
 
     @staticmethod
     @lru_cache(maxsize=1)
