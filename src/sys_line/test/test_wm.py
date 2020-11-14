@@ -91,7 +91,7 @@ class TestYabai(unittest.TestCase):
         super(TestYabai, self).tearDown()
         patch.stopall()
 
-    def test__yabai_desktop_index(self):
+    def test__yabai_desktop_index_valid(self):
         self.which_patch.return_value = self.yabai_exe
         self.run_patch.return_value = self.query_spaces_out
 
@@ -106,7 +106,7 @@ class TestYabai(unittest.TestCase):
         ]
         self.assertEqual(args, (expected,))
 
-    def test__yabai_desktop_name(self):
+    def test__yabai_desktop_name_valid(self):
         self.which_patch.return_value = self.yabai_exe
         self.run_patch.return_value = self.query_spaces_out
 
@@ -121,7 +121,7 @@ class TestYabai(unittest.TestCase):
         ]
         self.assertEqual(args, (expected,))
 
-    def test__yabai_app_name(self):
+    def test__yabai_app_name_valid(self):
         self.which_patch.return_value = self.yabai_exe
         self.run_patch.return_value = self.query_windows_out
 
@@ -137,11 +137,73 @@ class TestYabai(unittest.TestCase):
         ]
         self.assertEqual(args, (expected,))
 
-    def test__yabai_window_name(self):
+    def test__yabai_window_name_valid(self):
         self.which_patch.return_value = self.yabai_exe
         self.run_patch.return_value = self.query_windows_out
 
         self.assertEqual(self.wm.window_name, "[0] bash: Julians-MBP")
+
+        args, _ = self.which_patch.call_args
+        self.assertEqual(args, ("yabai",))
+
+        args, _ = self.run_patch.call_args
+        expected = [
+            self.which_patch.return_value, "-m", "query", "--windows",
+            "--window"
+        ]
+        self.assertEqual(args, (expected,))
+
+    def test__yabai_desktop_index_invalid(self):
+        self.which_patch.return_value = self.yabai_exe
+        self.run_patch.return_value = ""
+
+        self.assertEqual(self.wm.desktop_index, None)
+
+        args, _ = self.which_patch.call_args
+        self.assertEqual(args, ("yabai",))
+
+        args, _ = self.run_patch.call_args
+        expected = [
+            self.which_patch.return_value, "-m", "query", "--spaces", "--space"
+        ]
+        self.assertEqual(args, (expected,))
+
+    def test__yabai_desktop_name_invalid(self):
+        self.which_patch.return_value = self.yabai_exe
+        self.run_patch.return_value = ""
+
+        self.assertEqual(self.wm.desktop_name, None)
+
+        args, _ = self.which_patch.call_args
+        self.assertEqual(args, ("yabai",))
+
+        args, _ = self.run_patch.call_args
+        expected = [
+            self.which_patch.return_value, "-m", "query", "--spaces", "--space"
+        ]
+        self.assertEqual(args, (expected,))
+
+    def test__yabai_app_name_invalid(self):
+        self.which_patch.return_value = self.yabai_exe
+        self.run_patch.return_value = ""
+
+        self.assertEqual(self.wm.app_name, None)
+
+        args, _ = self.which_patch.call_args
+        self.assertEqual(args, ("yabai",))
+
+        args, _ = self.run_patch.call_args
+        expected = [
+            self.which_patch.return_value, "-m", "query", "--windows",
+            "--window"
+        ]
+        self.assertEqual(args, (expected,))
+
+    def test__yabai_window_name_invalid(self):
+        self.which_patch.return_value = self.yabai_exe
+        self.run_patch.return_value = ""
+
+        self.assertEqual(self.wm.window_name, None)
 
         args, _ = self.which_patch.call_args
         self.assertEqual(args, ("yabai",))

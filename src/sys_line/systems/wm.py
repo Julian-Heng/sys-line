@@ -45,6 +45,9 @@ class Yabai(AbstractWindowManager):
             return None
 
         result = run([self._yabai_exe, "-m", "query"] + list(args))
+        if not result:
+            return None
+
         result = json.loads(result, object_hook=lambda d: SimpleNamespace(**d))
         return result
 
