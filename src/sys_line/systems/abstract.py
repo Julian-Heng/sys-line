@@ -675,7 +675,7 @@ class System(ABC):
     def __init__(self, options, **kwargs):
         super(System, self).__init__()
         self._getters = dict(kwargs, date=Date)
-        self.options = {k: getattr(options, k) for k in self._getters}
+        self.options = {k: getattr(options, k, None) for k in self._getters}
         self._getters_cache = {k: None for k in self._getters}
 
     @staticmethod
