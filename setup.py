@@ -40,13 +40,32 @@ class CleanCommand(setuptools.Command):
 setuptools.setup(
     name="sys-line",
     version="0.0.0",
+    description="a simple status line generator",
+    url="https://www.gitlab.com/julian-heng/sys-line",
     author="Julian Heng",
     author_email="julianhengwl@gmail.com",
-    description="a simple status line generator",
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX :: BSD :: FreeBSD",
+    ],
+    keywords="system status",
+    project_urls={
+        "Source": "https://www.gitlab.com/julian-heng/sys-line",
+    },
     packages=setuptools.find_packages("src", exclude=["*.test"]),
     package_dir={"": "src"},
+    python_requires=">=3.6",
     entry_points={
         "console_scripts": ["sys-line = sys_line.__main__:main"]
     },
-    cmdclass={"clean": CleanCommand}
+    cmdclass={"clean": CleanCommand},
 )
