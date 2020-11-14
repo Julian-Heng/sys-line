@@ -70,23 +70,3 @@ class Yabai(AbstractWindowManager):
     def window_name(self):
         query = self._yabai_query("--windows", "--window")
         return query.title if query is not None else None
-
-
-class WindowManagerStub(AbstractWindowManager):
-    """ Placeholder window manager """
-
-    @property
-    def desktop_index(self):
-        return None
-
-    @property
-    def desktop_name(self):
-        return None
-
-    @property
-    def app_name(self):
-        return None
-
-    @property
-    def window_name(self):
-        return None

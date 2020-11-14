@@ -712,6 +712,26 @@ class BatteryStub(AbstractBattery):
         return None
 
 
+class WindowManagerStub(AbstractWindowManager):
+    """ Placeholder window manager """
+
+    @property
+    def desktop_index(self):
+        return None
+
+    @property
+    def desktop_name(self):
+        return None
+
+    @property
+    def app_name(self):
+        return None
+
+    @property
+    def window_name(self):
+        return None
+
+
 class System(ABC):
     """
     Abstract System class to store all the assigned getters from the sub class
