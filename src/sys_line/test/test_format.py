@@ -114,6 +114,7 @@ class TestFormatInfo(TestFormatBase):
             self.assertEqual(ft.options, expected["options"])
             self.assertEqual(ft.info, expected["info"])
             self.assertEqual(ft.alt_fmt, expected["alt_fmt"])
+            self.assertEqual(ft.max_length, expected["max_length"])
 
         inputs = {
             "{a.b}": {
@@ -121,22 +122,49 @@ class TestFormatInfo(TestFormatBase):
                 "domain": "a",
                 "options": None,
                 "info": "b",
-                "alt_fmt": None
+                "alt_fmt": None,
+                "max_length": None,
             },
             "{a.b[c]}": {
                 "system": self.system_mock,
                 "domain": "a",
                 "options": "c",
                 "info": "b",
-                "alt_fmt": None
+                "alt_fmt": None,
+                "max_length": None,
             },
             "{a.b[c]?d}": {
                 "system": self.system_mock,
                 "domain": "a",
                 "options": "c",
                 "info": "b",
-                "alt_fmt": "d"
-            }
+                "alt_fmt": "d",
+                "max_length": None,
+            },
+            "{a.b[max_length=50]?d}": {
+                "system": self.system_mock,
+                "domain": "a",
+                "options": "",
+                "info": "b",
+                "alt_fmt": "d",
+                "max_length": 50,
+            },
+            "{a.b[c,max_length=50]?d}": {
+                "system": self.system_mock,
+                "domain": "a",
+                "options": "c,",
+                "info": "b",
+                "alt_fmt": "d",
+                "max_length": 50,
+            },
+            "{a.b[max_length=50,c]?d}": {
+                "system": self.system_mock,
+                "domain": "a",
+                "options": ",c",
+                "info": "b",
+                "alt_fmt": "d",
+                "max_length": 50,
+            },
         }
 
         for key, value in inputs.items():
