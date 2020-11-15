@@ -18,6 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# pylint: disable=invalid-name
+# pylint: disable=no-member
 # pylint: disable=too-few-public-methods
 
 """ String builder module to construct a string from a format """
@@ -63,6 +65,10 @@ class FormatTree(FormatNode):
 class FormatInfo(FormatNode):
     """ A FormatInfo class that contains a domain and info to query from """
 
+    FORMAT_OPTIONS = {
+        "max_length": int,
+    }
+
     EXTRACT_REGEX = re.compile(
         r"\{\s*(?:(\w+)\s*\.\s*(\w+)\s*(?:\[([^\]]+)\])?)\s*(?:\?)?"
     )
@@ -80,6 +86,10 @@ class FormatInfo(FormatNode):
         self.domain = extract.group(1)
         self.info = extract.group(2)
         self.options = extract.group(3)
+
+        # Set all format options to None
+        for k in FormatInfo.FORMAT_OPTIONS:
+            setattr(self, k, None)
 
         if self.fmt.find("?") > -1:
             self.alt_fmt = self.fmt[(self.fmt.find("?") + 1):-1]
@@ -135,6 +145,9 @@ class FormatInfo(FormatNode):
                     replace = self.alt.build().replace("{}", replace)
         else:
             replace = ""
+
+        if self.max_length is not None and len(replace) > self.max_length:
+            replace = f"{replace[:self.max_length]}..."
 
         return replace
 
