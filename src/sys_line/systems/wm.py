@@ -87,70 +87,61 @@ class Xorg(AbstractWindowManager):
         if not self._xprop_exe:
             return None
 
-        window_id = run(
-            [self._xprop_exe, "-root", "32x", r"\t$0", "_NET_ACTIVE_WINDOW"]
-        ).split()[1]
+        window_id = run([
+            self._xprop_exe, "-root", "-notype", "32x", r"\n$0",
+            "_NET_ACTIVE_WINDOW"
+        ]).split("\n")[-1]
+
         return window_id
 
-    def _xprop_query(self, prop, window_id=None):
+    def _xprop_query(self, fmt, prop, window_id=None):
         if not self._xprop_exe:
             return None
 
         if window_id is None:
-            cmd = [self._xprop_exe, "-root", "-notype", prop]
+            cmd = [self._xprop_exe, "-root", "-notype", fmt, "\n$0+", prop]
         else:
-            cmd = [self._xprop_exe, "-id", window_id, prop]
+            cmd = [self._xprop_exe, "-notype", "-id", window_id, fmt, "\n$0+",
+                   prop]
 
-        result = run(cmd).strip().split("\n")
+        out = run(cmd)
+        out = out.split("\n")[-1]
+        out = shlex.split(out)
+        out = [trim_string(i.rstrip(",")) for i in out]
 
-        if not result:
-            return None
-
-        if len(result) > 1:
-            result = list(map(trim_string, result[1:]))
-        else:
-            result = result[0]
-
-            if " = " in result:
-                result = result.split(" = ")[-1]
-            elif ":" in result:
-                result = result.split(":")[-1]
-
-            if "not found" in result:
-                result = None
-            else:
-                result = shlex.split(result)
-                result = [trim_string(i.rstrip(",")) for i in result]
-
-        if result is not None and len(result) == 1:
-            result = result[0]
-
-        return result
+        return out
 
     @property
     def desktop_index(self):
-        index = self._xprop_query("_NET_CURRENT_DESKTOP")
+        index = self._xprop_query("0c", "_NET_CURRENT_DESKTOP")[-1]
         return index
 
     @property
     def desktop_name(self):
+        name = None
         index = self.desktop_index
-        desktops = self._xprop_query("_NET_DESKTOP_NAMES")
-        name = desktops[int(index)]
+        desktops = self._xprop_query("8u", "_NET_DESKTOP_NAMES")
+
+        if index is not None and desktops is not None:
+            name = desktops[int(index)]
         return name
 
     @property
     def app_name(self):
         window_id = self._current_window_id
-        name = self._xprop_query("WM_CLASS", window_id=window_id)
-        if len(name) > 0:
-            name = name[0]
+        name = self._xprop_query("8s", "WM_CLASS", window_id=window_id)
+
+        if name is not None:
+            name = name[-1]
+
         return name
 
     @property
     def window_name(self):
         window_id = self._current_window_id
-        name = self._xprop_query("WM_NAME", window_id=window_id)
-        if not name:
-            name = None
+        name = self._xprop_query("8s", "WM_NAME", window_id=window_id)
+
+        if name is not None:
+            name = name[-1]
+
         return name
