@@ -22,7 +22,7 @@ import unittest
 
 from unittest.mock import MagicMock, PropertyMock, patch
 
-from ..systems.wm import Yabai, WindowManagerStub
+from ..systems.wm import Yabai
 
 
 class TestYabai(unittest.TestCase):

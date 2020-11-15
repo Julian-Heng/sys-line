@@ -21,13 +21,14 @@
 """ Window manager implementations """
 
 import json
+import shlex
 import shutil
 
 from functools import lru_cache
 from types import SimpleNamespace
 
 from .abstract import AbstractWindowManager
-from ..tools.utils import run
+from ..tools.utils import run, trim_string
 
 
 class Yabai(AbstractWindowManager):
@@ -72,21 +73,84 @@ class Yabai(AbstractWindowManager):
         return query.title if query is not None else None
 
 
-class WindowManagerStub(AbstractWindowManager):
-    """ Placeholder window manager """
+class Xorg(AbstractWindowManager):
+    """ Xorg window managers implementation """
+
+    @property
+    @lru_cache(maxsize=1)
+    def _xprop_exe(self):
+        """ Returns the path to the yabai executable """
+        return shutil.which("xprop")
+
+    @property
+    def _current_window_id(self):
+        if not self._xprop_exe:
+            return None
+
+        window_id = run(
+            [self._xprop_exe, "-root", "32x", r"\t$0", "_NET_ACTIVE_WINDOW"]
+        ).split()[1]
+        return window_id
+
+    def _xprop_query(self, prop, window_id=None):
+        if not self._xprop_exe:
+            return None
+
+        if window_id is None:
+            cmd = [self._xprop_exe, "-root", "-notype", prop]
+        else:
+            cmd = [self._xprop_exe, "-id", window_id, prop]
+
+        result = run(cmd).strip().split("\n")
+
+        if not result:
+            return None
+
+        if len(result) > 1:
+            result = list(map(trim_string, result[1:]))
+        else:
+            result = result[0]
+
+            if " = " in result:
+                result = result.split(" = ")[-1]
+            elif ":" in result:
+                result = result.split(":")[-1]
+
+            if "not found" in result:
+                result = None
+            else:
+                result = shlex.split(result)
+                result = [trim_string(i.rstrip(",")) for i in result]
+
+        if result is not None and len(result) == 1:
+            result = result[0]
+
+        return result
 
     @property
     def desktop_index(self):
-        return None
+        index = self._xprop_query("_NET_CURRENT_DESKTOP")
+        return index
 
     @property
     def desktop_name(self):
-        return None
+        index = self.desktop_index
+        desktops = self._xprop_query("_NET_DESKTOP_NAMES")
+        name = desktops[int(index)]
+        return name
 
     @property
     def app_name(self):
-        return None
+        window_id = self._current_window_id
+        name = self._xprop_query("WM_CLASS", window_id=window_id)
+        if len(name) > 0:
+            name = name[0]
+        return name
 
     @property
     def window_name(self):
-        return None
+        window_id = self._current_window_id
+        name = self._xprop_query("WM_NAME", window_id=window_id)
+        if not name:
+            name = None
+        return name
