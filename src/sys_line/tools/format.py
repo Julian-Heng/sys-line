@@ -18,6 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# pylint: disable=invalid-name
+# pylint: disable=no-member
 # pylint: disable=too-few-public-methods
 
 """ String builder module to construct a string from a format """
@@ -63,7 +65,17 @@ class FormatTree(FormatNode):
 class FormatInfo(FormatNode):
     """ A FormatInfo class that contains a domain and info to query from """
 
-    EXTRACT_REGEX = re.compile(r"\{(?:(\w+)\.(\w+)(?:\[([^\]]+)\])?)(?:\?)?")
+    FORMAT_OPTIONS = {
+        "max_length": int,
+    }
+
+    EXTRACT_REGEX = re.compile(
+        r"\{\s*(?:(\w+)\s*\.\s*(\w+)\s*(?:\[([^\]]+)\])?)\s*(?:\?)?"
+    )
+
+    FORMAT_OPTIONS_EXTRACT_REGEX = re.compile(
+        r"({})(?:=(\w+))?".format(r"|".join(FORMAT_OPTIONS.keys()))
+    )
 
     def __init__(self, system, fmt):
         super(FormatInfo, self).__init__(system, fmt)
@@ -75,12 +87,51 @@ class FormatInfo(FormatNode):
         self.info = extract.group(2)
         self.options = extract.group(3)
 
+        # Set all format options to None
+        for k in FormatInfo.FORMAT_OPTIONS:
+            setattr(self, k, None)
+
         if self.fmt.find("?") > -1:
             self.alt_fmt = self.fmt[(self.fmt.find("?") + 1):-1]
             self.alt = FormatTree(self.system, self.alt_fmt)
         else:
             self.alt_fmt = None
             self.alt = None
+
+        # Parse any fomrat specific options within the option string
+        self._parse_format_options()
+
+    def _parse_format_options(self):
+        if self.options is None:
+            return
+
+        opts = dict()
+
+        reg = FormatInfo.FORMAT_OPTIONS_EXTRACT_REGEX
+        for fmt_opt in reg.finditer(self.options):
+            fmt_opt_key = fmt_opt.group(1)
+            fmt_opt_value = fmt_opt.group(2)
+            fmt_opt_type = FormatInfo.FORMAT_OPTIONS[fmt_opt_key]
+
+            if fmt_opt_type is int:
+                if not fmt_opt_value.isnumeric():
+                    msg = f"invalid value for '{fmt_opt_key}': {fmt_opt_value}"
+                    raise RuntimeError(msg)
+                fmt_opt_value = int(fmt_opt_value)
+            elif fmt_opt_type is bool:
+                if fmt_opt_value is None:
+                    fmt_opt_value = True
+                else:
+                    fmt_opt_value = bool(fmt_opt_value)
+            else:
+                fmt_opt_value = None
+
+            opts[fmt_opt_key] = fmt_opt_value
+
+        for k, v in opts.items():
+            setattr(self, k, v)
+
+        self.options = reg.sub("", self.options)
 
     def build(self):
         domain = self.system.query(self.domain)
@@ -94,6 +145,9 @@ class FormatInfo(FormatNode):
                     replace = self.alt.build().replace("{}", replace)
         else:
             replace = ""
+
+        if self.max_length is not None and len(replace) > self.max_length:
+            replace = f"{replace[:self.max_length]}..."
 
         return replace
 
