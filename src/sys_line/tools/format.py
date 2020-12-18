@@ -166,7 +166,6 @@ class Tokenizer():
     """ Tokenizer class to gather tokens in the format string """
 
     # State enums to store the tokenizer state
-    START = -1
     INSIDE = 0
     OUTSIDE = 1
 
@@ -179,18 +178,13 @@ class Tokenizer():
 
         tokens = list()
         token = ""
-        state = Tokenizer.START
+        state = Tokenizer.OUTSIDE
         level = 0
 
         for i in string:
             if i == "{":
                 level += 1
-                if state == Tokenizer.START:
-                    state = Tokenizer.INSIDE
-                    if token:
-                        tokens.append(token)
-                    token = ""
-                elif state == Tokenizer.OUTSIDE:
+                if state == Tokenizer.OUTSIDE:
                     state = Tokenizer.INSIDE
                     if token:
                         tokens.append(token)
