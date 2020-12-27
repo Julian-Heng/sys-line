@@ -46,7 +46,7 @@ unittest:latest:
   <<: *unittest_definition
 
 unittest:minimum:
-  image: python:3.6.11
+  image: python:3.6.12
   stage: test
   <<: *unittest_definition
 
@@ -56,6 +56,6 @@ runtime_test:latest:
   <<: *runtime_definition
 
 runtime_test:minimum:
-  image: python:3.6.11
+  image: python:3.6.12
   stage: test
   <<: *runtime_definition
