@@ -49,70 +49,89 @@ class Cpu(AbstractCpu):
 
     @property
     @lru_cache(maxsize=1)
-    def cpu_file(self):
+    def _cpu_file(self):
         """ Returns cached /proc/cpuinfo """
         return open_read(Cpu.FILES["proc_cpu"])
 
     @property
     @lru_cache(maxsize=1)
+    def _cpu_speed_file_path(self):
+        speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
+        speed_dir = Cpu.FILES["sys_cpu"]
+        path = (f for f in p(speed_dir).rglob("*") if speed_reg.search(str(f)))
+        return next(path, None)
+
+    @property
+    @lru_cache(maxsize=1)
+    def _cpu_temp_file_paths(self):
+        def check(_file):
+            return _file.exists() and "temp" in open_read(_file)
+
+        temp_files = None
+        temp_dir_base = Cpu.FILES["sys_hwmon"]
+        files = (f for f in p(temp_dir_base).glob("*")
+                if check(f.joinpath("name")))
+
+        temp_dir = next(files, None)
+        if temp_dir is not None:
+            temp_files = sorted(p(temp_dir).glob("temp*_input"))
+
+        return temp_files
+
+    @property
+    @lru_cache(maxsize=1)
+    def _cpu_fan_file_path(self):
+        files = (f for f in p(Cpu.FILES["sys_platform"]).rglob("fan1_input"))
+        return next(files, None)
+
+    @property
+    @lru_cache(maxsize=1)
     def cores(self):
-        return len(re.findall(r"^processor", self.cpu_file, re.M))
+        return len(re.findall(r"^processor", self._cpu_file, re.M))
+
+    def _cpu_string(self):
+        cpu = None
+        m = re.search(r"model name\s+: (.*)", self._cpu_file, re.M)
+        if m is not None:
+            cpu = m.group(1)
+        return cpu
 
     def _cpu_speed(self):
-        def check(_file):
-            return speed_reg.search(str(_file))
-
-        speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
-        cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
-
-        speed_dir = Cpu.FILES["sys_cpu"]
-        speed = next((f for f in p(speed_dir).rglob("*") if check(f)), None)
-
-        if speed is not None:
-            speed = float(open_read(speed))
-            speed = round_trim(speed / 1e6, 2)
-
-        return cpu, speed
+        speed = None
+        speed_file = self._cpu_speed_file_path
+        if speed_file is not None:
+            speed = round_trim(float(open_read(speed_file)) / 1e6, 2)
+        return speed
 
     def _load_avg(self):
-        return open_read(Cpu.FILES["proc_load"]).split(" ")[:3]
+        load = None
+        load_file = open_read(Cpu.FILES["proc_load"])
+        if load_file is not None:
+            load = load_file.split(" ")[:3]
+        return load
 
     @property
     def fan(self):
         fan = None
-        fan_dir = Cpu.FILES["sys_platform"]
-        glob = "fan1_input"
-        files = (f for f in p(fan_dir).rglob(glob))
-
-        fan = next(files, None)
-        if fan is not None:
-            fan = int(open_read(fan).strip())
-
+        fan_file = self._cpu_fan_file_path
+        if fan_file is not None:
+            fan = int(open_read(fan_file).strip())
         return fan
 
     @property
     def temp(self):
-        def check(_file):
-            return p(_file).exists() and "temp" in open_read(_file)
-
-        def glob(_dir):
-            return p(_dir).glob("*")
-
         temp = None
-        files = (f for f in glob(Cpu.FILES["sys_hwmon"])
-                 if check(f"{f}/name"))
-
-        temp_dir = next(files, None)
-        if temp_dir is not None:
-            files = sorted(p(temp_dir).glob("temp*_input"))
-            if files:
-                temp = float(open_read(str(files[0]))) / 1000
-
+        temp_files = self._cpu_temp_file_paths
+        if temp_files:
+            temp = float(open_read(str(next(iter(temp_files))))) / 1000
         return temp
 
     def _uptime(self):
-        uptime = open_read(Cpu.FILES["proc_uptime"]).strip().split(" ")[0]
-        return int(float(uptime))
+        uptime = None
+        uptime_file = open_read(Cpu.FILES["proc_uptime"])
+        if uptime_file is not None:
+            uptime = int(float(uptime_file.strip().split(" ")[0]))
+        return uptime
 
 
 @lru_cache(maxsize=1)
