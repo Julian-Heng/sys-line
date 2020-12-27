@@ -453,15 +453,12 @@ class Network(AbstractNetwork):
         dev = self.dev
 
         if dev is not None:
-            try:
-                wifi_path = Network.FILES["proc_wifi"]
-                wifi_out = open_read(wifi_path).strip().split("\n")
+            wifi_path = Network.FILES["proc_wifi"]
+            wifi_out = open_read(wifi_path)
+            if wifi_out is not None:
                 if len(wifi_out) >= 3 and shutil.which("iw"):
                     ssid_cmd = ("iw", "dev", dev, "link")
                     ssid_reg = re.compile(r"^SSID: (.*)$")
-            except FileNotFoundError:
-                ssid_cmd = None
-                ssid_reg = None
 
         return ssid_cmd, ssid_reg
 
