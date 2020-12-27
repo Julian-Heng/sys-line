@@ -18,6 +18,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# TODO:
+#   - Battery tests
+#   - Network tests
+#   - Misc tests
+
 import unittest
 
 from unittest.mock import MagicMock, PropertyMock, patch
