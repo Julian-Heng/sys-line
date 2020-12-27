@@ -38,11 +38,20 @@ from ..tools.utils import open_read, run, percent, round_trim
 class Cpu(AbstractCpu):
     """ A Linux implementation of the AbstractCpu class """
 
+    FILES = {
+        "proc_cpu": "/proc/cpuinfo",
+        "sys_cpu": "/sys/devices/system/cpu",
+        "proc_load": "/proc/loadavg",
+        "sys_platform": "/sys/devices/platform",
+        "sys_hwmon": "/sys/class/hwmon",
+        "proc_uptime": "/proc/uptime",
+    }
+
     @property
     @lru_cache(maxsize=1)
     def cpu_file(self):
         """ Returns cached /proc/cpuinfo """
-        return open_read(Linux.FILES["proc_cpu"])
+        return open_read(Cpu.FILES["proc_cpu"])
 
     @property
     @lru_cache(maxsize=1)
@@ -56,7 +65,7 @@ class Cpu(AbstractCpu):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         cpu = re.search(r"model name\s+: (.*)", self.cpu_file, re.M).group(1)
 
-        speed_dir = Linux.FILES["sys_cpu"]
+        speed_dir = Cpu.FILES["sys_cpu"]
         speed = next((f for f in p(speed_dir).rglob("*") if check(f)), None)
 
         if speed is not None:
@@ -66,12 +75,12 @@ class Cpu(AbstractCpu):
         return cpu, speed
 
     def _load_avg(self):
-        return open_read(Linux.FILES["proc_load"]).split(" ")[:3]
+        return open_read(Cpu.FILES["proc_load"]).split(" ")[:3]
 
     @property
     def fan(self):
         fan = None
-        fan_dir = Linux.FILES["sys_platform"]
+        fan_dir = Cpu.FILES["sys_platform"]
         glob = "fan1_input"
         files = (f for f in p(fan_dir).rglob(glob))
 
@@ -90,7 +99,7 @@ class Cpu(AbstractCpu):
             return p(_dir).glob("*")
 
         temp = None
-        files = (f for f in glob(Linux.FILES["sys_hwmon"])
+        files = (f for f in glob(Cpu.FILES["sys_hwmon"])
                  if check(f"{f}/name"))
 
         temp_dir = next(files, None)
@@ -102,7 +111,7 @@ class Cpu(AbstractCpu):
         return temp
 
     def _uptime(self):
-        uptime = open_read(Linux.FILES["proc_uptime"]).strip().split(" ")[0]
+        uptime = open_read(Cpu.FILES["proc_uptime"]).strip().split(" ")[0]
         return int(float(uptime))
 
 
@@ -432,14 +441,6 @@ class Linux(System):
     """ A Linux implementation of the abstract System class """
 
     FILES = {
-        # Cpu
-        "proc_cpu": "/proc/cpuinfo",
-        "sys_cpu": "/sys/devices/system/cpu",
-        "proc_load": "/proc/loadavg",
-        "sys_platform": "/sys/devices/platform",
-        "sys_hwmon": "/sys/class/hwmon",
-        "proc_uptime": "/proc/uptime",
-
         # Mem/Swap
         "proc_mem": "/proc/meminfo",
 
