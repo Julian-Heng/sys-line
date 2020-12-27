@@ -115,11 +115,21 @@ class Cpu(AbstractCpu):
         return int(float(uptime))
 
 
+@lru_cache(maxsize=1)
+def _mem_file():
+    """ Returns cached /proc/meminfo """
+    reg = re.compile(r"\s+|kB")
+    mem_file = open_read("/proc/meminfo").strip().split("\n")
+    mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
+    mem_file = {k: int(v) for k, v in mem_file.items()}
+    return mem_file
+
+
 class Memory(AbstractMemory):
     """ A Linux implementation of the AbstractMemory class """
 
     def _used(self):
-        mem_file = Linux.mem_file()
+        mem_file = _mem_file()
         keys = [["MemTotal", "Shmem"],
                 ["MemFree", "Buffers", "Cached", "SReclaimable"]]
         used = sum([mem_file[i] for i in keys[0]])
@@ -127,19 +137,19 @@ class Memory(AbstractMemory):
         return used, "KiB"
 
     def _total(self):
-        return Linux.mem_file()["MemTotal"], "KiB"
+        return _mem_file()["MemTotal"], "KiB"
 
 
 class Swap(AbstractSwap):
-    """ A Linux implementation of the AbstractSwap class """
+    """ A self implementation of the AbstractSwap class """
 
     def _used(self):
-        mem_file = Linux.mem_file()
+        mem_file = _mem_file()
         used = mem_file["SwapTotal"] - mem_file["SwapFree"]
         return used, "KiB"
 
     def _total(self):
-        return Linux.mem_file()["SwapTotal"], "KiB"
+        return _mem_file()["SwapTotal"], "KiB"
 
 
 class Disk(AbstractDisk):
@@ -461,16 +471,6 @@ class Linux(System):
                                     bat=Linux.detect_battery(), net=Network,
                                     wm=self.detect_window_manager(),
                                     misc=Misc)
-
-    @staticmethod
-    @lru_cache(maxsize=1)
-    def mem_file():
-        """ Returns cached /proc/meminfo """
-        reg = re.compile(r"\s+|kB")
-        _mem_file = open_read(Linux.FILES["proc_mem"]).strip().split("\n")
-        _mem_file = dict(reg.sub("", i).split(":", 1) for i in _mem_file)
-        _mem_file = {k: int(v) for k, v in _mem_file.items()}
-        return _mem_file
 
     @staticmethod
     @lru_cache(maxsize=1)
