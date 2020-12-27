@@ -456,6 +456,10 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ A Linux implementation of the AbstractMisc class """
 
+    FILES = {
+        "sys_backlight": "/sys/devices/backlight"
+    }
+
     @property
     def vol(self):
         def check(_dir):
@@ -464,7 +468,7 @@ class Misc(AbstractMisc):
         def extract(_file):
             return open_read(f"{_file}/cmdline")
 
-        systems = {"pulseaudio": Linux.vol_pulseaudio}
+        systems = {"pulseaudio": Misc._vol_pulseaudio}
 
         reg = re.compile(r"|".join(systems.keys()))
 
@@ -489,7 +493,7 @@ class Misc(AbstractMisc):
             return "kbd" not in _file and "backlight" in _file
 
         scr = None
-        backlight_path = p(Linux.FILES["sys_backlight"])
+        backlight_path = p(Misc.FILES["sys_backlight"])
 
         if backlight_path.exists():
             scr_files = (f for f in backlight_path.rglob("*") if check(f.name))
@@ -503,31 +507,9 @@ class Misc(AbstractMisc):
 
         return scr
 
-
-class Linux(System):
-    """ A Linux implementation of the abstract System class """
-
-    FILES = {
-        # Misc
-        "sys_backlight": "/sys/devices/backlight"
-    }
-
-    def __init__(self, options):
-        super(Linux, self).__init__(options,
-                                    cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
-                                    bat=Linux.detect_battery(), net=Network,
-                                    wm=self.detect_window_manager(),
-                                    misc=Misc)
-
-    @property
-    def _SUPPORTED_WMS(self):
-        return {
-            "Xorg": wm.Xorg,
-        }
-
     @staticmethod
     @lru_cache(maxsize=1)
-    def vol_pulseaudio():
+    def _vol_pulseaudio():
         """ Return system volume using pulse audio """
         default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
         pac_dump = run(["pacmd", "dump"])
@@ -542,3 +524,20 @@ class Linux(System):
                 vol = percent(int(vol.group(1), 16), 0x10000)
 
         return vol
+
+
+class Linux(System):
+    """ A Linux implementation of the abstract System class """
+
+    def __init__(self, options):
+        super(Linux, self).__init__(options,
+                                    cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
+                                    bat=Battery.detect_battery(), net=Network,
+                                    wm=self.detect_window_manager(),
+                                    misc=Misc)
+
+    @property
+    def _SUPPORTED_WMS(self):
+        return {
+            "Xorg": wm.Xorg,
+        }
