@@ -408,6 +408,11 @@ class BatteryWatt(Battery):
 class Network(AbstractNetwork):
     """ A Linux implementation of the AbstractNetwork class """
 
+    FILES = {
+        "sys_net": "/sys/class/net",
+        "proc_wifi": "/proc/net/wireless",
+    }
+
     @property
     def _LOCAL_IP_CMD(self):
         return ["ip", "address", "show", "dev"]
@@ -420,7 +425,7 @@ class Network(AbstractNetwork):
         def find(_dir):
             return p(_dir).glob("[!v]*")
 
-        return next((f.name for f in find(Linux.FILES["sys_net"])
+        return next((f.name for f in find(Network.FILES["sys_net"])
                      if check(f)), None)
 
     def _ssid(self):
@@ -430,7 +435,7 @@ class Network(AbstractNetwork):
 
         if dev is not None:
             try:
-                wifi_path = Linux.FILES["proc_wifi"]
+                wifi_path = Network.FILES["proc_wifi"]
                 wifi_out = open_read(wifi_path).strip().split("\n")
                 if len(wifi_out) >= 3 and shutil.which("iw"):
                     ssid_cmd = ("iw", "dev", dev, "link")
@@ -442,7 +447,7 @@ class Network(AbstractNetwork):
         return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
-        net = Linux.FILES["sys_net"]
+        net = Network.FILES["sys_net"]
         mode = "tx" if mode == "up" else "rx"
         stat_file = f"{net}/{dev}/statistics/{mode}_bytes"
         return int(open_read(stat_file))
@@ -505,10 +510,6 @@ class Linux(System):
     FILES = {
         # Mem/Swap
         "proc_mem": "/proc/meminfo",
-
-        # Network
-        "sys_net": "/sys/class/net",
-        "proc_wifi": "/proc/net/wireless",
 
         # Misc
         "sys_backlight": "/sys/devices/backlight"
