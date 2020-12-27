@@ -43,8 +43,11 @@ class Cpu(AbstractCpu):
     def cores(self):
         return int(Sysctl.query("hw.logicalcpu_max"))
 
+    def _cpu_string(self):
+        return Sysctl.query("machdep.cpu.brand_string")
+
     def _cpu_speed(self):
-        return Sysctl.query("machdep.cpu.brand_string"), None
+        return None
 
     def _load_avg(self):
         return Sysctl.query("vm.loadavg").split()[1:4]
