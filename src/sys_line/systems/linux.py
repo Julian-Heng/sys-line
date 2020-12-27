@@ -211,6 +211,10 @@ class Disk(AbstractDisk):
 class Battery(AbstractBattery):
     """ A Linux implementation of the AbstractBattery class """
 
+    FILES = {
+        "sys_power_supply": "/sys/class/power_supply",
+    }
+
     @property
     @abstractmethod
     def current(self):
@@ -230,35 +234,42 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def status(self):
         """ Returns cached battery status file """
-        return open_read(f"{Linux.bat_dir()}/status").strip()
+        return open_read(f"{Battery.bat_dir()}/status").strip()
 
     @property
     @lru_cache(maxsize=1)
     def current_charge(self):
         """ Returns cached battery current charge file """
-        current = self.current
-        return None if Linux.bat_dir() is None else int(open_read(current))
+        if Battery.bat_dir() is not None:
+            return int(open_read(self.current))
+        return None
 
     @property
     @lru_cache(maxsize=1)
     def full_charge(self):
         """ Returns cached battery full charge file """
-        return None if Linux.bat_dir() is None else int(open_read(self.full))
+        if Battery.bat_dir() is not None:
+            return int(open_read(self.full))
+        return None
 
     @property
     @lru_cache(maxsize=1)
     def drain_rate(self):
         """ Returns cached battery drain rate file """
-        return None if Linux.bat_dir() is None else int(open_read(self.drain))
+        if Battery.bat_dir() is not None:
+            return int(open_read(self.drain))
+        return None
 
     @lru_cache(maxsize=1)
     def _compare_status(self, query):
         """ Compares status to query """
-        return None if Linux.bat_dir() is None else self.status == query
+        if Battery.bat_dir() is not None:
+            return self.status == query
+        return None
 
     @property
     def is_present(self):
-        return Linux.bat_dir() is not None
+        return Battery.bat_dir() is not None
 
     @property
     def is_charging(self):
@@ -271,7 +282,7 @@ class Battery(AbstractBattery):
     @property
     def percent(self):
         perc = None
-        if Linux.bat_dir() is not None:
+        if Battery.bat_dir() is not None:
             current_charge = self.current_charge
             full_charge = self.full_charge
 
@@ -282,7 +293,7 @@ class Battery(AbstractBattery):
 
     def _time(self):
         remaining = 0
-        if Linux.bat_dir() is not None and self.drain_rate:
+        if Battery.bat_dir() is not None and self.drain_rate:
             charge = self.current_charge
             if self.is_charging:
                 charge = self.full_charge - charge
@@ -294,6 +305,47 @@ class Battery(AbstractBattery):
     def power(self):
         pass
 
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def bat_dir():
+        """ Returns the path for the battery directory """
+        def check(_file):
+            return p(_file).exists() and bool(int(open_read(_file)))
+
+        _bat_dir = p(Battery.FILES["sys_power_supply"]).glob("*BAT*")
+        _bat_dir = (d for d in _bat_dir if check(f"{d}/present"))
+        return next(_bat_dir, None)
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def detect_battery():
+        """
+        Linux stores battery information in /sys/class/power_supply However,
+        depending on the machine/driver it may store different information.
+
+        Example:
+
+            On one machine it might contain these files:
+                /sys/class/power_supply/charge_now
+                /sys/class/power_supply/charge_full
+                /sys/class/power_supply/current_now
+
+            On another it might contain these files:
+                /sys/class/power_supply/energy_now
+                /sys/class/power_supply/energy_full
+                /sys/class/power_supply/power_now
+
+        So the purpose of this method is to determine which implementation it
+        should use
+        """
+        avail = {
+            f"{Battery.bat_dir()}/charge_now": BatteryAmp,
+            f"{Battery.bat_dir()}/energy_now": BatteryWatt
+        }
+
+        return next((v for k, v in avail.items() if p(k).exists()),
+                    BatteryStub)
+
 
 class BatteryAmp(Battery):
     """ Sub-Battery class for systems that stores battery info in amps """
@@ -302,25 +354,25 @@ class BatteryAmp(Battery):
     @lru_cache(maxsize=1)
     def current(self):
         """ Returns current charge filename """
-        return f"{Linux.bat_dir()}/charge_now"
+        return f"{Battery.bat_dir()}/charge_now"
 
     @property
     @lru_cache(maxsize=1)
     def full(self):
         """ Returns full charge filename """
-        return f"{Linux.bat_dir()}/charge_full"
+        return f"{Battery.bat_dir()}/charge_full"
 
     @property
     @lru_cache(maxsize=1)
     def drain(self):
         """ Returns current filename """
-        return f"{Linux.bat_dir()}/current_now"
+        return f"{Battery.bat_dir()}/current_now"
 
     @property
     def power(self):
         power = None
-        if Linux.bat_dir() is not None:
-            voltage = int(open_read(f"{Linux.bat_dir()}/voltage_now"))
+        if Battery.bat_dir() is not None:
+            voltage = int(open_read(f"{Battery.bat_dir()}/voltage_now"))
             power = (self.drain_rate * voltage) / 1e12
             power = round_trim(power, self.options.power_round)
 
@@ -334,19 +386,19 @@ class BatteryWatt(Battery):
     @lru_cache(maxsize=1)
     def current(self):
         """ Returns current energy filename """
-        return f"{Linux.bat_dir()}/energy_now"
+        return f"{Battery.bat_dir()}/energy_now"
 
     @property
     @lru_cache(maxsize=1)
     def full(self):
         """ Returns full energy filename """
-        return f"{Linux.bat_dir()}/energy_full"
+        return f"{Battery.bat_dir()}/energy_full"
 
     @property
     @lru_cache(maxsize=1)
     def drain(self):
         """ Returns power filename """
-        return f"{Linux.bat_dir()}/power_now"
+        return f"{Battery.bat_dir()}/power_now"
 
     @property
     def power(self):
@@ -454,9 +506,6 @@ class Linux(System):
         # Mem/Swap
         "proc_mem": "/proc/meminfo",
 
-        # Battery
-        "sys_power_supply": "/sys/class/power_supply",
-
         # Network
         "sys_net": "/sys/class/net",
         "proc_wifi": "/proc/net/wireless",
@@ -471,47 +520,6 @@ class Linux(System):
                                     bat=Linux.detect_battery(), net=Network,
                                     wm=self.detect_window_manager(),
                                     misc=Misc)
-
-    @staticmethod
-    @lru_cache(maxsize=1)
-    def bat_dir():
-        """ Returns the path for the battery directory """
-        def check(_file):
-            return p(_file).exists() and bool(int(open_read(_file)))
-
-        _bat_dir = p(Linux.FILES["sys_power_supply"]).glob("*BAT*")
-        _bat_dir = (d for d in _bat_dir if check(f"{d}/present"))
-        return next(_bat_dir, None)
-
-    @staticmethod
-    @lru_cache(maxsize=1)
-    def detect_battery():
-        """
-        Linux stores battery information in /sys/class/power_supply However,
-        depending on the machine/driver it may store different information.
-
-        Example:
-
-            On one machine it might contain these files:
-                /sys/class/power_supply/charge_now
-                /sys/class/power_supply/charge_full
-                /sys/class/power_supply/current_now
-
-            On another it might contain these files:
-                /sys/class/power_supply/energy_now
-                /sys/class/power_supply/energy_full
-                /sys/class/power_supply/power_now
-
-        So the purpose of this method is to determine which implementation it
-        should use
-        """
-        avail = {
-            f"{Linux.bat_dir()}/charge_now": BatteryAmp,
-            f"{Linux.bat_dir()}/energy_now": BatteryWatt
-        }
-
-        return next((v for k, v in avail.items() if p(k).exists()),
-                    BatteryStub)
 
     @property
     def _SUPPORTED_WMS(self):
