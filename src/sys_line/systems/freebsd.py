@@ -43,12 +43,14 @@ class Cpu(AbstractCpu):
     def cores(self):
         return int(Sysctl.query("hw.ncpu"))
 
+    def _cpu_string(self):
+        return Sysctl.query("hw.model")
+
     def _cpu_speed(self):
-        cpu = Sysctl.query("hw.model")
         speed = Sysctl.query("hw.cpuspeed")
         if speed is None:
             speed = Sysctl.query("hw.clockrate")
-        return cpu, round_trim(int(speed) / 1000, 2)
+        return round_trim(int(speed) / 1000, 2)
 
     def _load_avg(self):
         return Sysctl.query("vm.loadavg").split()[1:4]
