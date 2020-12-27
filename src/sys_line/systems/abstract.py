@@ -19,7 +19,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # pylint: disable=invalid-name
-# pylint: disable=too-many-arguments
 
 """ Abstract classes for getting system info """
 
