@@ -59,11 +59,14 @@ class TestDarwinCpu(TestDarwin):
         args, _ = self.sysctl_patch.query.call_args
         self.assertEqual(args, ("hw.logicalcpu_max",))
 
-    def test__darwin_cpu_speed(self):
+    def test__darwin_cpu_string(self):
         self.sysctl_patch.query.return_value = "Cpu string"
-        self.assertEqual(self.cpu._cpu_speed(), ("Cpu string", None))
+        self.assertEqual(self.cpu._cpu_string(), "Cpu string")
         args, _ = self.sysctl_patch.query.call_args
         self.assertEqual(args, ("machdep.cpu.brand_string",))
+
+    def test__darwin_cpu_speed(self):
+        self.assertEqual(self.cpu._cpu_speed(), None)
 
     def test__darwin_cpu_load_avg(self):
         self.sysctl_patch.query.return_value = "{ 1.27 1.31 1.36 }"
