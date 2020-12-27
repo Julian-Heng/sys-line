@@ -211,9 +211,15 @@ class AbstractCpu(AbstractGetter):
         """ Abstract cores method to be implemented by subclass """
 
     @abstractmethod
+    def _cpu_string(self):
+        """
+        Private abstract cpu string method to be implemented by subclass
+        """
+
+    @abstractmethod
     def _cpu_speed(self):
         """
-        Private abstract cpu and speed method to be implemented by subclass
+        Private abstract cpu speed method to be implemented by subclass
         """
 
     @property
@@ -223,7 +229,8 @@ class AbstractCpu(AbstractGetter):
         trim_reg = re.compile(r"CPU|\((R|TM)\)")
 
         cores = self.cores
-        cpu, speed = self._cpu_speed()
+        cpu = self._cpu_string()
+        speed = self._cpu_speed()
         cpu = trim_reg.sub("", cpu.strip())
 
         if speed is not None:
