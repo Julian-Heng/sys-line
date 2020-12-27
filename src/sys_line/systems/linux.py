@@ -70,7 +70,7 @@ class Cpu(AbstractCpu):
         temp_files = None
         temp_dir_base = Cpu.FILES["sys_hwmon"]
         files = (f for f in p(temp_dir_base).glob("*")
-                if check(f.joinpath("name")))
+                 if check(f.joinpath("name")))
 
         temp_dir = next(files, None)
         if temp_dir is not None:
@@ -91,9 +91,9 @@ class Cpu(AbstractCpu):
 
     def _cpu_string(self):
         cpu = None
-        m = re.search(r"model name\s+: (.*)", self._cpu_file, re.M)
-        if m is not None:
-            cpu = m.group(1)
+        match = re.search(r"model name\s+: (.*)", self._cpu_file, re.M)
+        if match is not None:
+            cpu = match.group(1)
         return cpu
 
     def _cpu_speed(self):
