@@ -508,9 +508,6 @@ class Linux(System):
     """ A Linux implementation of the abstract System class """
 
     FILES = {
-        # Mem/Swap
-        "proc_mem": "/proc/meminfo",
-
         # Misc
         "sys_backlight": "/sys/devices/backlight"
     }
