@@ -252,7 +252,9 @@ class AbstractCpu(AbstractGetter):
     def load_avg(self):
         """ Load average method """
         load = self._load_avg()
-        return load[0] if self.options.load_short else " ".join(load)
+        if load is not None:
+            return load[0] if self.options.load_short else " ".join(load)
+        return None
 
     @property
     def cpu_usage(self):
