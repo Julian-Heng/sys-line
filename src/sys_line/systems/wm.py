@@ -87,10 +87,15 @@ class Xorg(AbstractWindowManager):
         if not self._xprop_exe:
             return None
 
-        window_id = run([
+        out = run([
             self._xprop_exe, "-root", "-notype", "32x", r"\n$0",
             "_NET_ACTIVE_WINDOW"
-        ]).split("\n")[-1]
+        ])
+
+        if not out or "not found" in out:
+            return None
+
+        window_id = out.split("\n")[-1]
 
         return window_id
 
@@ -105,6 +110,10 @@ class Xorg(AbstractWindowManager):
                    prop]
 
         out = run(cmd)
+
+        if not out or "not found" in out:
+            return None
+
         out = out.split("\n")[-1]
         out = shlex.split(out)
         out = [trim_string(i.rstrip(",")) for i in out]
