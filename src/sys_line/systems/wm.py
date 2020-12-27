@@ -122,7 +122,11 @@ class Xorg(AbstractWindowManager):
 
     @property
     def desktop_index(self):
-        index = self._xprop_query("0c", "_NET_CURRENT_DESKTOP")[-1]
+        current_desktop = self._xprop_query("0c", "_NET_CURRENT_DESKTOP")
+        if current_desktop is None:
+            return None
+
+        index = current_desktop[-1]
         return index
 
     @property
@@ -132,25 +136,33 @@ class Xorg(AbstractWindowManager):
         desktops = self._xprop_query("8u", "_NET_DESKTOP_NAMES")
 
         if index is not None and desktops is not None:
-            name = desktops[int(index)]
+            try:
+                name = desktops[int(index)]
+            except IndexError:
+                name = next(iter(desktops))
+
         return name
 
     @property
     def app_name(self):
+        name = None
         window_id = self._current_window_id
-        name = self._xprop_query("8s", "WM_CLASS", window_id=window_id)
 
-        if name is not None:
-            name = name[-1]
+        if window_id is not None:
+            name = self._xprop_query("8s", "WM_CLASS", window_id=window_id)
+            if name is not None:
+                name = name[-1]
 
         return name
 
     @property
     def window_name(self):
+        name = None
         window_id = self._current_window_id
-        name = self._xprop_query("8s", "WM_NAME", window_id=window_id)
 
-        if name is not None:
-            name = name[-1]
+        if window_id is not None:
+            name = self._xprop_query("8s", "WM_NAME", window_id=window_id)
+            if name is not None:
+                name = name[-1]
 
         return name
