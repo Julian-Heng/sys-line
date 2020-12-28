@@ -489,7 +489,7 @@ class TestDarwinDiskDiskutil(TestDarwinDisk):
         self.run_patch.side_effect = self.diskutil_mock_multiple
 
     def test__darwin_disk_diskutil(self):
-        diskutil = self.disk.diskutil
+        diskutil = self.disk._diskutil
         entry = next(iter(diskutil.values()))
 
         self.assertEqual(diskutil is not None, True)
