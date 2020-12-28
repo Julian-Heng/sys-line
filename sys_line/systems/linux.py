@@ -307,8 +307,8 @@ class Battery(AbstractBattery):
         perc = None
         bat_dir = Battery.directory()
         if bat_dir is not None:
-            current_charge = bat_dir.joinpath(self.current_charge)
-            full_charge = bat_dir.joinpath(self.full_charge)
+            current_charge = self.current_charge
+            full_charge = self.full_charge
 
             perc = percent(current_charge, full_charge)
             perc = round_trim(perc, self.options.percent_round)
