@@ -25,7 +25,6 @@
 import os
 import re
 import subprocess
-import sys
 
 
 def percent(num_1, num_2):

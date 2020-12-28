@@ -317,7 +317,7 @@ class Battery(AbstractBattery):
 
     def _time(self):
         remaining = 0
-        if self.present and self.drain_rate:
+        if self.is_present and self.drain_rate:
             charge = self.current_charge
             if self.is_charging:
                 charge = self.full_charge - charge
@@ -450,7 +450,7 @@ class Network(AbstractNetwork):
     @property
     def dev(self):
         return next((f.name for f in Network.FILES["sys_net"].glob("[!v]*")
-                    if "up" in open_read(f.joinpath("operstate"))), None)
+                     if "up" in open_read(f.joinpath("operstate"))), None)
 
     def _ssid(self):
         ssid_cmd = None
