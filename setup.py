@@ -40,7 +40,7 @@ class CleanCommand(setuptools.Command):
                     find_files(j, "*", files)
                 files.append(j)
 
-        patterns = ("build", "dist", "*.pyc", "*.tgz", "src/*.egg-info")
+        patterns = ("build", "dist", "*.pyc", "*.tgz", "*.egg-info")
         files = list()
 
         for pattern in patterns:
@@ -83,8 +83,8 @@ setuptools.setup(
     project_urls={
         "Source": "https://www.gitlab.com/julian-heng/sys-line",
     },
-    packages=setuptools.find_packages("src", exclude=["*.test"]),
-    package_dir={"": "src"},
+    packages=setuptools.find_packages(".", exclude=["*.test"]),
+    package_dir={"": "."},
     python_requires=">=3.6",
     entry_points={
         "console_scripts": ["sys-line = sys_line.__main__:main"]
