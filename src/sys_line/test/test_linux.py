@@ -28,6 +28,7 @@
 
 import unittest
 
+from pathlib import Path as p
 from unittest.mock import MagicMock, PropertyMock, patch
 
 from ..systems.linux import Linux
@@ -209,13 +210,13 @@ power management:
         self.open_read_patch.return_value = "1.06 1.09 1.15 2/996 281756\n"
         self.assertEqual(self.cpu._load_avg(), ["1.06", "1.09", "1.15"])
         args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, ("/proc/loadavg",))
+        self.assertEqual(args, (p("/proc/loadavg"),))
 
     def test__linux_load_avg_invalid(self):
         self.open_read_patch.return_value = None
         self.assertEqual(self.cpu._load_avg(), None)
         args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, ("/proc/loadavg",))
+        self.assertEqual(args, (p("/proc/loadavg"),))
 
     def test__linux_fan_valid(self):
         self.cpu_fan_file_path_patch.return_value = "stub"
@@ -245,10 +246,10 @@ power management:
         self.open_read_patch.return_value = "45516.13 123925.62\n"
         self.assertEqual(self.cpu._uptime(), 45516)
         args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, ("/proc/uptime",))
+        self.assertEqual(args, (p("/proc/uptime"),))
 
     def test__linux_uptime_invalid(self):
         self.open_read_patch.return_value = None
         self.assertEqual(self.cpu._uptime(), None)
         args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, ("/proc/uptime",))
+        self.assertEqual(args, (p("/proc/uptime"),))
