@@ -479,7 +479,6 @@ class TestDarwinDisk(TestDarwin):
 
         self.dev_patch = patch("sys_line.systems.darwin.Disk.original_dev",
                                new_callable=PropertyMock).start()
-        self.run_patch = patch("sys_line.systems.darwin.run").start()
 
 
 class TestDarwinDiskDiskutil(TestDarwinDisk):
