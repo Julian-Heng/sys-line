@@ -19,7 +19,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # TODO:
-#   - Memory tests
 #   - Swap tests
 #   - Disk tests
 #   - Battery tests
@@ -31,7 +30,7 @@ import unittest
 from pathlib import Path as p
 from unittest.mock import MagicMock, PropertyMock, patch
 
-from ..systems.linux import Linux
+from ..systems.linux import Linux, _mem_file
 from ..tools.cli import parse_cli
 
 
@@ -253,3 +252,99 @@ power management:
         self.assertEqual(self.cpu._uptime(), None)
         args, _ = self.open_read_patch.call_args
         self.assertEqual(args, (p("/proc/uptime"),))
+
+
+class _TestLinuxMemFile(TestLinux):
+
+    def setUp(self):
+        super(_TestLinuxMemFile, self).setUp()
+        self.open_read_patch.return_value = """
+MemTotal:       16260004 kB
+MemFree:         8172964 kB
+MemAvailable:   12541728 kB
+Buffers:          576268 kB
+Cached:          4798564 kB
+SwapCached:            0 kB
+Active:          1748660 kB
+Inactive:        5302088 kB
+Active(anon):      24976 kB
+Inactive(anon):  2505580 kB
+Active(file):    1723684 kB
+Inactive(file):  2796508 kB
+Unevictable:      614112 kB
+Mlocked:              32 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Dirty:              5432 kB
+Writeback:             0 kB
+AnonPages:       2289976 kB
+Mapped:           823120 kB
+Shmem:            865948 kB
+KReclaimable:     185588 kB
+Slab:             258232 kB
+SReclaimable:     185588 kB
+SUnreclaim:        72644 kB
+KernelStack:       13104 kB
+PageTables:        25884 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:     8130000 kB
+Committed_AS:    8528624 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:       31976 kB
+VmallocChunk:          0 kB
+Percpu:             2240 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:         0 kB
+FilePmdMapped:         0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+DirectMap4k:      326580 kB
+DirectMap2M:    15267840 kB
+DirectMap1G:     1048576 kB
+"""
+
+
+class TestLinuxMem(_TestLinuxMemFile):
+
+    def setUp(self):
+        super(TestLinuxMem, self).setUp()
+        self.mem = self.system.query("mem")
+
+    def test__linux_mem_file(self):
+        mem_file = _mem_file()
+        keys = ("MemTotal", "Shmem", "MemFree", "Buffers", "Cached",
+                "SReclaimable", "MemTotal")
+
+        for k in keys:
+            self.assertTrue(k in mem_file.keys())
+
+        args, _ = self.open_read_patch.call_args
+        self.assertEqual(args, ("/proc/meminfo",))
+
+    def test__linux_mem_used(self):
+        self.assertEqual(self.mem._used(), (3392568, "KiB"))
+
+    def test__linux_mem_total(self):
+        self.assertEqual(self.mem._total(), (16260004, "KiB"))
+
+
+class TestLinuxSwap(TestLinux):
+
+    def setUp(self):
+        super(TestLinuxSwap, self).setUp()
+        self.swap = self.system.query("swap")
+
+    def test__linux_swap_used(self):
+        self.assertEqual(self.swap._used(), (0, "KiB"))
+
+    def test__linux_swap_total(self):
+        self.assertEqual(self.swap._total(), (0, "KiB"))
