@@ -102,7 +102,7 @@ class TestDarwinCpu(TestDarwin):
 
         self.run_patch.return_value = "\n".join(out)
         self.assertEqual(self.cpu.fan, 1359)
-        self.assertEqual(self.run_patch.called, True)
+        self.assertTrue(self.run_patch.called)
 
     def test__darwin_cpu_temp_no_prog(self):
         self.which_patch.return_value = False
@@ -492,8 +492,8 @@ class TestDarwinDiskDiskutil(TestDarwinDisk):
         diskutil = self.disk._diskutil
         entry = next(iter(diskutil.values()))
 
-        self.assertEqual(diskutil is not None, True)
-        self.assertEqual(isinstance(entry, dict), True)
+        self.assertTrue(diskutil is not None)
+        self.assertTrue(isinstance(entry, dict))
 
 
 class TestDarwinDiskSingle(TestDarwinDisk):
