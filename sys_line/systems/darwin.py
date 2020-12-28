@@ -132,7 +132,7 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def diskutil(self):
+    def _diskutil(self):
         """ Returns diskutil program output as a dict """
         devs = self.original_dev.values()
         cmd = ["diskutil", "info", "-plist"]
@@ -145,7 +145,7 @@ class Disk(AbstractDisk):
 
     def _lookup_diskutil(self, key):
         try:
-            return {k: v[key] for k, v in self.diskutil.items()}
+            return {k: v[key] for k, v in self._diskutil.items()}
         except KeyError:
             return None
 
