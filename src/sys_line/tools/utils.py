@@ -34,14 +34,7 @@ def percent(num_1, num_2):
 
 
 def open_read(filename):
-    """
-    Wrapper for opening and reading a file
-    """
-    # Pathlib for python <= 3.5 can't open properly when passed to open(). So
-    # an edge case is required to convert the pathlib object to string
-    if sys.version_info[1] <= 5:
-        filename = str(filename)
-
+    """ Wrapper for opening and reading a file """
     try:
         with open(filename, "r") as f:
             return f.read()
