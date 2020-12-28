@@ -19,8 +19,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # TODO:
-#   - Swap tests
-#   - Disk tests
 #   - Battery tests
 #   - Network tests
 #   - Misc tests
@@ -348,3 +346,112 @@ class TestLinuxSwap(TestLinux):
 
     def test__linux_swap_total(self):
         self.assertEqual(self.swap._total(), (0, "KiB"))
+
+
+class TestLinuxDisk(TestLinux):
+
+    def setUp(self):
+        super(TestLinuxDisk, self).setUp()
+
+        self.disk = self.system.query("disk")
+
+        self.original_dev_mock_single = {
+            "/dev/sdb4": "/dev/sdb4",
+        }
+
+        self.original_dev_mock_multiple = {
+            "/dev/sdb4": "/dev/sdb4",
+            "/dev/sdb5": "/dev/sdb5",
+        }
+
+        # Output of
+        # 'lsblk --output NAME,LABEL,PARTLABEL,FSTYPE --paths --pairs'
+        self.lsblk_out = """
+NAME="/dev/sdb4" LABEL="" PARTLABEL="root" FSTYPE="ext4"
+NAME="/dev/sdb2" LABEL="" PARTLABEL="boot" FSTYPE="ext4"
+NAME="/dev/sdb5" LABEL="" PARTLABEL="home" FSTYPE="ext4"
+NAME="/dev/sdb3" LABEL="" PARTLABEL="efi" FSTYPE="vfat"
+NAME="/dev/sdb1" LABEL="" PARTLABEL="bios_grub" FSTYPE=""
+"""
+
+        self.dev_patch = patch("sys_line.systems.linux.Disk.original_dev",
+                               new_callable=PropertyMock).start()
+
+        self.run_patch.return_value = self.lsblk_out
+
+    def test__linux_lsblk_entries(self):
+        entries = self.disk._lsblk_entries
+        expected = {
+            "/dev/sdb4": {
+                "NAME": "/dev/sdb4",
+                "LABEL": "",
+                "PARTLABEL": "root",
+                "FSTYPE": "ext4",
+            },
+            "/dev/sdb2": {
+                "NAME": "/dev/sdb2",
+                "LABEL": "",
+                "PARTLABEL": "boot",
+                "FSTYPE": "ext4",
+            },
+            "/dev/sdb5": {
+                "NAME": "/dev/sdb5",
+                "LABEL": "",
+                "PARTLABEL": "home",
+                "FSTYPE": "ext4",
+            },
+            "/dev/sdb3": {
+                "NAME": "/dev/sdb3",
+                "LABEL": "",
+                "PARTLABEL": "efi",
+                "FSTYPE": "vfat",
+            },
+            "/dev/sdb1": {
+                "NAME": "/dev/sdb1",
+                "LABEL": "",
+                "PARTLABEL": "bios_grub",
+                "FSTYPE": "",
+            },
+        }
+
+        self.assertEqual(entries, expected)
+
+
+class TestLinuxDiskSingle(TestLinuxDisk):
+
+    def setUp(self):
+        super(TestLinuxDiskSingle, self).setUp()
+        self.dev_patch.return_value = self.original_dev_mock_single
+        self.run_patch.return_value = self.lsblk_out
+
+    def test__linux_disk_name_single(self):
+        expected = {"/dev/sdb4": "root"}
+        self.assertEqual(self.disk.name, expected)
+
+    def test__linux_disk_partition_single(self):
+        expected = {"/dev/sdb4": "ext4"}
+        self.assertEqual(self.disk.partition, expected)
+
+
+class TestLinuxDiskMultiple(TestLinuxDisk):
+
+    def setUp(self):
+        super(TestLinuxDiskMultiple, self).setUp()
+        self.dev_patch.return_value = self.original_dev_mock_multiple
+        self.run_patch.return_value = self.lsblk_out
+
+    def test__linux_disk_name_multiple(self):
+        expected = {
+            "/dev/sdb4": "root",
+            "/dev/sdb5": "home",
+        }
+
+        self.assertEqual(self.disk.name, expected)
+
+    def test__linux_disk_partition_multiple(self):
+        expected = {
+            "/dev/sdb4": "ext4",
+            "/dev/sdb5": "ext4",
+        }
+
+        self.assertEqual(self.disk.partition, expected)
