@@ -180,7 +180,7 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def lsblk_entries(self):
+    def _lsblk_entries(self):
         """
         Returns the output of lsblk in a dictionary with devices as keys
         """
@@ -204,24 +204,24 @@ class Disk(AbstractDisk):
     @property
     def name(self):
         labels = ["LABEL", "PARTLABEL"]
-        lsblk_entries = self.lsblk_entries
+        lsblk_entries = self._lsblk_entries
         names = {k: None for k in self.original_dev}
 
         if lsblk_entries is not None:
             names = {k: next((v[i] for i in labels if v[i]), None)
-                     for k, v in self.lsblk_entries.items()
+                     for k, v in self._lsblk_entries.items()
                      if k in self.original_dev}
 
         return names
 
     @property
     def partition(self):
-        lsblk_entries = self.lsblk_entries
+        lsblk_entries = self._lsblk_entries
         partitions = {k: None for k in self.original_dev}
 
         if lsblk_entries is not None:
             partitions = {k: v["FSTYPE"]
-                          for k, v in self.lsblk_entries.items()
+                          for k, v in self._lsblk_entries.items()
                           if k in self.original_dev}
 
         return partitions
