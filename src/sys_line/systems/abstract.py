@@ -260,7 +260,7 @@ class AbstractCpu(AbstractGetter):
         """ Cpu usage method """
         cores = self.cores
         ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
-        cpu_usage = sum([float(i) for i in ps_out]) / cores
+        cpu_usage = sum(float(i) for i in ps_out) / cores
         return round_trim(cpu_usage, self.options.usage_round)
 
     @property

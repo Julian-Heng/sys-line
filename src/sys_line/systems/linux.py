@@ -151,8 +151,8 @@ class Memory(AbstractMemory):
         mem_file = _mem_file()
         keys = [["MemTotal", "Shmem"],
                 ["MemFree", "Buffers", "Cached", "SReclaimable"]]
-        used = sum([mem_file[i] for i in keys[0]])
-        used -= sum([mem_file[i] for i in keys[1]])
+        used = sum(mem_file[i] for i in keys[0])
+        used -= sum(mem_file[i] for i in keys[1])
         return used, "KiB"
 
     def _total(self):

@@ -83,7 +83,7 @@ class Memory(AbstractMemory):
         keys = [int(Sysctl.query(f"vm.stats.vm.v_{i}_count"))
                 for i in ["inactive", "free", "cache"]]
 
-        used = total - sum([i * pagesize for i in keys])
+        used = total - sum(i * pagesize for i in keys)
         return used, "B"
 
     def _total(self):
@@ -98,7 +98,7 @@ class Swap(AbstractSwap):
             return int(line.split()[2])
 
         pstat = run(["pstat", "-s"]).strip().split("\n")[1:]
-        pstat = sum([extract(i) for i in pstat])
+        pstat = sum(extract(i) for i in pstat)
         return pstat, "KiB"
 
     def _total(self):

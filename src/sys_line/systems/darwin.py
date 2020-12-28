@@ -89,7 +89,7 @@ class Memory(AbstractMemory):
         vm_stat = run(["vm_stat"]).strip().split("\n")[1:]
         vm_stat = (re.sub(r"Pages |\.", r"", i) for i in vm_stat)
         vm_stat = dict(i.split(":", 1) for i in vm_stat)
-        value = sum([int(vm_stat[i]) for i in words]) * 4096
+        value = sum(int(vm_stat[i]) for i in words) * 4096
         return value, "B"
 
     def _total(self):
