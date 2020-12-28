@@ -39,12 +39,12 @@ class Cpu(AbstractCpu):
     """ A Linux implementation of the AbstractCpu class """
 
     FILES = {
-        "proc_cpu": "/proc/cpuinfo",
-        "sys_cpu": "/sys/devices/system/cpu",
-        "proc_load": "/proc/loadavg",
-        "sys_platform": "/sys/devices/platform",
-        "sys_hwmon": "/sys/class/hwmon",
-        "proc_uptime": "/proc/uptime",
+        "proc_cpu": p("/proc/cpuinfo"),
+        "sys_cpu": p("/sys/devices/system/cpu"),
+        "proc_load": p("/proc/loadavg"),
+        "sys_platform": p("/sys/devices/platform"),
+        "sys_hwmon": p("/sys/class/hwmon"),
+        "proc_uptime": p("/proc/uptime"),
     }
 
     @property
@@ -58,7 +58,7 @@ class Cpu(AbstractCpu):
     def _cpu_speed_file_path(self):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         speed_dir = Cpu.FILES["sys_cpu"]
-        path = (f for f in p(speed_dir).rglob("*") if speed_reg.search(str(f)))
+        path = (f for f in speed_dir.rglob("*") if speed_reg.search(str(f)))
         return next(path, None)
 
     @property
@@ -69,7 +69,7 @@ class Cpu(AbstractCpu):
 
         temp_files = None
         temp_dir_base = Cpu.FILES["sys_hwmon"]
-        files = (f for f in p(temp_dir_base).glob("*")
+        files = (f for f in temp_dir_base.glob("*")
                  if check(f.joinpath("name")))
 
         temp_dir = next(files, None)
@@ -81,7 +81,7 @@ class Cpu(AbstractCpu):
     @property
     @lru_cache(maxsize=1)
     def _cpu_fan_file_path(self):
-        files = (f for f in p(Cpu.FILES["sys_platform"]).rglob("fan1_input"))
+        files = (f for f in Cpu.FILES["sys_platform"].rglob("fan1_input"))
         return next(files, None)
 
     @property
@@ -231,7 +231,7 @@ class Battery(AbstractBattery):
     """ A Linux implementation of the AbstractBattery class """
 
     FILES = {
-        "sys_power_supply": "/sys/class/power_supply",
+        "sys_power_supply": p("/sys/class/power_supply"),
     }
 
     @property
@@ -428,8 +428,8 @@ class Network(AbstractNetwork):
     """ A Linux implementation of the AbstractNetwork class """
 
     FILES = {
-        "sys_net": "/sys/class/net",
-        "proc_wifi": "/proc/net/wireless",
+        "sys_net": p("/sys/class/net"),
+        "proc_wifi": p("/proc/net/wireless"),
     }
 
     @property
@@ -438,14 +438,8 @@ class Network(AbstractNetwork):
 
     @property
     def dev(self):
-        def check(_file):
-            return open_read(f"{_file}/operstate").strip() == "up"
-
-        def find(_dir):
-            return p(_dir).glob("[!v]*")
-
-        return next((f.name for f in find(Network.FILES["sys_net"])
-                     if check(f)), None)
+        return next((f.name for f in Network.FILES["sys_net"].glob("[!v]*")
+                    if "up" in open_read(f.joinpath("operstate"))), None)
 
     def _ssid(self):
         ssid_cmd = None
@@ -465,7 +459,7 @@ class Network(AbstractNetwork):
     def _bytes_delta(self, dev, mode):
         net = Network.FILES["sys_net"]
         mode = "tx" if mode == "up" else "rx"
-        stat_file = f"{net}/{dev}/statistics/{mode}_bytes"
+        stat_file = p(net, dev, "statistics", f"{mode}_bytes")
         return int(open_read(stat_file))
 
 
@@ -473,25 +467,19 @@ class Misc(AbstractMisc):
     """ A Linux implementation of the AbstractMisc class """
 
     FILES = {
-        "sys_backlight": "/sys/devices/backlight"
+        "sys_backlight": p("/sys/devices/backlight"),
     }
 
     @property
     def vol(self):
-        def check(_dir):
-            return _dir.is_dir() and _dir.name.isdigit()
-
-        def extract(_file):
-            return open_read(f"{_file}/cmdline")
-
         systems = {"pulseaudio": Misc._vol_pulseaudio}
-
         reg = re.compile(r"|".join(systems.keys()))
 
         vol = None
-        pids = (extract(i) for i in p("/proc").iterdir() if check(i))
-        audio = next((reg.search(i) for i in pids if i and reg.search(i)),
-                     None)
+        pids = (open_read(d.joinpath("cmdline")) for d in p("/proc").iterdir()
+                if d.is_dir() and d.name.isdigit())
+        audio = (reg.search(i) for i in pids if i and reg.search(i))
+        audio = next(audio, None)
 
         if audio is not None:
             try:
@@ -505,19 +493,17 @@ class Misc(AbstractMisc):
 
     @property
     def scr(self):
-        def check(_file):
-            return "kbd" not in _file and "backlight" in _file
-
         scr = None
-        backlight_path = p(Misc.FILES["sys_backlight"])
+        backlight_path = Misc.FILES["sys_backlight"]
 
         if backlight_path.exists():
-            scr_files = (f for f in backlight_path.rglob("*") if check(f.name))
+            scr_files = (f for f in backlight_path.rglob("*")
+                         if "kbd" not in f.name and "backlight" not in f.name)
             scr_dir = next(scr_files, None)
 
             if scr_dir is not None:
-                curr = int(open_read(f"{scr_dir}/brightness"))
-                max_scr = int(open_read(f"{scr_dir}/max_brightness"))
+                curr = int(open_read(scr_dir.joinpath("brightness")))
+                max_scr = int(open_read(scr_dir.joinpath("max_brightness")))
                 scr = percent(curr, max_scr)
                 scr = round_trim(scr, self.options.screen_round)
 
