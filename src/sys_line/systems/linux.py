@@ -253,42 +253,46 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def status(self):
         """ Returns cached battery status file """
-        return open_read(f"{Battery.bat_dir()}/status").strip()
+        return open_read(Battery.directory().joinpath("status")).strip()
 
     @property
     @lru_cache(maxsize=1)
     def current_charge(self):
         """ Returns cached battery current charge file """
-        if Battery.bat_dir() is not None:
-            return int(open_read(self.current))
+        bat_dir = Battery.directory()
+        if bat_dir is not None:
+            return int(open_read(bat_dir.joinpath(self.current)))
         return None
 
     @property
     @lru_cache(maxsize=1)
     def full_charge(self):
         """ Returns cached battery full charge file """
-        if Battery.bat_dir() is not None:
-            return int(open_read(self.full))
+        bat_dir = Battery.directory()
+        if bat_dir is not None:
+            return int(open_read(bat_dir.joinpath(self.full)))
         return None
 
     @property
     @lru_cache(maxsize=1)
     def drain_rate(self):
         """ Returns cached battery drain rate file """
-        if Battery.bat_dir() is not None:
-            return int(open_read(self.drain))
+        bat_dir = Battery.directory()
+        if bat_dir is not None:
+            return int(open_read(bat_dir.joinpath(self.drain)))
         return None
 
     @lru_cache(maxsize=1)
     def _compare_status(self, query):
         """ Compares status to query """
-        if Battery.bat_dir() is not None:
+        bat_dir = Battery.directory()
+        if bat_dir is not None:
             return self.status == query
         return None
 
     @property
     def is_present(self):
-        return Battery.bat_dir() is not None
+        return Battery.directory() is not None
 
     @property
     def is_charging(self):
@@ -301,9 +305,10 @@ class Battery(AbstractBattery):
     @property
     def percent(self):
         perc = None
-        if Battery.bat_dir() is not None:
-            current_charge = self.current_charge
-            full_charge = self.full_charge
+        bat_dir = Battery.directory()
+        if bat_dir is not None:
+            current_charge = bat_dir.joinpath(self.current_charge)
+            full_charge = bat_dir.joinpath(self.full_charge)
 
             perc = percent(current_charge, full_charge)
             perc = round_trim(perc, self.options.percent_round)
@@ -312,7 +317,7 @@ class Battery(AbstractBattery):
 
     def _time(self):
         remaining = 0
-        if Battery.bat_dir() is not None and self.drain_rate:
+        if self.present and self.drain_rate:
             charge = self.current_charge
             if self.is_charging:
                 charge = self.full_charge - charge
@@ -326,14 +331,14 @@ class Battery(AbstractBattery):
 
     @staticmethod
     @lru_cache(maxsize=1)
-    def bat_dir():
+    def directory():
         """ Returns the path for the battery directory """
         def check(_file):
             return p(_file).exists() and bool(int(open_read(_file)))
 
-        _bat_dir = p(Battery.FILES["sys_power_supply"]).glob("*BAT*")
-        _bat_dir = (d for d in _bat_dir if check(f"{d}/present"))
-        return next(_bat_dir, None)
+        _dir = Battery.FILES["sys_power_supply"].glob("*BAT*")
+        _dir = (d for d in _dir if check(d.joinpath("present")))
+        return next(_dir, None)
 
     @staticmethod
     @lru_cache(maxsize=1)
@@ -357,12 +362,16 @@ class Battery(AbstractBattery):
         So the purpose of this method is to determine which implementation it
         should use
         """
+        bat_dir = Battery.directory()
+        if bat_dir is None:
+            return BatteryStub
+
         avail = {
-            f"{Battery.bat_dir()}/charge_now": BatteryAmp,
-            f"{Battery.bat_dir()}/energy_now": BatteryWatt
+            bat_dir.joinpath("charge_now"): BatteryAmp,
+            bat_dir.joinpath("energy_now"): BatteryWatt,
         }
 
-        return next((v for k, v in avail.items() if p(k).exists()),
+        return next((v for k, v in avail.items() if k.exists()),
                     BatteryStub)
 
 
@@ -373,25 +382,27 @@ class BatteryAmp(Battery):
     @lru_cache(maxsize=1)
     def current(self):
         """ Returns current charge filename """
-        return f"{Battery.bat_dir()}/charge_now"
+        return "charge_now"
 
     @property
     @lru_cache(maxsize=1)
     def full(self):
         """ Returns full charge filename """
-        return f"{Battery.bat_dir()}/charge_full"
+        return "charge_full"
 
     @property
     @lru_cache(maxsize=1)
     def drain(self):
         """ Returns current filename """
-        return f"{Battery.bat_dir()}/current_now"
+        return "current_now"
 
     @property
     def power(self):
         power = None
-        if Battery.bat_dir() is not None:
-            voltage = int(open_read(f"{Battery.bat_dir()}/voltage_now"))
+        bat_dir = Battery.directory()
+        if bat_dir is not None:
+            voltage_path = bat_dir.joinpath("voltage_now")
+            voltage = int(open_read(voltage_path))
             power = (self.drain_rate * voltage) / 1e12
             power = round_trim(power, self.options.power_round)
 
@@ -405,19 +416,19 @@ class BatteryWatt(Battery):
     @lru_cache(maxsize=1)
     def current(self):
         """ Returns current energy filename """
-        return f"{Battery.bat_dir()}/energy_now"
+        return "energy_now"
 
     @property
     @lru_cache(maxsize=1)
     def full(self):
         """ Returns full energy filename """
-        return f"{Battery.bat_dir()}/energy_full"
+        return "energy_full"
 
     @property
     @lru_cache(maxsize=1)
     def drain(self):
         """ Returns power filename """
-        return f"{Battery.bat_dir()}/power_now"
+        return "power_now"
 
     @property
     def power(self):
