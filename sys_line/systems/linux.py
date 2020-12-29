@@ -461,6 +461,7 @@ class Network(AbstractNetwork):
             wifi_path = Network.FILES["proc_wifi"]
             wifi_out = open_read(wifi_path)
             if wifi_out is not None:
+                wifi_out = wifi_out.strip().splitlines()
                 if len(wifi_out) >= 3 and shutil.which("iw"):
                     ssid_cmd = ("iw", "dev", dev, "link")
                     ssid_reg = re.compile(r"^SSID: (.*)$")
