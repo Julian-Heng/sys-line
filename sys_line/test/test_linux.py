@@ -20,7 +20,6 @@
 
 # TODO:
 #   - Battery tests
-#   - Network tests
 #   - Misc tests
 
 import unittest
@@ -488,3 +487,107 @@ class TestLinuxDiskMultiple(TestLinuxDisk):
         }
 
         self.assertEqual(self.disk.partition, expected)
+
+
+class _TestLinuxNetwork(TestLinux):
+
+    def setUp(self):
+        super(_TestLinuxNetwork, self).setUp()
+        self.net = self.system.query("net")
+
+
+class TestLinuxNetworkDev(_TestLinuxNetwork):
+
+    def setUp(self):
+        super(TestLinuxNetworkDev, self).setUp()
+        self.net_original_files = self.net.FILES
+        self.net_files_patch = (
+            patch("sys_line.systems.linux.Network.FILES",
+                  new_callable=PropertyMock).start()
+        )
+
+        self.net_dev_glob_patch = patch("sys_line.systems.linux.p").start()
+        self.net_original_files["sys_net"] = self.net_dev_glob_patch
+        self.net_files_patch.return_value = self.net_original_files
+
+    @TestLinux.get_open_patch(read_data="up\n")
+    def test__linux_net_dev_valid_single(self, mock_file):
+        self.net_dev_glob_patch.glob.return_value = (
+            p("/sys/class/net/enp4s0"),
+        )
+        self.assertEqual(self.net.dev, "enp4s0")
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, (p("/sys/class/net/enp4s0/operstate"), "r"))
+
+    @TestLinux.get_open_patch_multiple(read_datas=("down\n", "up\n", "down\n"))
+    def test__linux_net_dev_valid_multiple(self):
+        self.net_dev_glob_patch.glob.return_value = (
+            p("/sys/class/net/enp3s0"),
+            p("/sys/class/net/enp4s0"),
+            p("/sys/class/net/enp5s0"),
+        )
+
+        self.assertEqual(self.net.dev, "enp4s0")
+
+    @TestLinux.get_open_patch(read_data=None)
+    def test__linux_net_dev_invalid(self, mock_file):
+        self.net_dev_glob_patch.glob.return_value = ()
+        self.assertEqual(self.net.dev, None)
+        self.assertFalse(mock_file.called)
+
+
+class TestLinuxNetworkSsid(_TestLinuxNetwork):
+
+    NO_WIFI_FILE = """Inter-| sta-|   Quality        |   Discarded packets               | Missed | WE
+ face | tus | link level noise |  nwid  crypt   frag  retry   misc | beacon | 22
+ """
+
+    # TODO: Add a wifi file
+    WIFI_FILE = """"""
+
+    def setUp(self):
+        super(TestLinuxNetworkSsid, self).setUp()
+
+        self.net_dev_patch = (
+            patch("sys_line.systems.linux.Network.dev",
+                  new_callable=PropertyMock).start()
+        )
+
+    @TestLinux.get_open_patch(read_data=NO_WIFI_FILE)
+    def test__linux_net_ssid_no_wireless(self, mock_file):
+        self.net_dev_patch.return_value = "stub"
+        self.assertEqual(self.net._ssid(), (None, None))
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, (p("/proc/net/wireless"), "r"))
+
+    @TestLinux.get_open_patch(read_data=WIFI_FILE)
+    def test__linux_net_ssid_have_wireless(self, mock_file):
+        pass
+
+    @TestLinux.get_open_patch(read_data=None)
+    def test__linux_net_ssid_dev_invalid(self, mock_file):
+        self.net_dev_patch.return_value = None
+        self.assertEqual(self.net.dev, None)
+        self.assertEqual(self.net._ssid(), (None, None))
+        self.assertFalse(mock_file.called)
+
+
+class TestLinuxNetwork(_TestLinuxNetwork):
+
+    @TestLinux.get_open_patch(read_data="1000\n")
+    def test__linux_net_bytes_delta_up(self, mock_file):
+        self.assertEqual(self.net._bytes_delta("stub", "up"), 1000)
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        expected = (p("/sys/class/net/stub/statistics/tx_bytes"), "r")
+        self.assertEqual(args, expected)
+
+    @TestLinux.get_open_patch(read_data="1000\n")
+    def test__linux_net_bytes_delta_down(self, mock_file):
+        self.assertEqual(self.net._bytes_delta("stub", "down"), 1000)
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        expected = (p("/sys/class/net/stub/statistics/rx_bytes"), "r")
+        self.assertEqual(args, expected)
