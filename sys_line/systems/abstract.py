@@ -563,9 +563,10 @@ class AbstractNetwork(AbstractGetter):
     def local_ip(self):
         """ Network local ip method """
         ip_out = None
-        if self.dev is not None:
+        dev = self.dev
+        if dev is not None:
             reg = re.compile(r"^inet\s+((?:[0-9]{1,3}\.){3}[0-9]{1,3})")
-            ip_out = run(self._LOCAL_IP_CMD + [self.dev]).strip().split("\n")
+            ip_out = run(self._LOCAL_IP_CMD + [dev]).strip().split("\n")
             ip_out = (reg.match(line.strip()) for line in ip_out)
             ip_out = next((i.group(1) for i in ip_out if i), None)
         return ip_out
@@ -582,18 +583,19 @@ class AbstractNetwork(AbstractGetter):
         Abstract network bytes rate method to fetch the rate of change in bytes
         on a device depending on mode
         """
-        if self.dev is None:
+        dev = self.dev
+        if dev is None:
             return 0.0
 
-        start = self._bytes_delta(self.dev, mode)
+        start = self._bytes_delta(dev, mode)
         start_time = time.time()
 
         # Timeout after 2 seconds
-        while (self._bytes_delta(self.dev, mode) <= start and
+        while (self._bytes_delta(dev, mode) <= start and
                time.time() - start_time < 2):
             time.sleep(0.01)
 
-        end = self._bytes_delta(self.dev, mode)
+        end = self._bytes_delta(dev, mode)
         if end == start:
             return 0.0
 
