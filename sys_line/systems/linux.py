@@ -449,7 +449,9 @@ class Network(AbstractNetwork):
 
     @property
     def dev(self):
-        return next((f.name for f in Network.FILES["sys_net"].glob("[!v]*")
+        # Skip virtual network devices
+        files = Network.FILES["sys_net"].glob("[!v]*")
+        return next((f.name for f in files
                      if "up" in open_read(f.joinpath("operstate"))), None)
 
     def _ssid(self):
