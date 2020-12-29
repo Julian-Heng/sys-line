@@ -26,7 +26,7 @@
 import unittest
 
 from pathlib import Path as p
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
 from ..systems.linux import Linux, _mem_file
 from ..tools.cli import parse_cli
@@ -37,42 +37,35 @@ class TestLinux(unittest.TestCase):
     def setUp(self):
         super(TestLinux, self).setUp()
         self.system = Linux(parse_cli([]))
-
-        self.open_read_patch = (
-            patch("sys_line.systems.linux.open_read").start()
-        )
         self.run_patch = patch("sys_line.systems.linux.run").start()
 
     def tearDown(self):
         super(TestLinux, self).tearDown()
         patch.stopall()
 
+    @staticmethod
+    def get_open_patch(read_data=""):
+        return patch("sys_line.tools.utils.open", new_callable=mock_open,
+                     read_data=read_data, create=True)
+
+    @staticmethod
+    def get_open_patch_multiple(read_datas=tuple()):
+        try:
+            _iter = iter(read_datas)
+            first = next(_iter)
+        except (TypeError, StopIteration):
+            return TestLinux.get_open_patch(read_data=None)
+
+        m = mock_open(read_data=first)
+        m.side_effect = (
+            mock_open(read_data=d).return_value for d in read_datas
+        )
+        return patch("sys_line.tools.utils.open", m, create=True)
+
 
 class TestLinuxCpu(TestLinux):
 
-    def setUp(self):
-        super(TestLinuxCpu, self).setUp()
-        self.cpu = self.system.query("cpu")
-
-        self.cpu_file_patch = patch("sys_line.systems.linux.Cpu._cpu_file",
-                                    new_callable=PropertyMock).start()
-        self.cpu_speed_file_path_patch = (
-            patch("sys_line.systems.linux.Cpu._cpu_speed_file_path",
-                  new_callable=PropertyMock).start()
-        )
-
-        self.cpu_temp_file_paths_patch = (
-            patch("sys_line.systems.linux.Cpu._cpu_temp_file_paths",
-                  new_callable=PropertyMock).start()
-        )
-
-        self.cpu_fan_file_path_patch = (
-            patch("sys_line.systems.linux.Cpu._cpu_fan_file_path",
-                  new_callable=PropertyMock).start()
-        )
-
-        self.cpu_file_patch.return_value = """
-processor       : 0
+    CPU_FILE= """processor       : 0
 vendor_id       : GenuineIntel
 cpu family      : 6
 model           : 60
@@ -185,79 +178,122 @@ address sizes   : 39 bits physical, 48 bits virtual
 power management:
 """
 
-    def test__linux_cpu_cores(self):
+    SPEED_FILE = "3700000\n"
+    LOAD_FILE = "1.06 1.09 1.15 2/996 281756\n"
+    FAN_FILE = "1234\n"
+    TEMP_FILE = "58000\n"
+    UPTIME_FILE = "45516.13 123925.62\n"
+
+    def setUp(self):
+        super(TestLinuxCpu, self).setUp()
+        self.cpu = self.system.query("cpu")
+
+        self.cpu_speed_file_path_patch = (
+            patch("sys_line.systems.linux.Cpu._cpu_speed_file_path",
+                  new_callable=PropertyMock).start()
+        )
+
+        self.cpu_temp_file_paths_patch = (
+            patch("sys_line.systems.linux.Cpu._cpu_temp_file_paths",
+                  new_callable=PropertyMock).start()
+        )
+
+        self.cpu_fan_file_path_patch = (
+            patch("sys_line.systems.linux.Cpu._cpu_fan_file_path",
+                  new_callable=PropertyMock).start()
+        )
+
+    @TestLinux.get_open_patch(read_data=CPU_FILE)
+    def test__linux_cpu_cores(self, mock_file):
         self.assertEqual(self.cpu.query("cores", None), 4)
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, (p("/proc/cpuinfo"), "r"))
 
-    def test__linux_cpu_string(self):
-        self.assertEqual(self.cpu._cpu_string(),
-                         "Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz")
+    @TestLinux.get_open_patch(read_data=CPU_FILE)
+    def test__linux_cpu_string(self, mock_file):
+        expected = "Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz"
+        self.assertEqual(self.cpu._cpu_string(), expected)
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, (p("/proc/cpuinfo"), "r"))
 
-    def test__linux_cpu_speed_valid(self):
+    @TestLinux.get_open_patch(read_data=SPEED_FILE)
+    def test__linux_cpu_speed_valid(self, mock_file):
         self.cpu_speed_file_path_patch.return_value = "stub"
-        self.open_read_patch.return_value = "3700000\n"
         self.assertEqual(self.cpu._cpu_speed(), 3.7)
-        args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, ("stub",))
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, ("stub", "r"))
 
-    def test__linux_cpu_speed_invalid(self):
+    @TestLinux.get_open_patch(read_data=None)
+    def test__linux_cpu_speed_invalid(self, mock_file):
         self.cpu_speed_file_path_patch.return_value = None
         self.assertEqual(self.cpu._cpu_speed(), None)
+        self.assertFalse(mock_file.called)
 
-    def test__linux_load_avg_valid(self):
-        self.open_read_patch.return_value = "1.06 1.09 1.15 2/996 281756\n"
-        self.assertEqual(self.cpu._load_avg(), ["1.06", "1.09", "1.15"])
-        args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, (p("/proc/loadavg"),))
+    @TestLinux.get_open_patch(read_data=LOAD_FILE)
+    def test__linux_cpu_load_avg_valid(self, mock_file):
+        expected = ["1.06", "1.09", "1.15"]
+        self.assertEqual(self.cpu._load_avg(), expected)
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, (p("/proc/loadavg"), "r"))
 
-    def test__linux_load_avg_invalid(self):
-        self.open_read_patch.return_value = None
+    @TestLinux.get_open_patch(read_data=None)
+    def test__linux_cpu_load_avg_invalid(self, mock_file):
+        mock_file.side_effect = FileNotFoundError
         self.assertEqual(self.cpu._load_avg(), None)
-        args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, (p("/proc/loadavg"),))
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, (p("/proc/loadavg"), "r"))
 
-    def test__linux_fan_valid(self):
+    @TestLinux.get_open_patch(read_data=FAN_FILE)
+    def test__linux_cpu_fan_valid(self, mock_file):
         self.cpu_fan_file_path_patch.return_value = "stub"
-        self.open_read_patch.return_value = "1234\n"
         self.assertEqual(self.cpu.fan, 1234)
-        args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, ("stub",))
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, ("stub", "r"))
 
-    def test__linux_fan_invalid(self):
+    @TestLinux.get_open_patch(read_data=None)
+    def test__linux_cpu_fan_invalid(self, mock_file):
         self.cpu_fan_file_path_patch.return_value = None
         self.assertEqual(self.cpu.fan, None)
-        self.assertEqual(self.open_read_patch.call_args, None)
+        self.assertFalse(mock_file.called)
 
-    def test__linux_temp_valid(self):
+    @TestLinux.get_open_patch(read_data=TEMP_FILE)
+    def test__linux_cpu_temp_valid(self, mock_file):
         self.cpu_temp_file_paths_patch.return_value = ["stub1", "stub2"]
-        self.open_read_patch.return_value = "58000\n"
         self.assertEqual(self.cpu.temp, 58.0)
-        args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, ("stub1",))
+        self.assertTrue(mock_file.called)
+        args, _ = mock_file.call_args
+        self.assertEqual(args, ("stub1", "r"))
 
-    def test__linux_temp_invalid(self):
+    @TestLinux.get_open_patch(read_data=None)
+    def test__linux_cpu_temp_invalid(self, mock_file):
         self.cpu_temp_file_paths_patch.return_value = None
         self.assertEqual(self.cpu.temp, None)
-        self.assertEqual(self.open_read_patch.call_args, None)
+        self.assertFalse(mock_file.called)
 
-    def test__linux_uptime_valid(self):
-        self.open_read_patch.return_value = "45516.13 123925.62\n"
+    @TestLinux.get_open_patch(read_data=UPTIME_FILE)
+    def test__linux_cpu_uptime_valid(self, mock_file):
         self.assertEqual(self.cpu._uptime(), 45516)
-        args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, (p("/proc/uptime"),))
+        args, _ = mock_file.call_args
+        self.assertTrue(mock_file.called)
+        self.assertEqual(args, (p("/proc/uptime"), "r"))
 
-    def test__linux_uptime_invalid(self):
-        self.open_read_patch.return_value = None
+    @TestLinux.get_open_patch(read_data=None)
+    def test__linux_cpu_uptime_invalid(self, mock_file):
+        mock_file.side_effect = FileNotFoundError
         self.assertEqual(self.cpu._uptime(), None)
-        args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, (p("/proc/uptime"),))
+        args, _ = mock_file.call_args
+        self.assertEqual(args, (p("/proc/uptime"), "r"))
 
 
 class _TestLinuxMemFile(TestLinux):
 
-    def setUp(self):
-        super(_TestLinuxMemFile, self).setUp()
-        self.open_read_patch.return_value = """
-MemTotal:       16260004 kB
+    MEM_FILE = """MemTotal:       16260004 kB
 MemFree:         8172964 kB
 MemAvailable:   12541728 kB
 Buffers:          576268 kB
@@ -317,16 +353,14 @@ class TestLinuxMem(_TestLinuxMemFile):
         super(TestLinuxMem, self).setUp()
         self.mem = self.system.query("mem")
 
-    def test__linux_mem_file(self):
+    @TestLinux.get_open_patch(read_data=_TestLinuxMemFile.MEM_FILE)
+    def test__linux_mem_file(self, mock_file):
         mem_file = _mem_file()
         keys = ("MemTotal", "Shmem", "MemFree", "Buffers", "Cached",
                 "SReclaimable", "MemTotal")
-
-        for k in keys:
-            self.assertTrue(k in mem_file.keys())
-
-        args, _ = self.open_read_patch.call_args
-        self.assertEqual(args, ("/proc/meminfo",))
+        self.assertTrue(all(k in mem_file.keys() for k in keys))
+        args, _ = mock_file.call_args
+        self.assertEqual(args, ("/proc/meminfo", "r"))
 
     def test__linux_mem_used(self):
         self.assertEqual(self.mem._used(), (3392568, "KiB"))
@@ -366,8 +400,7 @@ class TestLinuxDisk(TestLinux):
 
         # Output of
         # 'lsblk --output NAME,LABEL,PARTLABEL,FSTYPE --paths --pairs'
-        self.lsblk_out = """
-NAME="/dev/sdb4" LABEL="" PARTLABEL="root" FSTYPE="ext4"
+        self.lsblk_out = """NAME="/dev/sdb4" LABEL="" PARTLABEL="root" FSTYPE="ext4"
 NAME="/dev/sdb2" LABEL="" PARTLABEL="boot" FSTYPE="ext4"
 NAME="/dev/sdb5" LABEL="" PARTLABEL="home" FSTYPE="ext4"
 NAME="/dev/sdb3" LABEL="" PARTLABEL="efi" FSTYPE="vfat"
