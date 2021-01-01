@@ -481,6 +481,7 @@ class Misc(AbstractMisc):
     """ A Linux implementation of the AbstractMisc class """
 
     FILES = {
+        "proc": Path("/proc"),
         "sys_backlight": Path("/sys/devices/backlight"),
     }
 
@@ -490,7 +491,8 @@ class Misc(AbstractMisc):
         reg = re.compile(r"|".join(systems.keys()))
 
         vol = None
-        pids = (open_read(d.joinpath("cmdline")) for d in Path("/proc").iterdir()
+        proc = Misc.FILES["proc"]
+        pids = (open_read(d.joinpath("cmdline")) for d in proc.iterdir()
                 if d.is_dir() and d.name.isdigit())
         audio = (reg.search(i) for i in pids if i and reg.search(i))
         audio = next(audio, None)
