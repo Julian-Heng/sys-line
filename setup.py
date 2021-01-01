@@ -48,10 +48,10 @@ class CleanCommand(setuptools.Command):
 
         for i in files:
             if i.is_dir():
-                print("removed directory '{}'".format(i))
+                print(f"removed directory '{i}'")
                 i.rmdir()
             else:
-                print("removed '{}'".format(i))
+                print(f"removed '{i}'")
                 i.unlink()
 
 
