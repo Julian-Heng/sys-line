@@ -23,12 +23,12 @@ stages:
 flake8:
   stage: lint
   script:
-    - sh ./lint.sh flake8
+    - ./lint.sh flake8
 
 pylint:
   stage: lint
   script:
-    - sh ./lint.sh pylint
+    - ./lint.sh pylint
 
 .unittest_template: &unittest_definition
   script:
