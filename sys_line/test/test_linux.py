@@ -406,10 +406,18 @@ NAME="/dev/sdb3" LABEL="" PARTLABEL="efi" FSTYPE="vfat"
 NAME="/dev/sdb1" LABEL="" PARTLABEL="bios_grub" FSTYPE=""
 """
 
+        self.which_patch = patch("shutil.which").start()
+        self.which_patch.return_value = True
+
         self.dev_patch = patch("sys_line.systems.linux.Disk.original_dev",
                                new_callable=PropertyMock).start()
 
         self.run_patch.return_value = self.lsblk_out
+
+    def test__linux_lsblk_not_installed(self):
+        self.which_patch.return_value = False
+        entries = self.disk._lsblk_entries
+        self.assertEqual(entries, None)
 
     def test__linux_lsblk_entries(self):
         entries = self.disk._lsblk_entries
@@ -456,6 +464,13 @@ class TestLinuxDiskSingle(TestLinuxDisk):
         self.dev_patch.return_value = self.original_dev_mock_single
         self.run_patch.return_value = self.lsblk_out
 
+    def test__linux_disk_lsblk_not_installed_single(self):
+        self.which_patch.return_value = False
+
+        expected = {"/dev/sdb4": None}
+        self.assertEqual(self.disk.name, expected)
+        self.assertEqual(self.disk.partition, expected)
+
     def test__linux_disk_name_single(self):
         expected = {"/dev/sdb4": "root"}
         self.assertEqual(self.disk.name, expected)
@@ -471,6 +486,17 @@ class TestLinuxDiskMultiple(TestLinuxDisk):
         super(TestLinuxDiskMultiple, self).setUp()
         self.dev_patch.return_value = self.original_dev_mock_multiple
         self.run_patch.return_value = self.lsblk_out
+
+    def test__linux_disk_lsblk_not_installed_multiple(self):
+        self.which_patch.return_value = False
+
+        expected = {
+            "/dev/sdb4": None,
+            "/dev/sdb5": None,
+        }
+
+        self.assertEqual(self.disk.name, expected)
+        self.assertEqual(self.disk.partition, expected)
 
     def test__linux_disk_name_multiple(self):
         expected = {
