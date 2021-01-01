@@ -118,8 +118,7 @@ class Cpu(AbstractCpu):
             fan = int(open_read(fan_file).strip())
         return fan
 
-    @property
-    def temp(self):
+    def _temp(self):
         temp = None
         temp_files = self._cpu_temp_file_paths
         if temp_files:
@@ -302,18 +301,8 @@ class Battery(AbstractBattery):
     def is_full(self):
         return self._compare_status("Full")
 
-    @property
-    def percent(self):
-        perc = None
-        bat_dir = Battery.directory()
-        if bat_dir is not None:
-            current_charge = self.current_charge
-            full_charge = self.full_charge
-
-            perc = percent(current_charge, full_charge)
-            perc = round_trim(perc, self.options.percent_round)
-
-        return perc
+    def _percent(self):
+        return self.current_charge, self.full_charge
 
     def _time(self):
         remaining = 0
@@ -325,8 +314,7 @@ class Battery(AbstractBattery):
 
         return remaining
 
-    @property
-    def power(self):
+    def _power(self):
         pass
 
     @staticmethod
@@ -396,15 +384,13 @@ class BatteryAmp(Battery):
         """ Returns current filename """
         return "current_now"
 
-    @property
-    def power(self):
+    def _power(self):
         power = None
         bat_dir = Battery.directory()
         if bat_dir is not None:
             voltage_path = bat_dir.joinpath("voltage_now")
             voltage = int(open_read(voltage_path))
             power = (self.drain_rate * voltage) / 1e12
-            power = round_trim(power, self.options.power_round)
 
         return power
 
@@ -430,9 +416,8 @@ class BatteryWatt(Battery):
         """ Returns power filename """
         return "power_now"
 
-    @property
-    def power(self):
-        return round_trim(self.drain_rate / 1e6, self.options.power_round)
+    def _power(self):
+        return self.drain_rate / 1e6
 
 
 class Network(AbstractNetwork):
@@ -485,8 +470,7 @@ class Misc(AbstractMisc):
         "sys_backlight": Path("/sys/devices/backlight"),
     }
 
-    @property
-    def vol(self):
+    def _vol(self):
         systems = {"pulseaudio": Misc._vol_pulseaudio}
         reg = re.compile(r"|".join(systems.keys()))
 
@@ -500,15 +484,12 @@ class Misc(AbstractMisc):
         if audio is not None:
             try:
                 vol = systems[audio.group(0)]()
-                if vol is not None:
-                    vol = round_trim(vol, self.options.volume_round)
             except KeyError:
                 vol = None
 
         return vol
 
-    @property
-    def scr(self):
+    def _scr(self):
         scr = None
         backlight_path = Misc.FILES["sys_backlight"]
 
@@ -521,7 +502,6 @@ class Misc(AbstractMisc):
                 curr = int(open_read(scr_dir.joinpath("brightness")))
                 max_scr = int(open_read(scr_dir.joinpath("max_brightness")))
                 scr = percent(curr, max_scr)
-                scr = round_trim(scr, self.options.screen_round)
 
         return scr
 

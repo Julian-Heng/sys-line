@@ -268,10 +268,17 @@ class AbstractCpu(AbstractGetter):
     def fan(self):
         """ Abstract fan method to be implemented by subclass """
 
-    @property
     @abstractmethod
-    def temp(self):
+    def _temp(self):
         """ Abstract temperature method to be implemented by subclass """
+
+    @property
+    def temp(self):
+        """ Temperature method """
+        temp = self._temp()
+        if temp is not None:
+            return round_trim(temp, self.options.temp_round)
+        return None
 
     @abstractmethod
     def _uptime(self):
@@ -502,10 +509,20 @@ class AbstractBattery(AbstractGetter):
     def is_full(self):
         """ Abstract battery full method to be implemented by subclass """
 
-    @property
     @abstractmethod
-    def percent(self):
+    def _percent(self):
         """ Abstract battery percent method to be implemented by subclass """
+
+    @property
+    def percent(self):
+        """ Battery percent method """
+        perc = None
+        if self.is_present:
+            current, full = self._percent()
+            if current is not None and full is not None:
+                perc = percent(current, full)
+                perc = round_trim(perc, self.options.percent_round)
+        return perc
 
     @abstractmethod
     def _time(self):
@@ -518,12 +535,23 @@ class AbstractBattery(AbstractGetter):
         """ Battery time method """
         return unix_epoch_to_str(self._time())
 
-    @property
     @abstractmethod
-    def power(self):
+    def _power(self):
         """
         Abstract battery power usage method to be implemented by subclass
         """
+
+    @property
+    def power(self):
+        """
+        Power usage method
+        """
+        power = None
+        if self.is_present:
+            power = self._power()
+            if power is not None:
+                power = round_trim(power, self.options.power_round)
+        return power
 
 
 class AbstractNetwork(AbstractGetter):
@@ -684,15 +712,29 @@ class AbstractMisc(AbstractGetter):
     def _valid_info(self):
         return ["vol", "scr"]
 
-    @property
     @abstractmethod
-    def vol(self):
+    def _vol(self):
         """ Abstract volume method to be implemented by subclass """
 
     @property
+    def vol(self):
+        """ Volume method """
+        vol = self._vol()
+        if vol is not None:
+            vol = round_trim(vol, self.options.volume_round)
+        return vol
+
     @abstractmethod
-    def scr(self):
+    def _scr(self):
         """ Abstract screen brightness method to be implemented by subclass """
+
+    @property
+    def scr(self):
+        """ Screen brightness method """
+        scr = self._scr()
+        if scr is not None:
+            scr = round_trim(scr, self.options.screen_round)
+        return scr
 
 
 class BatteryStub(AbstractBattery):
@@ -710,15 +752,13 @@ class BatteryStub(AbstractBattery):
     def is_full(self):
         return None
 
-    @property
-    def percent(self):
-        return None
+    def _percent(self):
+        return None, None
 
     def _time(self):
         return 0
 
-    @property
-    def power(self):
+    def _power(self):
         return None
 
 

@@ -32,7 +32,7 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractMisc)
 from .wm import Yabai
 from ..tools.sysctl import Sysctl
-from ..tools.utils import percent, run, round_trim
+from ..tools.utils import percent, run
 
 
 class Cpu(AbstractCpu):
@@ -62,14 +62,13 @@ class Cpu(AbstractCpu):
 
         return fan
 
-    @property
-    def temp(self):
+    def _temp(self):
         temp = None
         if shutil.which("osx-cpu-temp"):
             regex = r"CPU: ((\d+\.)?\d+)"
             match = re.search(regex, run(["osx-cpu-temp", "-f", "-c"]))
-            temp = float(match.group(1)) if match else 0.0
-            temp = round_trim(temp, self.options.temp_round)
+            if match:
+                temp = float(match.group(1))
 
         return temp
 
@@ -202,17 +201,8 @@ class Battery(AbstractBattery):
     def is_full(self):
         return self.bat["FullyCharged"] == "Yes" if self.is_present else None
 
-    @property
-    def percent(self):
-        perc = None
-
-        if self.is_present:
-            current_capacity = self._current_capacity()
-            max_capacity = int(self.bat["MaxCapacity"])
-            perc = percent(current_capacity, max_capacity)
-            perc = round_trim(perc, self.options.percent_round)
-
-        return perc
+    def _percent(self):
+        return self._current_capacity(), int(self.bat["MaxCapacity"])
 
     def _time(self):
         charge = 0
@@ -225,14 +215,12 @@ class Battery(AbstractBattery):
 
         return charge
 
-    @property
-    def power(self):
+    def _power(self):
         power = None
 
         if self.is_present:
             voltage = int(self.bat["Voltage"])
             power = (self._current() * voltage) / 1e6
-            power = round_trim(power, self.options.power_round)
 
         return power
 
@@ -281,15 +269,13 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ Darwin implementation of AbstractMisc class """
 
-    @property
-    def vol(self):
+    def _vol(self):
         cmd = ["vol"]
         osa = ["osascript", "-e", "output volume of (get volume settings)"]
         vol = float(run(cmd if shutil.which("vol") else osa))
-        return round_trim(vol, self.options.volume_round)
+        return vol
 
-    @property
-    def scr(self):
+    def _scr(self):
         def check(line):
             return "IODisplayParameters" in line
 
@@ -303,7 +289,6 @@ class Misc(AbstractMisc):
                 reg = r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)"
                 scr = re.search(reg, scr_out)
             scr = percent(int(scr.group(2)), int(scr.group(1)))
-            scr = round_trim(scr, self.options.screen_round)
 
         return scr
 

@@ -60,8 +60,7 @@ class Cpu(AbstractCpu):
         """ Stub """
         return None
 
-    @property
-    def temp(self):
+    def _temp(self):
         temp = Sysctl.query("dev.cpu.0.temperature")
         return float(re.search(r"\d+\.?\d+", temp).group(0)) if temp else None
 
@@ -219,13 +218,11 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ FreeBSD implementation of AbstractMisc class """
 
-    @property
-    def vol(self):
+    def _vol(self):
         """ Stub """
         return None
 
-    @property
-    def scr(self):
+    def _scr(self):
         """ Stub """
         return None
 
