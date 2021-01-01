@@ -9,6 +9,7 @@ cache:
     - venv/
 
 before_script:
+  - ls -al
   - python -V
   - type -p python
   - pip install virtualenv
