@@ -26,7 +26,7 @@ import shutil
 
 from abc import abstractmethod
 from functools import lru_cache
-from pathlib import Path as p
+from pathlib import Path
 
 from . import wm
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
@@ -39,12 +39,12 @@ class Cpu(AbstractCpu):
     """ A Linux implementation of the AbstractCpu class """
 
     FILES = {
-        "proc_cpu": p("/proc/cpuinfo"),
-        "sys_cpu": p("/sys/devices/system/cpu"),
-        "proc_load": p("/proc/loadavg"),
-        "sys_platform": p("/sys/devices/platform"),
-        "sys_hwmon": p("/sys/class/hwmon"),
-        "proc_uptime": p("/proc/uptime"),
+        "proc_cpu": Path("/proc/cpuinfo"),
+        "sys_cpu": Path("/sys/devices/system/cpu"),
+        "proc_load": Path("/proc/loadavg"),
+        "sys_platform": Path("/sys/devices/platform"),
+        "sys_hwmon": Path("/sys/class/hwmon"),
+        "proc_uptime": Path("/proc/uptime"),
     }
 
     @property
@@ -74,7 +74,7 @@ class Cpu(AbstractCpu):
 
         temp_dir = next(files, None)
         if temp_dir is not None:
-            temp_files = sorted(p(temp_dir).glob("temp*_input"))
+            temp_files = sorted(temp_dir.glob("temp*_input"))
 
         return temp_files
 
@@ -231,7 +231,7 @@ class Battery(AbstractBattery):
     """ A Linux implementation of the AbstractBattery class """
 
     FILES = {
-        "sys_power_supply": p("/sys/class/power_supply"),
+        "sys_power_supply": Path("/sys/class/power_supply"),
     }
 
     @property
@@ -334,7 +334,7 @@ class Battery(AbstractBattery):
     def directory():
         """ Returns the path for the battery directory """
         def check(_file):
-            return p(_file).exists() and bool(int(open_read(_file)))
+            return _file.exists() and bool(int(open_read(_file)))
 
         _dir = Battery.FILES["sys_power_supply"].glob("*BAT*")
         _dir = (d for d in _dir if check(d.joinpath("present")))
@@ -439,8 +439,8 @@ class Network(AbstractNetwork):
     """ A Linux implementation of the AbstractNetwork class """
 
     FILES = {
-        "sys_net": p("/sys/class/net"),
-        "proc_wifi": p("/proc/net/wireless"),
+        "sys_net": Path("/sys/class/net"),
+        "proc_wifi": Path("/proc/net/wireless"),
     }
 
     @property
@@ -473,7 +473,7 @@ class Network(AbstractNetwork):
     def _bytes_delta(self, dev, mode):
         net = Network.FILES["sys_net"]
         mode = "tx" if mode == "up" else "rx"
-        stat_file = p(net, dev, "statistics", f"{mode}_bytes")
+        stat_file = Path(net, dev, "statistics", f"{mode}_bytes")
         return int(open_read(stat_file))
 
 
@@ -481,7 +481,7 @@ class Misc(AbstractMisc):
     """ A Linux implementation of the AbstractMisc class """
 
     FILES = {
-        "sys_backlight": p("/sys/devices/backlight"),
+        "sys_backlight": Path("/sys/devices/backlight"),
     }
 
     @property
@@ -490,7 +490,7 @@ class Misc(AbstractMisc):
         reg = re.compile(r"|".join(systems.keys()))
 
         vol = None
-        pids = (open_read(d.joinpath("cmdline")) for d in p("/proc").iterdir()
+        pids = (open_read(d.joinpath("cmdline")) for d in Path("/proc").iterdir()
                 if d.is_dir() and d.name.isdigit())
         audio = (reg.search(i) for i in pids if i and reg.search(i))
         audio = next(audio, None)

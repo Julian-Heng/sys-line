@@ -24,7 +24,7 @@
 
 import unittest
 
-from pathlib import Path as p
+from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
 from ..systems.linux import Linux, _mem_file
@@ -207,7 +207,7 @@ power management:
         self.assertEqual(self.cpu.query("cores", None), 4)
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
-        self.assertEqual(args, (p("/proc/cpuinfo"), "r"))
+        self.assertEqual(args, (Path("/proc/cpuinfo"), "r"))
 
     @TestLinux.get_open_patch(read_data=CPU_FILE)
     def test__linux_cpu_string(self, mock_file):
@@ -215,7 +215,7 @@ power management:
         self.assertEqual(self.cpu._cpu_string(), expected)
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
-        self.assertEqual(args, (p("/proc/cpuinfo"), "r"))
+        self.assertEqual(args, (Path("/proc/cpuinfo"), "r"))
 
     @TestLinux.get_open_patch(read_data=SPEED_FILE)
     def test__linux_cpu_speed_valid(self, mock_file):
@@ -237,7 +237,7 @@ power management:
         self.assertEqual(self.cpu._load_avg(), expected)
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
-        self.assertEqual(args, (p("/proc/loadavg"), "r"))
+        self.assertEqual(args, (Path("/proc/loadavg"), "r"))
 
     @TestLinux.get_open_patch(read_data=None)
     def test__linux_cpu_load_avg_invalid(self, mock_file):
@@ -245,7 +245,7 @@ power management:
         self.assertEqual(self.cpu._load_avg(), None)
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
-        self.assertEqual(args, (p("/proc/loadavg"), "r"))
+        self.assertEqual(args, (Path("/proc/loadavg"), "r"))
 
     @TestLinux.get_open_patch(read_data=FAN_FILE)
     def test__linux_cpu_fan_valid(self, mock_file):
@@ -280,14 +280,14 @@ power management:
         self.assertEqual(self.cpu._uptime(), 45516)
         args, _ = mock_file.call_args
         self.assertTrue(mock_file.called)
-        self.assertEqual(args, (p("/proc/uptime"), "r"))
+        self.assertEqual(args, (Path("/proc/uptime"), "r"))
 
     @TestLinux.get_open_patch(read_data=None)
     def test__linux_cpu_uptime_invalid(self, mock_file):
         mock_file.side_effect = FileNotFoundError
         self.assertEqual(self.cpu._uptime(), None)
         args, _ = mock_file.call_args
-        self.assertEqual(args, (p("/proc/uptime"), "r"))
+        self.assertEqual(args, (Path("/proc/uptime"), "r"))
 
 
 class _TestLinuxMemFile(TestLinux):
@@ -532,26 +532,26 @@ class TestLinuxNetworkDev(_TestLinuxNetwork):
                   new_callable=PropertyMock).start()
         )
 
-        self.net_dev_glob_patch = patch("sys_line.systems.linux.p").start()
+        self.net_dev_glob_patch = patch("sys_line.systems.linux.Path").start()
         self.net_original_files["sys_net"] = self.net_dev_glob_patch
         self.net_files_patch.return_value = self.net_original_files
 
     @TestLinux.get_open_patch(read_data="up\n")
     def test__linux_net_dev_valid_single(self, mock_file):
         self.net_dev_glob_patch.glob.return_value = (
-            p("/sys/class/net/enp4s0"),
+            Path("/sys/class/net/enp4s0"),
         )
         self.assertEqual(self.net.dev, "enp4s0")
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
-        self.assertEqual(args, (p("/sys/class/net/enp4s0/operstate"), "r"))
+        self.assertEqual(args, (Path("/sys/class/net/enp4s0/operstate"), "r"))
 
     @TestLinux.get_open_patch_multiple(read_datas=("down\n", "up\n", "down\n"))
     def test__linux_net_dev_valid_multiple(self):
         self.net_dev_glob_patch.glob.return_value = (
-            p("/sys/class/net/enp3s0"),
-            p("/sys/class/net/enp4s0"),
-            p("/sys/class/net/enp5s0"),
+            Path("/sys/class/net/enp3s0"),
+            Path("/sys/class/net/enp4s0"),
+            Path("/sys/class/net/enp5s0"),
         )
 
         self.assertEqual(self.net.dev, "enp4s0")
@@ -586,7 +586,7 @@ class TestLinuxNetworkSsid(_TestLinuxNetwork):
         self.assertEqual(self.net._ssid(), (None, None))
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
-        self.assertEqual(args, (p("/proc/net/wireless"), "r"))
+        self.assertEqual(args, (Path("/proc/net/wireless"), "r"))
 
     @TestLinux.get_open_patch(read_data=WIFI_FILE)
     def test__linux_net_ssid_have_wireless(self, mock_file):
@@ -607,7 +607,7 @@ class TestLinuxNetwork(_TestLinuxNetwork):
         self.assertEqual(self.net._bytes_delta("stub", "up"), 1000)
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
-        expected = (p("/sys/class/net/stub/statistics/tx_bytes"), "r")
+        expected = (Path("/sys/class/net/stub/statistics/tx_bytes"), "r")
         self.assertEqual(args, expected)
 
     @TestLinux.get_open_patch(read_data="1000\n")
@@ -615,5 +615,5 @@ class TestLinuxNetwork(_TestLinuxNetwork):
         self.assertEqual(self.net._bytes_delta("stub", "down"), 1000)
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
-        expected = (p("/sys/class/net/stub/statistics/rx_bytes"), "r")
+        expected = (Path("/sys/class/net/stub/statistics/rx_bytes"), "r")
         self.assertEqual(args, expected)
