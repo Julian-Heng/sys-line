@@ -23,12 +23,12 @@ stages:
 flake8:
   stage: lint
   script:
-    - python -m flake8 ./sys_line
+    - sh ./lint.sh flake8
 
 pylint:
   stage: lint
   script:
-    - python -m pylint --rcfile=./.pylintrc ./sys_line
+    - sh ./lint.sh pylint
 
 .unittest_template: &unittest_definition
   script:
