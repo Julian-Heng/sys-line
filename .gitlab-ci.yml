@@ -9,7 +9,6 @@ cache:
     - venv/
 
 before_script:
-  - ls -al
   - python -V
   - type -p python
   - pip install virtualenv
@@ -24,12 +23,12 @@ stages:
 flake8:
   stage: lint
   script:
-    - ./lint.sh flake8
+    - python -m flake8 ./sys_line
 
 pylint:
   stage: lint
   script:
-    - ./lint.sh pylint
+    - python -m pylint --rcfile=./.pylintrc ./sys_line
 
 .unittest_template: &unittest_definition
   script:
