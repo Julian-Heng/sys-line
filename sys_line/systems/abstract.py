@@ -32,7 +32,7 @@ from copy import copy
 from datetime import datetime
 from functools import lru_cache
 from importlib import import_module
-from pathlib import Path as p
+from pathlib import Path
 
 from ..tools.storage import Storage
 from ..tools.utils import percent, run, unix_epoch_to_str, round_trim
@@ -342,12 +342,12 @@ class AbstractDisk(AbstractStorage):
             # to the first disk or mount set in the arguments
             key = next(iter(getattr(self, info)), "/")
         elif not (key in self.options.disk or key in self.options.mount):
-            if p(key).is_block_device():
+            if Path(key).is_block_device():
                 self.options.disk.append(key)
             else:
                 self.options.mount.append(key)
 
-        if not p(key).is_block_device():
+        if not Path(key).is_block_device():
             key = self._mount_to_devname(key)
 
         return super(AbstractDisk, self)._query(info, new_opts)[key]
