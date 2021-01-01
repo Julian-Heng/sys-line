@@ -35,8 +35,7 @@ class TestYabai(unittest.TestCase):
         self.run_patch = patch("sys_line.systems.wm.run").start()
 
         self.yabai_exe = "/usr/local/bin/yabai"
-        self.query_spaces_out = ("""
-{
+        self.query_spaces_out = """{
 	"id":3,
 	"label":"",
 	"index":1,
@@ -49,10 +48,9 @@ class TestYabai(unittest.TestCase):
 	"first-window":52,
 	"last-window":52
 }
-""")
+"""
 
-        self.query_windows_out = ("""
-{
+        self.query_windows_out = """{
 	"id":52,
 	"pid":543,
 	"app":"iTerm2",
@@ -85,7 +83,7 @@ class TestYabai(unittest.TestCase):
 	"zoom-fullscreen":0,
 	"native-fullscreen":0
 }
-""")
+"""
 
     def tearDown(self):
         super(TestYabai, self).tearDown()
