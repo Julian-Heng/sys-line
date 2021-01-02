@@ -65,12 +65,12 @@ class Yabai(AbstractWindowManager):
     @property
     def app_name(self):
         query = self._yabai_query("--windows", "--window")
-        return query.app if query is not None else None
+        return query.app if query is not None and query.app else None
 
     @property
     def window_name(self):
         query = self._yabai_query("--windows", "--window")
-        return query.title if query is not None else None
+        return query.title if query is not None and query.title else None
 
 
 class Xorg(AbstractWindowManager):
