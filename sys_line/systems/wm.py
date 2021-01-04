@@ -52,23 +52,19 @@ class Yabai(AbstractWindowManager):
         result = json.loads(result, object_hook=lambda d: SimpleNamespace(**d))
         return result
 
-    @property
-    def desktop_index(self):
+    def desktop_index(self, options=None):
         query = self._yabai_query("--spaces", "--space")
         return query.index if query is not None else None
 
-    @property
-    def desktop_name(self):
-        index = self.desktop_index
+    def desktop_name(self, options=None):
+        index = self.desktop_index(options)
         return f"Desktop {index}" if index is not None else None
 
-    @property
-    def app_name(self):
+    def app_name(self, options=None):
         query = self._yabai_query("--windows", "--window")
         return query.app if query is not None and query.app else None
 
-    @property
-    def window_name(self):
+    def window_name(self, options=None):
         query = self._yabai_query("--windows", "--window")
         return query.title if query is not None and query.title else None
 
@@ -120,8 +116,7 @@ class Xorg(AbstractWindowManager):
 
         return out
 
-    @property
-    def desktop_index(self):
+    def desktop_index(self, options=None):
         current_desktop = self._xprop_query("0c", "_NET_CURRENT_DESKTOP")
         if current_desktop is None:
             return None
@@ -129,10 +124,9 @@ class Xorg(AbstractWindowManager):
         index = current_desktop[-1]
         return index
 
-    @property
-    def desktop_name(self):
+    def desktop_name(self, options=None):
         name = None
-        index = self.desktop_index
+        index = self.desktop_index(options)
         desktops = self._xprop_query("8u", "_NET_DESKTOP_NAMES")
 
         if index is not None and desktops is not None:
@@ -143,8 +137,7 @@ class Xorg(AbstractWindowManager):
 
         return name
 
-    @property
-    def app_name(self):
+    def app_name(self, options=None):
         name = None
         window_id = self._current_window_id
 
@@ -155,8 +148,7 @@ class Xorg(AbstractWindowManager):
 
         return name
 
-    @property
-    def window_name(self):
+    def window_name(self, options=None):
         name = None
         window_id = self._current_window_id
 

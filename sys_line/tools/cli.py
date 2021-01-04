@@ -57,8 +57,8 @@ def parse_cli(args):
                                      usage=usage_msg,
                                      formatter_class=fmt)
 
-    parser.add_argument("format", nargs="*", action="append", type=str,
-                        default=[""])
+    parser.add_argument("format", nargs="*", action="store", type=str,
+                        default=[])
     parser.add_argument("-v", "--version", action="version", version=ver)
     parser.add_argument("-a", "--all", nargs="*", choices=System.SHORT_DOMAINS,
                         default=None, metavar="domain")
@@ -66,102 +66,113 @@ def parse_cli(args):
     groups = {i: parser.add_argument_group(i) for i in System.DOMAINS}
 
     groups["cpu"].add_argument("-cls", "--cpu-load-short",
-                               action="store_true", default=False)
+                               action="store_true", default=False,
+                               dest="cpu.load_avg.short")
     groups["cpu"].add_argument("-cur", "--cpu-usage-round",
                                action="store", type=int, default=2,
-                               metavar="int")
+                               metavar="int", dest="cpu.cpu_usage.round")
     groups["cpu"].add_argument("-ctr", "--cpu-temp-round",
                                action="store", type=int, default=1,
-                               metavar="int")
+                               metavar="int", dest="cpu.temp.round")
 
     groups["memory"].add_argument("-mup", "--mem-used-prefix",
                                   action="store", default="MiB",
-                                  choices=Storage.PREFIXES, metavar="prefix")
+                                  choices=Storage.PREFIXES, metavar="prefix",
+                                  dest="mem.used.prefix")
     groups["memory"].add_argument("-mtp", "--mem-total-prefix",
                                   action="store", default="MiB",
-                                  choices=Storage.PREFIXES, metavar="prefix")
+                                  choices=Storage.PREFIXES, metavar="prefix",
+                                  dest="mem.total.prefix")
     groups["memory"].add_argument("-mur", "--mem-used-round",
                                   action="store", type=int, default=0,
-                                  metavar="int")
+                                  metavar="int", dest="mem.used.round")
     groups["memory"].add_argument("-mtr", "--mem-total-round",
                                   action="store", type=int, default=0,
-                                  metavar="int")
+                                  metavar="int", dest="mem.total.round")
     groups["memory"].add_argument("-mpr", "--mem-percent-round",
                                   action="store", type=int, default=2,
-                                  metavar="int")
+                                  metavar="int", dest="mem.percent.round")
 
     groups["swap"].add_argument("-sup", "--swap-used-prefix",
                                 action="store", default="MiB",
-                                choices=Storage.PREFIXES, metavar="prefix")
+                                choices=Storage.PREFIXES, metavar="prefix",
+                                dest="swap.used.prefix")
     groups["swap"].add_argument("-stp", "--swap-total-prefix",
                                 action="store", default="MiB",
-                                choices=Storage.PREFIXES, metavar="prefix")
+                                choices=Storage.PREFIXES, metavar="prefix",
+                                dest="swap.total.prefix")
     groups["swap"].add_argument("-sur", "--swap-used-round",
                                 action="store", type=int, default=0,
-                                metavar="int")
+                                metavar="int", dest="swap.used.round")
     groups["swap"].add_argument("-str", "--swap-total-round",
                                 action="store", type=int, default=0,
-                                metavar="int")
+                                metavar="int", dest="swap.total.round")
     groups["swap"].add_argument("-spr", "--swap-percent-round",
                                 action="store", type=int, default=2,
-                                metavar="int")
+                                metavar="int", dest="swap.percent.round")
 
-    groups["disk"].add_argument("-dd", "--disk", nargs="*", action="append",
-                                default=[], metavar="disk", dest="disk_disk")
-    groups["disk"].add_argument("-dm", "--mount", nargs="*", action="append",
-                                default=["/"], metavar="mount",
-                                dest="disk_mount")
-    groups["disk"].add_argument("-dsd", "--disk-short-dev",
-                                action="store_true", default=False)
+    groups["disk"].add_argument("-dd", "--disk", nargs="+", action="append",
+                                default=[], metavar="disk",
+                                dest="disk.query")
+    groups["disk"].add_argument("-dm", "--mount", nargs="+", action="append",
+                                default=[], metavar="mount",
+                                dest="disk.query")
+    groups["disk"].add_argument("-dds", "--disk-dev-short",
+                                action="store_true", default=False,
+                                dest="disk.dev.short")
     groups["disk"].add_argument("-dup", "--disk-used-prefix",
                                 action="store", default="GiB",
-                                choices=Storage.PREFIXES, metavar="prefix")
+                                choices=Storage.PREFIXES, metavar="prefix",
+                                dest="disk.used.prefix")
     groups["disk"].add_argument("-dtp", "--disk-total-prefix",
                                 action="store", default="GiB",
-                                choices=Storage.PREFIXES, metavar="prefix")
+                                choices=Storage.PREFIXES, metavar="prefix",
+                                dest="disk.total.prefix")
     groups["disk"].add_argument("-dur", "--disk-used-round",
                                 action="store", type=int, default=2,
-                                metavar="int")
+                                metavar="int", dest="disk.used.round")
     groups["disk"].add_argument("-dtr", "--disk-total-round",
                                 action="store", type=int, default=2,
-                                metavar="int")
+                                metavar="int", dest="disk.total.round")
     groups["disk"].add_argument("-dpr", "--disk-percent-round",
                                 action="store", type=int, default=2,
-                                metavar="int")
+                                metavar="int", dest="disk.percent.round")
 
     groups["battery"].add_argument("-bpr", "--bat-percent-round",
                                    action="store", type=int, default=2,
-                                   metavar="int")
+                                   metavar="int", dest="bat.percent.round")
     groups["battery"].add_argument("-bppr", "--bat-power-round",
                                    action="store", type=int, default=2,
-                                   metavar="int")
+                                   metavar="int", dest="bat.power.round")
 
     groups["network"].add_argument("-ndp", "--net-download-prefix",
                                    action="store", default="KiB",
-                                   choices=Storage.PREFIXES, metavar="prefix")
+                                   choices=Storage.PREFIXES, metavar="prefix",
+                                   dest="net.download.prefix")
     groups["network"].add_argument("-nup", "--net-upload-prefix",
                                    action="store", default="KiB",
-                                   choices=Storage.PREFIXES, metavar="prefix")
+                                   choices=Storage.PREFIXES, metavar="prefix",
+                                   dest="net.upload.prefix")
     groups["network"].add_argument("-ndr", "--net-download-round",
                                    action="store", type=int, default=2,
-                                   metavar="int")
+                                   metavar="int", dest="net.download.round")
     groups["network"].add_argument("-nur", "--net-upload-round",
                                    action="store", type=int, default=2,
-                                   metavar="int")
+                                   metavar="int", dest="net.upload.round")
 
     groups["date"].add_argument("-tdf", "--date-format",
                                 action="store", type=str, default="%a, %d %h",
-                                metavar="str", dest="date_date_format")
+                                metavar="str", dest="date.date.format")
     groups["date"].add_argument("-tf", "--time-format",
                                 action="store", type=str, default="%H:%M",
-                                metavar="str", dest="date_time_format")
+                                metavar="str", dest="date.time.format")
 
     groups["misc"].add_argument("-mvr", "--misc-volume-round",
                                 action="store", type=int, default=0,
-                                metavar="int")
+                                metavar="int", dest="misc.vol.round")
     groups["misc"].add_argument("-msr", "--misc-screen-round",
                                 action="store", type=int, default=0,
-                                metavar="int")
+                                metavar="int", dest="misc.scr.round")
 
     return process_args(parser.parse_args(args))
 
@@ -176,53 +187,21 @@ def unique(_list):
     return list(dict.fromkeys(_list))
 
 
-def dict_to_namespace(_dict):
-    """ Converts a dictionary to a simple namespace recursively """
-    ret = SimpleNamespace()
-    for attr_name, attr_value in _dict.items():
-        if isinstance(attr_value, dict):
-            attr_value = dict_to_namespace(attr_value)
-        setattr(ret, attr_name, attr_value)
-    return ret
-
-
 def process_args(args):
     """
-    Converts the namespace from argparse.parse_args to a simple namespace
+    Processes the destination of the namespace from the parsed arguments to be
+    nested
     """
-    options = dict()
+    options = SimpleNamespace()
+    for dest, value in vars(args).items():
+        *split, attr = dest.split(".")
+        target = options
+        for groupspace in split:
+            if not hasattr(target, groupspace):
+                setattr(target, groupspace, SimpleNamespace())
+            target = getattr(target, groupspace)
+        setattr(target, attr, value)
 
-    # Split the argparse namespace into multiple namespaces
-    for key, value in vars(args).items():
-        if key in ["format", "all"]:
-            options[key] = value
-        else:
-            domain, info = key.split("_", 1)
-            if domain not in options:
-                options[domain] = dict()
-            options[domain][info] = value
+    options.disk.query = tuple(unique(flatten(options.disk.query)))
 
-    result = dict_to_namespace(options)
-
-    # Flatten the list of formats if it is not the default
-    if result.format != [""]:
-        result.format = flatten(result.format[1:])
-
-    disk = result.disk.disk
-    mount = result.disk.mount
-
-    # Flatten the list of disks if it is not the default
-    if disk:
-        disk = unique(flatten(disk))
-        # Clear mount list if it is default since disk is set
-        if mount == ["/"]:
-            mount = list()
-
-    # Flatten the list of mounts if it is not default
-    if mount and mount != ["/"]:
-        mount = unique(flatten(mount[1:]))
-
-    result.disk.disk = disk
-    result.disk.mount = mount
-
-    return result
+    return options
