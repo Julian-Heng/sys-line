@@ -38,9 +38,7 @@ from ..tools.utils import run, round_trim
 class Cpu(AbstractCpu):
     """ FreeBSD implementation of AbstractCpu class """
 
-    @property
-    @lru_cache(maxsize=1)
-    def cores(self):
+    def cores(self, options=None):
         return int(Sysctl.query("hw.ncpu"))
 
     def _cpu_string(self):
@@ -55,8 +53,7 @@ class Cpu(AbstractCpu):
     def _load_avg(self):
         return Sysctl.query("vm.loadavg").split()[1:4]
 
-    @property
-    def fan(self):
+    def fan(self, options=None):
         """ Stub """
         return None
 
@@ -111,17 +108,16 @@ class Disk(AbstractDisk):
     def _DF_FLAGS(self):
         return ["df", "-P", "-k"]
 
-    @property
-    def name(self):
+    def name(self, options=None):
         """ Stub """
-        return {i: None for i in self.original_dev.keys()}
+        return {i: None for i in self._original_dev(options).keys()}
 
-    @property
-    def partition(self):
+    def partition(self, options=None):
+        devs = self._original_dev(options)
         partition = None
         gpart_out = dict()
         reg = re.compile(r"^(.*)p(\d+)$")
-        dev_reg = {i: reg.search(i) for i in self.original_dev.keys()}
+        dev_reg = {i: reg.search(i) for i in devs.keys()}
 
         if dev_reg:
             partition = dict()
@@ -141,37 +137,34 @@ class Disk(AbstractDisk):
 class Battery(AbstractBattery):
     """ FreeBSD implementation of AbstractBattery class """
 
-    @property
-    @lru_cache(maxsize=1)
-    def bat(self):
-        """ Returns battery info from acpiconf as dict """
-        bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
-        bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in bat]
-        return dict(i.split(":", 1) for i in bat) if len(bat) > 1 else None
+    def is_present(self, options=None):
+        acpiconf = Battery.acpiconf()
+        return acpiconf["State"] != "not present" if acpiconf else False
 
-    @property
-    def is_present(self):
-        return self.bat["State"] != "not present" if self.bat else False
+    def is_charging(self, options=None):
+        acpiconf = Battery.acpiconf()
+        is_present = self.is_present(options)
+        return acpiconf["State"] == "charging" if is_present else None
 
-    @property
-    def is_charging(self):
-        return self.bat["State"] == "charging" if self.is_present else None
+    def is_full(self, options=None):
+        acpiconf = Battery.acpiconf()
+        is_present = self.is_present(options)
+        return acpiconf["State"] == "high" if is_present else None
 
-    @property
-    def is_full(self):
-        return self.bat["State"] == "high" if self.is_present else None
-
-    @property
-    def percent(self):
+    def percent(self, options=None):
         ret = None
-        if self.is_present:
-            ret = int(self.bat["Remaining capacity"][:-1])
+        is_present = self.is_present(options)
+        if is_present:
+            acpiconf = Battery.acpiconf()
+            ret = int(acpiconf["Remaining capacity"][:-1])
         return ret
 
     def _time(self):
         secs = 0
-        if self.is_present:
-            acpi_time = self.bat["Remaining time"]
+        is_present = self.is_present(None)
+        if is_present:
+            acpiconf = Battery.acpiconf()
+            acpi_time = acpiconf["Remaining time"]
             if acpi_time != "unknown":
                 acpi_time = [int(i) for i in acpi_time.split(":", maxsplit=3)]
                 secs = acpi_time[0] * 3600 + acpi_time[1] * 60
@@ -180,12 +173,21 @@ class Battery(AbstractBattery):
 
         return secs
 
-    @property
-    def power(self):
+    def power(self, options=None):
         ret = None
-        if self.is_present:
-            ret = int(self.bat["Present rate"][:-3]) / 1000
+        is_present = self.is_present(options)
+        if is_present:
+            acpiconf = Battery.acpiconf()
+            ret = int(acpiconf["Present rate"][:-3]) / 1000
         return ret
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def acpiconf():
+        """ Returns battery info from acpiconf as dict """
+        bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
+        bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in bat]
+        return dict(i.split(":", 1) for i in bat) if len(bat) > 1 else None
 
 
 class Network(AbstractNetwork):
@@ -195,8 +197,7 @@ class Network(AbstractNetwork):
     def _LOCAL_IP_CMD(self):
         return ["ifconfig"]
 
-    @property
-    def dev(self):
+    def dev(self, options=None):
         def check(dev):
             return active.search(run(self._LOCAL_IP_CMD + [dev]))
 
@@ -230,8 +231,8 @@ class Misc(AbstractMisc):
 class FreeBSD(System):
     """ A FreeBSD implementation of the abstract System class """
 
-    def __init__(self, options):
-        super(FreeBSD, self).__init__(options,
+    def __init__(self, default_options):
+        super(FreeBSD, self).__init__(default_options,
                                       cpu=Cpu, mem=Memory, swap=Swap,
                                       disk=Disk, bat=Battery, net=Network,
                                       wm=self.detect_window_manager(),
