@@ -175,7 +175,6 @@ class Battery(AbstractBattery):
         is_present = self.is_present()
         return int(self.ioreg()["CurrentCapacity"]) if is_present else None
 
-    @lru_cache(maxsize=1)
     def is_present(self, options=None):
         is_present = False
         if self.ioreg() is not None:
