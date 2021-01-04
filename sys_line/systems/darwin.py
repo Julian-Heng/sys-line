@@ -17,6 +17,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# pylint: disable=no-self-use
 
 """ Darwin specific module """
 
@@ -38,9 +40,7 @@ from ..tools.utils import percent, run
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
 
-    @property
-    @lru_cache(maxsize=1)
-    def cores(self):
+    def cores(self, options=None):
         return int(Sysctl.query("hw.logicalcpu_max"))
 
     def _cpu_string(self):
@@ -52,8 +52,7 @@ class Cpu(AbstractCpu):
     def _load_avg(self):
         return Sysctl.query("vm.loadavg").split()[1:4]
 
-    @property
-    def fan(self):
+    def fan(self, options=None):
         fan = None
         if shutil.which("osx-cpu-temp"):
             regex = r"(\d+) RPM"
@@ -100,7 +99,7 @@ class Swap(AbstractSwap):
 
     @property
     @lru_cache(maxsize=1)
-    def swapusage(self):
+    def _swapusage(self):
         """ Returns swapusage from sysctl """
         return Sysctl.query("vm.swapusage").strip()
 
@@ -108,7 +107,7 @@ class Swap(AbstractSwap):
         value = 0
 
         regex = fr"{search} = (\d+\.\d+)M"
-        match = re.search(regex, self.swapusage)
+        match = re.search(regex, self._swapusage)
 
         if match:
             value = int(float(match.group(1)) * pow(1024, 2))
@@ -133,7 +132,7 @@ class Disk(AbstractDisk):
     @lru_cache(maxsize=1)
     def _diskutil(self):
         """ Returns diskutil program output as a dict """
-        devs = self.original_dev.values()
+        devs = self._original_dev().values()
         cmd = ["diskutil", "info", "-plist"]
         diskutil = None
         if devs is not None:
@@ -148,32 +147,22 @@ class Disk(AbstractDisk):
         except KeyError:
             return None
 
-    @property
-    def name(self):
+    def name(self, options=None):
         return self._lookup_diskutil("VolumeName")
 
-    @property
-    def partition(self):
+    def partition(self, options=None):
         return self._lookup_diskutil("FilesystemName")
 
 
 class Battery(AbstractBattery):
     """ Darwin implementation of AbstractBattery class """
 
-    @property
-    @lru_cache(maxsize=1)
-    def bat(self):
-        """ Returns battery info from ioreg as a dict """
-        bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
-        bat = (re.sub("[\"{}]", "", i.strip()) for i in bat)
-        bat = dict(i.split(" = ", 1) for i in bat if i.strip())
-        return bat if bat else None
-
     @lru_cache(maxsize=1)
     def _current(self):
         current = 0
-        if self.is_present:
-            current = int(self.bat["InstantAmperage"])
+        is_present = self.is_present()
+        if is_present:
+            current = int(self.ioreg()["InstantAmperage"])
 
             # Fix current if it underflows in ioreg
             current -= pow(2, 64) if len(str(current)) >= 20 else 0
@@ -183,34 +172,36 @@ class Battery(AbstractBattery):
 
     @lru_cache(maxsize=1)
     def _current_capacity(self):
-        return int(self.bat["CurrentCapacity"]) if self.is_present else None
+        is_present = self.is_present()
+        return int(self.ioreg()["CurrentCapacity"]) if is_present else None
 
-    @property
     @lru_cache(maxsize=1)
-    def is_present(self):
+    def is_present(self, options=None):
         is_present = False
-        if self.bat is not None:
-            is_present = self.bat["BatteryInstalled"] == "Yes"
+        if self.ioreg() is not None:
+            is_present = self.ioreg()["BatteryInstalled"] == "Yes"
         return is_present
 
-    @property
-    def is_charging(self):
-        return self.bat["IsCharging"] == "Yes" if self.is_present else None
+    def is_charging(self, options=None):
+        is_present = self.is_present()
+        return self.ioreg()["IsCharging"] == "Yes" if is_present else None
 
-    @property
-    def is_full(self):
-        return self.bat["FullyCharged"] == "Yes" if self.is_present else None
+    def is_full(self, options=None):
+        is_present = self.is_present()
+        return self.ioreg()["FullyCharged"] == "Yes" if is_present else None
 
     def _percent(self):
-        return self._current_capacity(), int(self.bat["MaxCapacity"])
+        return self._current_capacity(), int(self.ioreg()["MaxCapacity"])
 
     def _time(self):
         charge = 0
 
-        if self.is_present and self._current() != 0:
+        is_present = self.is_present()
+        if is_present and self._current() != 0:
             charge = self._current_capacity()
-            if self.is_charging:
-                charge = int(self.bat["MaxCapacity"]) - charge
+            is_charging = self.is_charging()
+            if is_charging:
+                charge = int(self.ioreg()["MaxCapacity"]) - charge
             charge = int((charge / self._current()) * 3600)
 
         return charge
@@ -218,11 +209,21 @@ class Battery(AbstractBattery):
     def _power(self):
         power = None
 
-        if self.is_present:
-            voltage = int(self.bat["Voltage"])
+        is_present = self.is_present()
+        if is_present:
+            voltage = int(self.ioreg()["Voltage"])
             power = (self._current() * voltage) / 1e6
 
         return power
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def ioreg():
+        """ Returns battery info from ioreg as a dict """
+        bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
+        bat = (re.sub("[\"{}]", "", i.strip()) for i in bat)
+        bat = dict(i.split(" = ", 1) for i in bat if i.strip())
+        return bat if bat else None
 
 
 class Network(AbstractNetwork):
@@ -232,8 +233,7 @@ class Network(AbstractNetwork):
     def _LOCAL_IP_CMD(self):
         return ["ifconfig"]
 
-    @property
-    def dev(self):
+    def dev(self, options=None):
         def check(dev):
             return active.search(run(self._LOCAL_IP_CMD + [dev]))
 
@@ -296,8 +296,8 @@ class Misc(AbstractMisc):
 class Darwin(System):
     """ A Darwin implementation of the abstract System class """
 
-    def __init__(self, options):
-        super(Darwin, self).__init__(options,
+    def __init__(self, default_options):
+        super(Darwin, self).__init__(default_options,
                                      cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
                                      bat=Battery, net=Network,
                                      wm=self.detect_window_manager(),
