@@ -114,13 +114,12 @@ class Disk(AbstractDisk):
 
     def partition(self, options=None):
         devs = self._original_dev(options)
-        partition = None
+        partition = {i: None for i in devs.keys()}
         gpart_out = dict()
         reg = re.compile(r"^(.*)p(\d+)$")
         dev_reg = {i: reg.search(i) for i in devs.keys()}
 
         if dev_reg:
-            partition = dict()
             for k, v in dev_reg.items():
                 if v is not None:
                     if k not in gpart_out.keys():
@@ -151,6 +150,9 @@ class Battery(AbstractBattery):
         is_present = self.is_present(options)
         return acpiconf["State"] == "high" if is_present else None
 
+    def _percent(self):
+        pass
+
     def percent(self, options=None):
         ret = None
         is_present = self.is_present(options)
@@ -172,6 +174,9 @@ class Battery(AbstractBattery):
                 secs = 0
 
         return secs
+
+    def _power(self):
+        pass
 
     def power(self, options=None):
         ret = None
@@ -206,7 +211,7 @@ class Network(AbstractNetwork):
         return next((i for i in dev_list if check(i)), None)
 
     def _ssid(self):
-        ssid_cmd = tuple(self._LOCAL_IP_CMD + [self.dev])
+        ssid_cmd = tuple(self._LOCAL_IP_CMD + [self.dev()])
         ssid_reg = re.compile(r"ssid (.*) channel")
         return ssid_cmd, ssid_reg
 
