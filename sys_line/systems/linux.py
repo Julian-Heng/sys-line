@@ -38,7 +38,7 @@ from ..tools.utils import open_read, run, percent, round_trim
 class Cpu(AbstractCpu):
     """ A Linux implementation of the AbstractCpu class """
 
-    FILES = {
+    _FILES = {
         "proc_cpu": Path("/proc/cpuinfo"),
         "sys_cpu": Path("/sys/devices/system/cpu"),
         "proc_load": Path("/proc/loadavg"),
@@ -51,13 +51,13 @@ class Cpu(AbstractCpu):
     @lru_cache(maxsize=1)
     def _cpu_file(self):
         """ Returns cached /proc/cpuinfo """
-        return open_read(Cpu.FILES["proc_cpu"])
+        return open_read(Cpu._FILES["proc_cpu"])
 
     @property
     @lru_cache(maxsize=1)
     def _cpu_speed_file_path(self):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
-        speed_dir = Cpu.FILES["sys_cpu"]
+        speed_dir = Cpu._FILES["sys_cpu"]
         path = (f for f in speed_dir.rglob("*") if speed_reg.search(str(f)))
         return next(path, None)
 
@@ -68,7 +68,7 @@ class Cpu(AbstractCpu):
             return _file.exists() and "temp" in open_read(_file)
 
         temp_files = None
-        temp_dir_base = Cpu.FILES["sys_hwmon"]
+        temp_dir_base = Cpu._FILES["sys_hwmon"]
         files = (f for f in temp_dir_base.glob("*")
                  if check(f.joinpath("name")))
 
@@ -81,12 +81,10 @@ class Cpu(AbstractCpu):
     @property
     @lru_cache(maxsize=1)
     def _cpu_fan_file_path(self):
-        files = (f for f in Cpu.FILES["sys_platform"].rglob("fan1_input"))
+        files = (f for f in Cpu._FILES["sys_platform"].rglob("fan1_input"))
         return next(files, None)
 
-    @property
-    @lru_cache(maxsize=1)
-    def cores(self):
+    def cores(self, options=None):
         return len(re.findall(r"^processor", self._cpu_file, re.M))
 
     def _cpu_string(self):
@@ -105,13 +103,12 @@ class Cpu(AbstractCpu):
 
     def _load_avg(self):
         load = None
-        load_file = open_read(Cpu.FILES["proc_load"])
+        load_file = open_read(Cpu._FILES["proc_load"])
         if load_file is not None:
             load = load_file.split(" ")[:3]
         return load
 
-    @property
-    def fan(self):
+    def fan(self, options=None):
         fan = None
         fan_file = self._cpu_fan_file_path
         if fan_file is not None:
@@ -127,7 +124,7 @@ class Cpu(AbstractCpu):
 
     def _uptime(self):
         uptime = None
-        uptime_file = open_read(Cpu.FILES["proc_uptime"])
+        uptime_file = open_read(Cpu._FILES["proc_uptime"])
         if uptime_file is not None:
             uptime = int(float(uptime_file.strip().split(" ")[0]))
         return uptime
@@ -200,28 +197,26 @@ class Disk(AbstractDisk):
 
         return lsblk_entries
 
-    @property
-    def name(self):
+    def name(self, options=None):
+        devs = self._original_dev(options)
         labels = ["LABEL", "PARTLABEL"]
         lsblk_entries = self._lsblk_entries
-        names = {k: None for k in self.original_dev}
+        names = {k: None for k in devs}
 
         if lsblk_entries is not None:
             names = {k: next((v[i] for i in labels if v[i]), None)
-                     for k, v in self._lsblk_entries.items()
-                     if k in self.original_dev}
+                     for k, v in self._lsblk_entries.items() if k in devs}
 
         return names
 
-    @property
-    def partition(self):
+    def partition(self, options=None):
+        devs = self._original_dev(options)
         lsblk_entries = self._lsblk_entries
-        partitions = {k: None for k in self.original_dev}
+        partitions = {k: None for k in devs}
 
         if lsblk_entries is not None:
             partitions = {k: v["FSTYPE"]
-                          for k, v in self._lsblk_entries.items()
-                          if k in self.original_dev}
+                          for k, v in self._lsblk_entries.items() if k in devs}
 
         return partitions
 
@@ -229,56 +224,56 @@ class Disk(AbstractDisk):
 class Battery(AbstractBattery):
     """ A Linux implementation of the AbstractBattery class """
 
-    FILES = {
+    _FILES = {
         "sys_power_supply": Path("/sys/class/power_supply"),
     }
 
     @property
     @abstractmethod
-    def current(self):
+    def _current(self):
         """ Abstract current class to be implemented """
 
     @property
     @abstractmethod
-    def full(self):
+    def _full(self):
         """ Abstract current class to be implemented """
 
     @property
     @abstractmethod
-    def drain(self):
+    def _drain(self):
         """ Abstract current class to be implemented """
 
     @property
     @lru_cache(maxsize=1)
-    def status(self):
+    def _status(self):
         """ Returns cached battery status file """
         return open_read(Battery.directory().joinpath("status")).strip()
 
     @property
     @lru_cache(maxsize=1)
-    def current_charge(self):
+    def _current_charge(self):
         """ Returns cached battery current charge file """
         bat_dir = Battery.directory()
         if bat_dir is not None:
-            return int(open_read(bat_dir.joinpath(self.current)))
+            return int(open_read(bat_dir.joinpath(self._current)))
         return None
 
     @property
     @lru_cache(maxsize=1)
-    def full_charge(self):
+    def _full_charge(self):
         """ Returns cached battery full charge file """
         bat_dir = Battery.directory()
         if bat_dir is not None:
-            return int(open_read(bat_dir.joinpath(self.full)))
+            return int(open_read(bat_dir.joinpath(self._full)))
         return None
 
     @property
     @lru_cache(maxsize=1)
-    def drain_rate(self):
+    def _drain_rate(self):
         """ Returns cached battery drain rate file """
         bat_dir = Battery.directory()
         if bat_dir is not None:
-            return int(open_read(bat_dir.joinpath(self.drain)))
+            return int(open_read(bat_dir.joinpath(self._drain)))
         return None
 
     @lru_cache(maxsize=1)
@@ -286,31 +281,28 @@ class Battery(AbstractBattery):
         """ Compares status to query """
         bat_dir = Battery.directory()
         if bat_dir is not None:
-            return self.status == query
+            return self._status == query
         return None
 
-    @property
-    def is_present(self):
+    def is_present(self, options=None):
         return Battery.directory() is not None
 
-    @property
-    def is_charging(self):
+    def is_charging(self, options=None):
         return self._compare_status("Charging")
 
-    @property
-    def is_full(self):
+    def is_full(self, options=None):
         return self._compare_status("Full")
 
     def _percent(self):
-        return self.current_charge, self.full_charge
+        return self._current_charge, self._full_charge
 
     def _time(self):
         remaining = 0
-        if self.is_present and self.drain_rate:
-            charge = self.current_charge
-            if self.is_charging:
-                charge = self.full_charge - charge
-            remaining = int((charge / self.drain_rate) * 3600)
+        if self.is_present and self._drain_rate:
+            charge = self._current_charge
+            if self.is_charging():
+                charge = self._full_charge - charge
+            remaining = int((charge / self._drain_rate) * 3600)
 
         return remaining
 
@@ -324,7 +316,7 @@ class Battery(AbstractBattery):
         def check(_file):
             return _file.exists() and bool(int(open_read(_file)))
 
-        _dir = Battery.FILES["sys_power_supply"].glob("*BAT*")
+        _dir = Battery._FILES["sys_power_supply"].glob("*BAT*")
         _dir = (d for d in _dir if check(d.joinpath("present")))
         return next(_dir, None)
 
@@ -368,19 +360,19 @@ class BatteryAmp(Battery):
 
     @property
     @lru_cache(maxsize=1)
-    def current(self):
+    def _current(self):
         """ Returns current charge filename """
         return "charge_now"
 
     @property
     @lru_cache(maxsize=1)
-    def full(self):
+    def _full(self):
         """ Returns full charge filename """
         return "charge_full"
 
     @property
     @lru_cache(maxsize=1)
-    def drain(self):
+    def _drain(self):
         """ Returns current filename """
         return "current_now"
 
@@ -390,7 +382,7 @@ class BatteryAmp(Battery):
         if bat_dir is not None:
             voltage_path = bat_dir.joinpath("voltage_now")
             voltage = int(open_read(voltage_path))
-            power = (self.drain_rate * voltage) / 1e12
+            power = (self._drain_rate * voltage) / 1e12
 
         return power
 
@@ -400,30 +392,30 @@ class BatteryWatt(Battery):
 
     @property
     @lru_cache(maxsize=1)
-    def current(self):
+    def _current(self):
         """ Returns current energy filename """
         return "energy_now"
 
     @property
     @lru_cache(maxsize=1)
-    def full(self):
+    def _full(self):
         """ Returns full energy filename """
         return "energy_full"
 
     @property
     @lru_cache(maxsize=1)
-    def drain(self):
+    def _drain(self):
         """ Returns power filename """
         return "power_now"
 
     def _power(self):
-        return self.drain_rate / 1e6
+        return self._drain_rate / 1e6
 
 
 class Network(AbstractNetwork):
     """ A Linux implementation of the AbstractNetwork class """
 
-    FILES = {
+    _FILES = {
         "sys_net": Path("/sys/class/net"),
         "proc_wifi": Path("/proc/net/wireless"),
     }
@@ -432,20 +424,19 @@ class Network(AbstractNetwork):
     def _LOCAL_IP_CMD(self):
         return ["ip", "address", "show", "dev"]
 
-    @property
-    def dev(self):
+    def dev(self, options=None):
         # Skip virtual network devices
-        files = Network.FILES["sys_net"].glob("[!v]*")
+        files = Network._FILES["sys_net"].glob("[!v]*")
         return next((f.name for f in files
                      if "up" in open_read(f.joinpath("operstate"))), None)
 
     def _ssid(self):
         ssid_cmd = None
         ssid_reg = None
-        dev = self.dev
+        dev = self.dev()
 
         if dev is not None:
-            wifi_path = Network.FILES["proc_wifi"]
+            wifi_path = Network._FILES["proc_wifi"]
             wifi_out = open_read(wifi_path)
             if wifi_out is not None:
                 wifi_out = wifi_out.strip().splitlines()
@@ -456,7 +447,7 @@ class Network(AbstractNetwork):
         return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
-        net = Network.FILES["sys_net"]
+        net = Network._FILES["sys_net"]
         mode = "tx" if mode == "up" else "rx"
         stat_file = Path(net, dev, "statistics", f"{mode}_bytes")
         return int(open_read(stat_file))
@@ -465,7 +456,7 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ A Linux implementation of the AbstractMisc class """
 
-    FILES = {
+    _FILES = {
         "proc": Path("/proc"),
         "sys_backlight": Path("/sys/devices/backlight"),
     }
@@ -475,7 +466,7 @@ class Misc(AbstractMisc):
         reg = re.compile(r"|".join(systems.keys()))
 
         vol = None
-        proc = Misc.FILES["proc"]
+        proc = Misc._FILES["proc"]
         pids = (open_read(d.joinpath("cmdline")) for d in proc.iterdir()
                 if d.is_dir() and d.name.isdigit())
         audio = (reg.search(i) for i in pids if i and reg.search(i))
@@ -491,7 +482,7 @@ class Misc(AbstractMisc):
 
     def _scr(self):
         scr = None
-        backlight_path = Misc.FILES["sys_backlight"]
+        backlight_path = Misc._FILES["sys_backlight"]
 
         if backlight_path.exists():
             scr_files = (f for f in backlight_path.rglob("*")
@@ -527,8 +518,8 @@ class Misc(AbstractMisc):
 class Linux(System):
     """ A Linux implementation of the abstract System class """
 
-    def __init__(self, options):
-        super(Linux, self).__init__(options,
+    def __init__(self, default_options):
+        super(Linux, self).__init__(default_options,
                                     cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
                                     bat=Battery.detect_battery(), net=Network,
                                     wm=self.detect_window_manager(),
