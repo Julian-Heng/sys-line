@@ -77,7 +77,7 @@ class TestDarwinCpu(TestDarwin):
 
     def test__darwin_cpu_fan_no_prog(self):
         self.which_patch.return_value = False
-        self.assertEqual(self.cpu.fan, None)
+        self.assertEqual(self.cpu.fan(), None)
 
     def test__darwin_cpu_fan_have_prog_zero_rpm(self):
         self.which_patch.return_value = True
@@ -89,7 +89,7 @@ class TestDarwinCpu(TestDarwin):
         ]
 
         self.run_patch.return_value = "\n".join(out)
-        self.assertEqual(self.cpu.fan, 0)
+        self.assertEqual(self.cpu.fan(), 0)
 
     def test__darwin_cpu_fan_have_prog_non_zero_rpm(self):
         self.which_patch.return_value = True
@@ -101,12 +101,12 @@ class TestDarwinCpu(TestDarwin):
         ]
 
         self.run_patch.return_value = "\n".join(out)
-        self.assertEqual(self.cpu.fan, 1359)
+        self.assertEqual(self.cpu.fan(), 1359)
         self.assertTrue(self.run_patch.called)
 
     def test__darwin_cpu_temp_no_prog(self):
         self.which_patch.return_value = False
-        self.assertEqual(self.cpu.temp, None)
+        self.assertEqual(self.cpu.temp(), None)
 
     def test__darwin_cpu_temp_have_prog(self):
         self.which_patch.return_value = True
@@ -118,7 +118,7 @@ class TestDarwinCpu(TestDarwin):
         ]
 
         self.run_patch.return_value = "\n".join(out)
-        self.assertEqual(self.cpu.temp, 50.1)
+        self.assertEqual(self.cpu.temp(), 50.1)
 
     def test__darwin_cpu_uptime(self):
         value = "{ sec = 1594371260, usec = 995858 } Fri Jul 10 16:54:20 2020"
@@ -175,7 +175,7 @@ class TestDarwinSwap(TestDarwin):
     def setUp(self):
         super(TestDarwinSwap, self).setUp()
         self.swap = self.system.query("swap")
-        self.swapusage_mock = patch("sys_line.systems.darwin.Swap.swapusage",
+        self.swapusage_mock = patch("sys_line.systems.darwin.Swap._swapusage",
                                     new_callable=PropertyMock).start()
 
     def test__darwin_swap_used_not_in_use(self):
@@ -477,8 +477,9 @@ class TestDarwinDisk(TestDarwin):
         self.diskutil_mock_multiple = ["\n".join(i) for i in out]
         self.diskutil_mock_single = self.diskutil_mock_multiple[0]
 
-        self.dev_patch = patch("sys_line.systems.darwin.Disk.original_dev",
-                               new_callable=PropertyMock).start()
+        self.dev_patch = (
+            patch("sys_line.systems.darwin.Disk._original_dev").start()
+        )
 
 
 class TestDarwinDiskDiskutil(TestDarwinDisk):
@@ -505,11 +506,11 @@ class TestDarwinDiskSingle(TestDarwinDisk):
 
     def test__darwin_disk_name_single(self):
         expected = {"/dev/disk1s5": "Macintosh HD"}
-        self.assertEqual(self.disk.name, expected)
+        self.assertEqual(self.disk.name(), expected)
 
     def test__darwin_disk_partition_single(self):
         expected = {"/dev/disk1s5": "APFS"}
-        self.assertEqual(self.disk.partition, expected)
+        self.assertEqual(self.disk.partition(), expected)
 
 
 class TestDarwinDiskMultiple(TestDarwinDisk):
@@ -525,7 +526,7 @@ class TestDarwinDiskMultiple(TestDarwinDisk):
             "/dev/disk1s1": "Macintosh HD — Data"
         }
 
-        self.assertEqual(self.disk.name, expected)
+        self.assertEqual(self.disk.name(), expected)
 
     def test__darwin_disk_partition_multiple(self):
         expected = {
@@ -533,4 +534,4 @@ class TestDarwinDiskMultiple(TestDarwinDisk):
             "/dev/disk1s1": "APFS"
         }
 
-        self.assertEqual(self.disk.partition, expected)
+        self.assertEqual(self.disk.partition(), expected)

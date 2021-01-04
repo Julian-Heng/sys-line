@@ -250,7 +250,7 @@ power management:
     @TestLinux.get_open_patch(read_data=FAN_FILE)
     def test__linux_cpu_fan_valid(self, mock_file):
         self.cpu_fan_file_path_patch.return_value = "stub"
-        self.assertEqual(self.cpu.fan, 1234)
+        self.assertEqual(self.cpu.fan(), 1234)
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
         self.assertEqual(args, ("stub", "r"))
@@ -258,13 +258,13 @@ power management:
     @TestLinux.get_open_patch(read_data=None)
     def test__linux_cpu_fan_invalid(self, mock_file):
         self.cpu_fan_file_path_patch.return_value = None
-        self.assertEqual(self.cpu.fan, None)
+        self.assertEqual(self.cpu.fan(), None)
         self.assertFalse(mock_file.called)
 
     @TestLinux.get_open_patch(read_data=TEMP_FILE)
     def test__linux_cpu_temp_valid(self, mock_file):
         self.cpu_temp_file_paths_patch.return_value = ["stub1", "stub2"]
-        self.assertEqual(self.cpu.temp, 58.0)
+        self.assertEqual(self.cpu.temp(), 58.0)
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
         self.assertEqual(args, ("stub1", "r"))
@@ -272,7 +272,7 @@ power management:
     @TestLinux.get_open_patch(read_data=None)
     def test__linux_cpu_temp_invalid(self, mock_file):
         self.cpu_temp_file_paths_patch.return_value = None
-        self.assertEqual(self.cpu.temp, None)
+        self.assertEqual(self.cpu.temp(), None)
         self.assertFalse(mock_file.called)
 
     @TestLinux.get_open_patch(read_data=UPTIME_FILE)
@@ -409,8 +409,9 @@ NAME="/dev/sdb1" LABEL="" PARTLABEL="bios_grub" FSTYPE=""
         self.which_patch = patch("shutil.which").start()
         self.which_patch.return_value = True
 
-        self.dev_patch = patch("sys_line.systems.linux.Disk.original_dev",
-                               new_callable=PropertyMock).start()
+        self.dev_patch = (
+            patch("sys_line.systems.linux.Disk._original_dev").start()
+        )
 
         self.run_patch.return_value = self.lsblk_out
 
@@ -468,16 +469,16 @@ class TestLinuxDiskSingle(TestLinuxDisk):
         self.which_patch.return_value = False
 
         expected = {"/dev/sdb4": None}
-        self.assertEqual(self.disk.name, expected)
-        self.assertEqual(self.disk.partition, expected)
+        self.assertEqual(self.disk.name(), expected)
+        self.assertEqual(self.disk.partition(), expected)
 
     def test__linux_disk_name_single(self):
         expected = {"/dev/sdb4": "root"}
-        self.assertEqual(self.disk.name, expected)
+        self.assertEqual(self.disk.name(), expected)
 
     def test__linux_disk_partition_single(self):
         expected = {"/dev/sdb4": "ext4"}
-        self.assertEqual(self.disk.partition, expected)
+        self.assertEqual(self.disk.partition(), expected)
 
 
 class TestLinuxDiskMultiple(TestLinuxDisk):
@@ -495,8 +496,8 @@ class TestLinuxDiskMultiple(TestLinuxDisk):
             "/dev/sdb5": None,
         }
 
-        self.assertEqual(self.disk.name, expected)
-        self.assertEqual(self.disk.partition, expected)
+        self.assertEqual(self.disk.name(), expected)
+        self.assertEqual(self.disk.partition(), expected)
 
     def test__linux_disk_name_multiple(self):
         expected = {
@@ -504,7 +505,7 @@ class TestLinuxDiskMultiple(TestLinuxDisk):
             "/dev/sdb5": "home",
         }
 
-        self.assertEqual(self.disk.name, expected)
+        self.assertEqual(self.disk.name(), expected)
 
     def test__linux_disk_partition_multiple(self):
         expected = {
@@ -512,7 +513,7 @@ class TestLinuxDiskMultiple(TestLinuxDisk):
             "/dev/sdb5": "ext4",
         }
 
-        self.assertEqual(self.disk.partition, expected)
+        self.assertEqual(self.disk.partition(), expected)
 
 
 class _TestLinuxNetwork(TestLinux):
@@ -526,9 +527,9 @@ class TestLinuxNetworkDev(_TestLinuxNetwork):
 
     def setUp(self):
         super(TestLinuxNetworkDev, self).setUp()
-        self.net_original_files = self.net.FILES
+        self.net_original_files = self.net._FILES
         self.net_files_patch = (
-            patch("sys_line.systems.linux.Network.FILES",
+            patch("sys_line.systems.linux.Network._FILES",
                   new_callable=PropertyMock).start()
         )
 
@@ -541,7 +542,7 @@ class TestLinuxNetworkDev(_TestLinuxNetwork):
         self.net_dev_glob_patch.glob.return_value = (
             Path("/sys/class/net/enp4s0"),
         )
-        self.assertEqual(self.net.dev, "enp4s0")
+        self.assertEqual(self.net.dev(), "enp4s0")
         self.assertTrue(mock_file.called)
         args, _ = mock_file.call_args
         self.assertEqual(args, (Path("/sys/class/net/enp4s0/operstate"), "r"))
@@ -554,12 +555,12 @@ class TestLinuxNetworkDev(_TestLinuxNetwork):
             Path("/sys/class/net/enp5s0"),
         )
 
-        self.assertEqual(self.net.dev, "enp4s0")
+        self.assertEqual(self.net.dev(), "enp4s0")
 
     @TestLinux.get_open_patch(read_data=None)
     def test__linux_net_dev_invalid(self, mock_file):
         self.net_dev_glob_patch.glob.return_value = ()
-        self.assertEqual(self.net.dev, None)
+        self.assertEqual(self.net.dev(), None)
         self.assertFalse(mock_file.called)
 
 
@@ -576,8 +577,7 @@ class TestLinuxNetworkSsid(_TestLinuxNetwork):
         super(TestLinuxNetworkSsid, self).setUp()
 
         self.net_dev_patch = (
-            patch("sys_line.systems.linux.Network.dev",
-                  new_callable=PropertyMock).start()
+            patch("sys_line.systems.linux.Network.dev").start()
         )
 
     @TestLinux.get_open_patch(read_data=NO_WIFI_FILE)
@@ -595,7 +595,7 @@ class TestLinuxNetworkSsid(_TestLinuxNetwork):
     @TestLinux.get_open_patch(read_data=None)
     def test__linux_net_ssid_dev_invalid(self, mock_file):
         self.net_dev_patch.return_value = None
-        self.assertEqual(self.net.dev, None)
+        self.assertEqual(self.net.dev(), None)
         self.assertEqual(self.net._ssid(), (None, None))
         self.assertFalse(mock_file.called)
 
