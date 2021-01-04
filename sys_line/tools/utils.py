@@ -26,6 +26,8 @@ import os
 import re
 import subprocess
 
+from types import SimpleNamespace
+
 
 def percent(num_1, num_2):
     """ Returns percent of 2 numbers """
@@ -76,3 +78,13 @@ def round_trim(num, rnd):
 def trim_string(string):
     """ Trims the string of whitespaces """
     return re.sub(r"\s+", " ", string.strip())
+
+
+def namespace_types_as_dict(o):
+    """
+    Returns a dictionary in the same structure as the given namespace except
+    with types as values
+    """
+    if isinstance(o, SimpleNamespace):
+        return {k: namespace_types_as_dict(v) for k, v in o.__dict__.items()}
+    return type(o)
