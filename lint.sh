@@ -6,10 +6,10 @@ flake8() { python3 -m flake8 ./sys_line; }
 
 main()
 {
-    if (($# == 0)); then
+    if [ "$#" -eq 0 ]; then
         all
     else
-        while (($# > 0)); do
+        while [ "$#" -gt 0 ]; do
             case "$1" in
                 "pylint") pylint ;;
                 "flake8") flake8 ;;
