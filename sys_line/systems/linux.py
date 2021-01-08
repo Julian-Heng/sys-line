@@ -481,20 +481,32 @@ class Misc(AbstractMisc):
         return vol
 
     def _scr(self):
-        scr = None
+        def check(_file):
+            _filename = _file.name
+            return "kbd" not in _filename and "backlight" not in _filename
+
         backlight_path = Misc._FILES["sys_backlight"]
+        if not backlight_path.exists():
+            return None, None
 
-        if backlight_path.exists():
-            scr_files = (f for f in backlight_path.rglob("*")
-                         if "kbd" not in f.name and "backlight" not in f.name)
-            scr_dir = next(scr_files, None)
+        backlight_glob = backlight_path.rglob("*")
+        scr_dir = next(filter(check, backlight_glob), None)
+        if scr_dir is None:
+            return None, None
 
-            if scr_dir is not None:
-                curr = int(open_read(scr_dir.joinpath("brightness")))
-                max_scr = int(open_read(scr_dir.joinpath("max_brightness")))
-                scr = percent(curr, max_scr)
+        current_scr = open_read(scr_dir.joinpath("brightness"))
+        max_scr = open_read(scr_dir.joinpath("max_brightness"))
 
-        return scr
+        if current_scr is None or max_scr is None:
+            return None, None
+
+        current_scr = current_scr.strip()
+        max_scr = max_scr.strip()
+
+        if not current_scr.isnumeric() or not max_scr.isnumeric():
+            return None, None
+
+        return current_scr, max_scr
 
     @staticmethod
     @lru_cache(maxsize=1)
