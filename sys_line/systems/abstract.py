@@ -123,7 +123,7 @@ class AbstractGetter(ABC):
     def __str__(self):
         """ The string representation of the getter would return all values """
         return "\n".join([
-            f"{self.domain_name}.{i}: {getattr(self, i)(self.default_options)}"
+            f"{self.domain_name}.{i}: {self.query(i, None)}"
             for i in self._valid_info
         ])
 
