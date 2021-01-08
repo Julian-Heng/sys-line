@@ -58,75 +58,103 @@ class Cpu(AbstractCpu):
     def _cpu_speed_file_path(self):
         speed_reg = re.compile(r"(bios_limit|(scaling|cpuinfo)_max_freq)$")
         speed_dir = Cpu._FILES["sys_cpu"]
-        path = (f for f in speed_dir.rglob("*") if speed_reg.search(str(f)))
-        return next(path, None)
+        speed_glob = speed_dir.rglob("*")
+        path = next(filter(speed_reg.search, map(str, speed_glob)), None)
+        return path
 
     @property
     @lru_cache(maxsize=1)
     def _cpu_temp_file_paths(self):
         def check(_file):
-            return _file.exists() and "temp" in open_read(_file)
+            _file = _file.joinpath("name")
+            _file_contents = open_read(_file)
+            if _file_contents is None:
+                return False
+            return "temp" in open_read(_file)
 
-        temp_files = None
         temp_dir_base = Cpu._FILES["sys_hwmon"]
-        files = (f for f in temp_dir_base.glob("*")
-                 if check(f.joinpath("name")))
+        temp_dir_glob = temp_dir_base.glob("*")
+        temp_dir = next(filter(check, temp_dir_glob), None)
 
-        temp_dir = next(files, None)
-        if temp_dir is not None:
-            temp_files = sorted(temp_dir.glob("temp*_input"))
+        if temp_dir is None:
+            return None
 
-        return temp_files
+        temp_paths = sorted(temp_dir.glob("temp*_input"))
+        return temp_paths
 
     @property
     @lru_cache(maxsize=1)
     def _cpu_fan_file_path(self):
-        files = (f for f in Cpu._FILES["sys_platform"].rglob("fan1_input"))
-        return next(files, None)
+        fan_dir_base = Cpu._FILES["sys_platform"]
+        fan_dir_glob = fan_dir_base.rglob("fan1_input")
+        fan_path = next(fan_dir_glob, None)
+        return fan_path
 
     def cores(self, options=None):
         return len(re.findall(r"^processor", self._cpu_file, re.M))
 
     def _cpu_string(self):
-        cpu = None
         match = re.search(r"model name\s+: (.*)", self._cpu_file, re.M)
-        if match is not None:
-            cpu = match.group(1)
+        if match is None:
+            return None
+
+        cpu = match.group(1)
         return cpu
 
     def _cpu_speed(self):
-        speed = None
-        speed_file = self._cpu_speed_file_path
-        if speed_file is not None:
-            speed = round_trim(float(open_read(speed_file)) / 1e6, 2)
+        speed_path = self._cpu_speed_file_path
+        if speed_path is None:
+            return None
+
+        speed = open_read(speed_path)
+        if speed is None or not speed.strip().isnumeric():
+            return None
+
+        speed = round_trim(float(speed) / 1e6, 2)
         return speed
 
     def _load_avg(self):
-        load = None
-        load_file = open_read(Cpu._FILES["proc_load"])
-        if load_file is not None:
-            load = load_file.split(" ")[:3]
+        load_path = Cpu._FILES["proc_load"]
+        load_file = open_read(load_path)
+        if load_file is None:
+            return None
+
+        load = load_file.strip().split()[:3]
         return load
 
     def fan(self, options=None):
-        fan = None
-        fan_file = self._cpu_fan_file_path
-        if fan_file is not None:
-            fan = int(open_read(fan_file).strip())
+        fan_path = self._cpu_fan_file_path
+        if fan_path is None:
+            return None
+
+        fan = open_read(fan_path)
+        if fan is None or not fan.strip().isnumeric():
+            return None
+
+        fan = int(fan.strip())
         return fan
 
     def _temp(self):
-        temp = None
-        temp_files = self._cpu_temp_file_paths
-        if temp_files:
-            temp = float(open_read(str(next(iter(temp_files))))) / 1000
+        temp_paths = self._cpu_temp_file_paths
+        if not temp_paths:
+            return None
+
+        temp_path = next(iter(temp_paths))
+        temp = open_read(temp_path)
+        if temp is None:
+            return None
+
+        temp = float(temp) / 1000
         return temp
 
     def _uptime(self):
         uptime = None
-        uptime_file = open_read(Cpu._FILES["proc_uptime"])
-        if uptime_file is not None:
-            uptime = int(float(uptime_file.strip().split(" ")[0]))
+        uptime_path = Cpu._FILES["proc_uptime"]
+        uptime_file = open_read(uptime_path)
+        if uptime_file is None:
+            return None
+
+        uptime = int(float(uptime_file.strip().split(" ")[0]))
         return uptime
 
 
@@ -134,7 +162,11 @@ class Cpu(AbstractCpu):
 def _mem_file():
     """ Returns cached /proc/meminfo """
     reg = re.compile(r"\s+|kB")
-    mem_file = open_read("/proc/meminfo").strip().split("\n")
+    mem_file = open_read("/proc/meminfo")
+    if mem_file is None:
+        return dict()
+
+    mem_file = mem_file.strip().splitlines()
     mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
     mem_file = {k: int(v) for k, v in mem_file.items()}
     return mem_file
@@ -147,12 +179,12 @@ class Memory(AbstractMemory):
         mem_file = _mem_file()
         keys = [["MemTotal", "Shmem"],
                 ["MemFree", "Buffers", "Cached", "SReclaimable"]]
-        used = sum(mem_file[i] for i in keys[0])
-        used -= sum(mem_file[i] for i in keys[1])
+        used = sum(mem_file.get(i, 0) for i in keys[0])
+        used -= sum(mem_file.get(i, 0) for i in keys[1])
         return used, "KiB"
 
     def _total(self):
-        return _mem_file()["MemTotal"], "KiB"
+        return _mem_file().get("MemTotal", 0), "KiB"
 
 
 class Swap(AbstractSwap):
@@ -160,11 +192,11 @@ class Swap(AbstractSwap):
 
     def _used(self):
         mem_file = _mem_file()
-        used = mem_file["SwapTotal"] - mem_file["SwapFree"]
+        used = mem_file.get("SwapTotal", 0) - mem_file.get("SwapFree", 0)
         return used, "KiB"
 
     def _total(self):
-        return _mem_file()["SwapTotal"], "KiB"
+        return _mem_file().get("SwapTotal", 0), "KiB"
 
 
 class Disk(AbstractDisk):
@@ -176,48 +208,60 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
+    def _lsblk_exe(self):
+        """ Returns the path to the lsblk executable """
+        return shutil.which("lsblk")
+
+    @property
+    @lru_cache(maxsize=1)
     def _lsblk_entries(self):
         """
         Returns the output of lsblk in a dictionary with devices as keys
         """
-        lsblk_entries = None
-        lsblk_out = None
-        if shutil.which("lsblk"):
-            columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
-            cmd = ["lsblk", "--output", ",".join(columns), "--paths",
-                   "--pairs"]
-            lsblk_out = run(cmd).strip().split("\n")
+        if not self._lsblk_exe:
+            return None
 
-        if lsblk_out is not None and lsblk_out:
-            lsblk_entries = dict()
-            for line in lsblk_out:
-                out = shlex.split(line)
-                out = dict(re.sub("\"", "", i).split("=", 1) for i in out)
-                lsblk_entries[out["NAME"]] = out
+        columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
+        cmd = [self._lsblk_exe, "--output", ",".join(columns), "--paths",
+               "--pairs"]
+        lsblk_out = run(cmd)
+        if lsblk_out is None:
+            return None
+
+        lsblk_out = lsblk_out.strip().splitlines()
+        lsblk_entries = dict()
+        for line in lsblk_out:
+            out = shlex.split(line)
+            out = dict(re.sub("\"", "", i).split("=", 1) for i in out)
+            lsblk_entries[out["NAME"]] = out
 
         return lsblk_entries
 
     def name(self, options=None):
         devs = self._original_dev(options)
-        labels = ["LABEL", "PARTLABEL"]
+        if devs is None:
+            return None
+
         lsblk_entries = self._lsblk_entries
-        names = {k: None for k in devs}
+        if lsblk_entries is None:
+            return {k: None for k in devs.keys()}
 
-        if lsblk_entries is not None:
-            names = {k: next((v[i] for i in labels if v[i]), None)
-                     for k, v in self._lsblk_entries.items() if k in devs}
-
+        labels = ["LABEL", "PARTLABEL"]
+        names = {k: next((v[i] for i in labels if v[i]), None)
+                 for k, v in lsblk_entries.items() if k in devs}
         return names
 
     def partition(self, options=None):
         devs = self._original_dev(options)
+        if devs is None:
+            return None
+
         lsblk_entries = self._lsblk_entries
-        partitions = {k: None for k in devs}
+        if lsblk_entries is None:
+            return {k: None for k in devs.keys()}
 
-        if lsblk_entries is not None:
-            partitions = {k: v["FSTYPE"]
-                          for k, v in self._lsblk_entries.items() if k in devs}
-
+        partitions = {k: v["FSTYPE"]
+                      for k, v in lsblk_entries.items() if k in devs}
         return partitions
 
 
@@ -247,34 +291,92 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def _status(self):
         """ Returns cached battery status file """
-        return open_read(Battery.directory().joinpath("status")).strip()
+        bat_dir = Battery.directory()
+        if bat_dir is None:
+            return None
+
+        status_path = bat_dir.joinpath("status")
+        status = open_read(status_path)
+        if status is None:
+            return None
+
+        status = status.strip()
+        return status
 
     @property
     @lru_cache(maxsize=1)
     def _current_charge(self):
         """ Returns cached battery current charge file """
         bat_dir = Battery.directory()
-        if bat_dir is not None:
-            return int(open_read(bat_dir.joinpath(self._current)))
-        return None
+        current_filename = self._current
+
+        if bat_dir is None:
+            return None
+
+        if current_filename is None:
+            return None
+
+        current_path = bat_dir.joinpath(current_filename)
+        current_charge = open_read(current_path)
+        if current_charge is None:
+            return None
+
+        current_charge = current_charge.strip()
+        if not current_charge.isnumeric():
+            return None
+
+        current_charge = int(current_charge)
+        return current_charge
 
     @property
     @lru_cache(maxsize=1)
     def _full_charge(self):
         """ Returns cached battery full charge file """
         bat_dir = Battery.directory()
-        if bat_dir is not None:
-            return int(open_read(bat_dir.joinpath(self._full)))
-        return None
+        full_filename = self._full
+
+        if bat_dir is None:
+            return None
+
+        if full_filename is None:
+            return None
+
+        full_path = bat_dir.joinpath(full_filename)
+        full_charge = open_read(full_path)
+        if full_charge is None:
+            return None
+
+        full_charge = full_charge.strip()
+        if not full_charge.isnumeric():
+            return None
+
+        full_charge = int(full_charge)
+        return full_charge
 
     @property
     @lru_cache(maxsize=1)
     def _drain_rate(self):
         """ Returns cached battery drain rate file """
         bat_dir = Battery.directory()
-        if bat_dir is not None:
-            return int(open_read(bat_dir.joinpath(self._drain)))
-        return None
+        drain_filename = self._drain
+
+        if bat_dir is None:
+            return None
+
+        if drain_filename is None:
+            return None
+
+        drain_path = bat_dir.joinpath(drain_filename)
+        drain_rate = open_read(drain_path)
+        if drain_rate is None:
+            return None
+
+        drain_rate = drain_rate.strip()
+        if not drain_rate.isnumeric():
+            return None
+
+        drain_rate = int(drain_rate)
+        return drain_rate
 
     @lru_cache(maxsize=1)
     def _compare_status(self, query):
@@ -297,13 +399,14 @@ class Battery(AbstractBattery):
         return self._current_charge, self._full_charge
 
     def _time(self):
-        remaining = 0
-        if self.is_present and self._drain_rate:
-            charge = self._current_charge
-            if self.is_charging():
-                charge = self._full_charge - charge
-            remaining = int((charge / self._drain_rate) * 3600)
+        if not self.is_present or not self._drain_rate:
+            return 0
 
+        charge = self._current_charge
+        if self.is_charging():
+            charge = self._full_charge - charge
+
+        remaining = int((charge / self._drain_rate) * 3600)
         return remaining
 
     def _power(self):
@@ -314,11 +417,23 @@ class Battery(AbstractBattery):
     def directory():
         """ Returns the path for the battery directory """
         def check(_file):
-            return _file.exists() and bool(int(open_read(_file)))
+            _file = _file.joinpath("present")
+            if not _file.exists():
+                return False
 
-        _dir = Battery._FILES["sys_power_supply"].glob("*BAT*")
-        _dir = (d for d in _dir if check(d.joinpath("present")))
-        return next(_dir, None)
+            _file_contents = open_read(_file)
+            if (
+                    _file_contents is None
+                    or not _file_contents.strip().isnumeric()
+            ):
+                return False
+
+            return bool(int(_file_contents))
+
+        _dir = Battery._FILES["sys_power_supply"]
+        _dir_glob = _dir.glob("*BAT*")
+        bat_dir = next(filter(check, _dir_glob), None)
+        return bat_dir
 
     @staticmethod
     @lru_cache(maxsize=1)
@@ -377,13 +492,26 @@ class BatteryAmp(Battery):
         return "current_now"
 
     def _power(self):
-        power = None
         bat_dir = Battery.directory()
-        if bat_dir is not None:
-            voltage_path = bat_dir.joinpath("voltage_now")
-            voltage = int(open_read(voltage_path))
-            power = (self._drain_rate * voltage) / 1e12
+        if bat_dir is None:
+            return None
 
+        voltage_path = bat_dir.joinpath("voltage_now")
+        voltage = open_read(voltage_path)
+        drain_rate = self._drain_rate
+
+        if voltage is None:
+            return None
+
+        voltage = voltage.strip()
+        if not voltage.isnumeric():
+            return None
+
+        if drain_rate is None:
+            return None
+
+        voltage = int(voltage)
+        power = (drain_rate * voltage) / 1_000_000_000_000
         return power
 
 
@@ -409,7 +537,10 @@ class BatteryWatt(Battery):
         return "power_now"
 
     def _power(self):
-        return self._drain_rate / 1e6
+        drain_rate = self._drain_rate
+        if drain_rate is None:
+            return None
+        return drain_rate / 1_000_000
 
 
 class Network(AbstractNetwork):
@@ -424,33 +555,59 @@ class Network(AbstractNetwork):
     def _LOCAL_IP_CMD(self):
         return ["ip", "address", "show", "dev"]
 
+    @property
+    @lru_cache(maxsize=1)
+    def _iw_exe(self):
+        """ Returns the path to the iw executable """
+        return shutil.which("iw")
+
     def dev(self, options=None):
+        def check(_file):
+            _file = _file.joinpath("operstate")
+            _file_contents = open_read(_file)
+            if _file_contents is None:
+                return False
+            return "up" in _file_contents
+
         # Skip virtual network devices
         files = Network._FILES["sys_net"].glob("[!v]*")
-        return next((f.name for f in files
-                     if "up" in open_read(f.joinpath("operstate"))), None)
+        dev_dir = next(filter(check, files), None)
+        if dev_dir is None:
+            return None
+        return dev_dir.name
 
     def _ssid(self):
-        ssid_cmd = None
-        ssid_reg = None
         dev = self.dev()
+        if dev is None:
+            return None, None
 
-        if dev is not None:
-            wifi_path = Network._FILES["proc_wifi"]
-            wifi_out = open_read(wifi_path)
-            if wifi_out is not None:
-                wifi_out = wifi_out.strip().splitlines()
-                if len(wifi_out) >= 3 and shutil.which("iw"):
-                    ssid_cmd = ("iw", "dev", dev, "link")
-                    ssid_reg = re.compile(r"^SSID: (.*)$")
+        wifi_path = Network._FILES["proc_wifi"]
+        wifi_out = open_read(wifi_path)
+        if wifi_out is None:
+            return None, None
 
+        wifi_out = wifi_out.strip().splitlines()
+        if len(wifi_out) < 3 or not self._iw_exe:
+            return None, None
+
+        ssid_cmd = (self._iw_exe, "dev", dev, "link")
+        ssid_reg = re.compile(r"^SSID: (.*)$")
         return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
         net = Network._FILES["sys_net"]
-        mode = "tx" if mode == "up" else "rx"
+        if mode == "up":
+            mode = "tx"
+        else:
+            mode = "rx"
+
         stat_file = Path(net, dev, "statistics", f"{mode}_bytes")
-        return int(open_read(stat_file))
+        stat = open_read(stat_file)
+        if stat is None:
+            return None
+
+        stat = int(stat)
+        return stat
 
 
 class Misc(AbstractMisc):
@@ -465,18 +622,19 @@ class Misc(AbstractMisc):
         systems = {"pulseaudio": Misc._vol_pulseaudio}
         reg = re.compile(r"|".join(systems.keys()))
 
-        vol = None
         proc = Misc._FILES["proc"]
         pids = (open_read(d.joinpath("cmdline")) for d in proc.iterdir()
                 if d.is_dir() and d.name.isdigit())
         audio = (reg.search(i) for i in pids if i and reg.search(i))
         audio = next(audio, None)
 
-        if audio is not None:
-            try:
-                vol = systems[audio.group(0)]()
-            except KeyError:
-                vol = None
+        if audio is None:
+            return None
+
+        try:
+            vol = systems[audio.group(0)]()
+        except KeyError:
+            vol = None
 
         return vol
 
@@ -513,17 +671,28 @@ class Misc(AbstractMisc):
     def _vol_pulseaudio():
         """ Return system volume using pulse audio """
         default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
-        pac_dump = run(["pacmd", "dump"])
+        pacmd_exe = shutil.which("pacmd")
+        if not pacmd_exe:
+            return None
 
-        vol = None
+        pac_dump = run([pacmd_exe, "dump"])
+        if pac_dump is None:
+            return None
+
         default = default_reg.search(pac_dump)
-        if default is not None:
-            vol_reg = fr"^set-sink-volume {default.group(1)} 0x(.*)$"
-            vol_reg = re.compile(vol_reg, re.M)
-            vol = vol_reg.search(pac_dump)
-            if vol is not None:
-                vol = percent(int(vol.group(1), 16), 0x10000)
+        if default is None:
+            return None
 
+        vol_reg = fr"^set-sink-volume {default.group(1)} 0x(.*)$"
+        vol_reg = re.compile(vol_reg, re.M)
+        vol = vol_reg.search(pac_dump)
+
+        if vol is None:
+            return None
+
+        vol = vol.group(1)
+        vol = int(vol, 16)
+        vol = percent(vol, 0x10000)
         return vol
 
 

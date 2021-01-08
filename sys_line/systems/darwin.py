@@ -28,17 +28,24 @@ import shutil
 import time
 
 from functools import lru_cache
+from pathlib import Path
 
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc)
 from .wm import Yabai
 from ..tools.sysctl import Sysctl
-from ..tools.utils import percent, run
+from ..tools.utils import run
 
 
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
+
+    @property
+    @lru_cache(maxsize=1)
+    def _osx_cpu_temp_exe(self):
+        """ Returns the path to the osx-cpu-temp executable """
+        return shutil.which("osx-cpu-temp")
 
     def cores(self, options=None):
         return int(Sysctl.query("hw.logicalcpu_max"))
@@ -50,32 +57,52 @@ class Cpu(AbstractCpu):
         return None
 
     def _load_avg(self):
-        return Sysctl.query("vm.loadavg").split()[1:4]
+        query = Sysctl.query("vm.loadavg")
+        if query is None:
+            return None
+
+        return query.split()[1:4]
 
     def fan(self, options=None):
-        fan = None
-        if shutil.which("osx-cpu-temp"):
-            regex = r"(\d+) RPM"
-            match = re.search(regex, run(["osx-cpu-temp", "-f", "-c"]))
-            fan = int(match.group(1)) if match else None
+        if not self._osx_cpu_temp_exe:
+            return None
 
-        return fan
+        regex = r"(\d+) RPM"
+        out = run([self._osx_cpu_temp_exe, "-f", "-c"])
+
+        if out is None:
+            return None
+
+        match = re.search(regex, out)
+        if not match:
+            return None
+
+        return int(match.group(1))
 
     def _temp(self):
-        temp = None
-        if shutil.which("osx-cpu-temp"):
-            regex = r"CPU: ((\d+\.)?\d+)"
-            match = re.search(regex, run(["osx-cpu-temp", "-f", "-c"]))
-            if match:
-                temp = float(match.group(1))
+        if not self._osx_cpu_temp_exe:
+            return None
 
-        return temp
+        regex = r"CPU: ((\d+\.)?\d+)"
+        out = run([self._osx_cpu_temp_exe, "-f", "-c"])
+
+        if out is None:
+            return None
+
+        match = re.search(regex, out)
+        if not match:
+            return None
+
+        return float(match.group(1))
 
     def _uptime(self):
         reg = re.compile(r"sec = (\d+),")
-        sec = reg.search(Sysctl.query("kern.boottime")).group(1)
-        sec = int(time.time()) - int(sec)
+        query = Sysctl.query("kern.boottime")
+        if query is None:
+            return 0
 
+        sec = reg.search(query).group(1)
+        sec = int(time.time()) - int(sec)
         return sec
 
 
@@ -84,14 +111,20 @@ class Memory(AbstractMemory):
 
     def _used(self):
         words = ["active", "wired down", "occupied by compressor"]
-        vm_stat = run(["vm_stat"]).strip().split("\n")[1:]
+        vm_stat = run(["vm_stat"])
+
+        if vm_stat is None:
+            return None, None
+
+        vm_stat = vm_stat.strip().splitlines()[1:]
         vm_stat = (re.sub(r"Pages |\.", r"", i) for i in vm_stat)
         vm_stat = dict(i.split(":", 1) for i in vm_stat)
-        value = sum(int(vm_stat[i]) for i in words) * 4096
-        return value, "B"
+        used = sum(int(vm_stat.get(i, 0)) for i in words) * 4096
+        return used, "B"
 
     def _total(self):
-        return int(Sysctl.query("hw.memsize")), "B"
+        total = int(Sysctl.query("hw.memsize", default=0))
+        return total, "B"
 
 
 class Swap(AbstractSwap):
@@ -101,7 +134,8 @@ class Swap(AbstractSwap):
     @lru_cache(maxsize=1)
     def _swapusage(self):
         """ Returns swapusage from sysctl """
-        return Sysctl.query("vm.swapusage").strip()
+        swapusage = Sysctl.query("vm.swapusage", default="").strip()
+        return swapusage
 
     def _lookup_swap(self, search):
         value = 0
@@ -109,9 +143,10 @@ class Swap(AbstractSwap):
         regex = fr"{search} = (\d+\.\d+)M"
         match = re.search(regex, self._swapusage)
 
-        if match:
-            value = int(float(match.group(1)) * pow(1024, 2))
+        if not match:
+            return 0
 
+        value = int(float(match.group(1)) * pow(1024, 2))
         return value
 
     def _used(self):
@@ -134,18 +169,16 @@ class Disk(AbstractDisk):
         """ Returns diskutil program output as a dict """
         devs = self._original_dev().values()
         cmd = ["diskutil", "info", "-plist"]
-        diskutil = None
-        if devs is not None:
-            out = {dev: run(cmd + [dev]).encode("utf-8") for dev in devs}
-            diskutil = {k: plistlib.loads(v) for k, v in out.items()}
+        if devs is None:
+            return None
 
+        out = {dev: run(cmd + [dev]).encode("utf-8") for dev in devs}
+        diskutil = {k: plistlib.loads(v) for k, v in out.items()}
         return diskutil
 
     def _lookup_diskutil(self, key):
-        try:
-            return {k: v[key] for k, v in self._diskutil.items()}
-        except KeyError:
-            return None
+        diskutil = self._diskutil
+        return {k: v.get(key, None) for k, v in diskutil.items()}
 
     def name(self, options=None):
         return self._lookup_diskutil("VolumeName")
@@ -161,68 +194,119 @@ class Battery(AbstractBattery):
     def _current(self):
         current = 0
         is_present = self.is_present()
-        if is_present:
-            current = int(self.ioreg()["InstantAmperage"])
+        if not is_present:
+            return 0
 
-            # Fix current if it underflows in ioreg
-            current -= pow(2, 64) if len(str(current)) >= 20 else 0
-            current = abs(current)
+        ioreg = Battery.ioreg()
+        current = int(ioreg.get("InstantAmperage", 0))
 
+        # Fix current if it underflows in ioreg
+        if len(str(current)) >= 20:
+            current -= pow(2, 64)
+
+        current = abs(current)
         return current
 
     @lru_cache(maxsize=1)
     def _current_capacity(self):
         is_present = self.is_present()
-        return int(self.ioreg()["CurrentCapacity"]) if is_present else None
+        if not is_present:
+            return None
+
+        ioreg = Battery.ioreg()
+        if ioreg is None or "CurrentCapacity" not in ioreg:
+            return None
+
+        return int(ioreg["CurrentCapacity"])
 
     def is_present(self, options=None):
-        is_present = False
-        if self.ioreg() is not None:
-            is_present = self.ioreg()["BatteryInstalled"] == "Yes"
+        ioreg = Battery.ioreg()
+        if ioreg is None:
+            return False
+
+        is_present = ioreg.get("BatteryInstalled", "") == "Yes"
         return is_present
 
     def is_charging(self, options=None):
         is_present = self.is_present()
-        return self.ioreg()["IsCharging"] == "Yes" if is_present else None
+        if not is_present:
+            return None
+
+        ioreg = Battery.ioreg()
+        is_charging = ioreg.get("IsCharging", "") == "Yes"
+        return is_charging
 
     def is_full(self, options=None):
         is_present = self.is_present()
-        return self.ioreg()["FullyCharged"] == "Yes" if is_present else None
+        if not is_present:
+            return None
+
+        ioreg = Battery.ioreg()
+        is_charging = ioreg.get("FullyCharged", "") == "Yes"
+        return is_charging
 
     def _percent(self):
-        return self._current_capacity(), int(self.ioreg()["MaxCapacity"])
+        current_capacity = self._current_capacity()
+        ioreg = Battery.ioreg()
+
+        if ioreg is None:
+            max_capacity = 0
+        else:
+            max_capacity = int(ioreg.get("MaxCapacity", 0))
+
+        return current_capacity, max_capacity
 
     def _time(self):
         charge = 0
 
         is_present = self.is_present()
-        if is_present and self._current() != 0:
-            charge = self._current_capacity()
-            is_charging = self.is_charging()
-            if is_charging:
-                charge = int(self.ioreg()["MaxCapacity"]) - charge
-            charge = int((charge / self._current()) * 3600)
+        current = self._current()
+        if not is_present or current == 0:
+            return 0
 
+        charge = self._current_capacity()
+        is_charging = self.is_charging()
+
+        if is_charging:
+            ioreg = Battery.ioreg()
+            if ioreg is None:
+                return 0
+
+            charge = int(ioreg.get("MaxCapacity", 0)) - charge
+
+        charge = int((charge / self._current()) * 3600)
         return charge
 
     def _power(self):
         power = None
 
         is_present = self.is_present()
-        if is_present:
-            voltage = int(self.ioreg()["Voltage"])
-            power = (self._current() * voltage) / 1e6
+        if not is_present:
+            return None
 
+        ioreg = Battery.ioreg()
+        if ioreg is None:
+            return None
+
+        voltage = int(ioreg.get("Voltage", 0))
+        power = (self._current() * voltage) / 1e6
         return power
 
     @staticmethod
     @lru_cache(maxsize=1)
     def ioreg():
         """ Returns battery info from ioreg as a dict """
-        bat = run(["ioreg", "-rc", "AppleSmartBattery"]).split("\n")[1:]
+        bat = run(["ioreg", "-rc", "AppleSmartBattery"])
+        if bat is None:
+            return None
+
+        bat = bat.splitlines()[1:]
         bat = (re.sub("[\"{}]", "", i.strip()) for i in bat)
         bat = dict(i.split(" = ", 1) for i in bat if i.strip())
-        return bat if bat else None
+        if not bat:
+            return None
+
+        return bat
 
 
 class Network(AbstractNetwork):
@@ -240,57 +324,86 @@ class Network(AbstractNetwork):
         dev_reg = re.compile(r"Device: (.*)$")
 
         dev_list = run(["networksetup", "-listallhardwareports"])
-        dev_list = dev_list.strip().split("\n")
-        dev_list = (dev_reg.search(i) for i in dev_list)
+        if dev_list is None:
+            return None
+
+        dev_list = dev_list.strip().splitlines()
+        dev_list = map(dev_reg.search, dev_list)
         dev_list = (i.group(1) for i in dev_list if i)
 
-        return next((i for i in dev_list if check(i)), None)
+        dev = next(filter(check, dev_list), None)
+        return dev
 
     def _ssid(self):
-        ssid_cmd_path = ["System", "Library", "PrivateFrameworks",
-                         "Apple80211.framework", "Versions", "Current",
-                         "Resources", "airport"]
-        ssid_cmd = ("/{}".format("/".join(ssid_cmd_path)), "--getinfo")
+        ssid_cmd_path = Path("/", "System", "Library", "PrivateFrameworks",
+                             "Apple80211.framework", "Versions", "Current",
+                             "Resources", "airport")
+        ssid_cmd = (ssid_cmd_path.resolve(), "--getinfo")
         ssid_reg = re.compile(r"^SSID: (.*)$")
 
         return ssid_cmd, ssid_reg
 
     def _bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]
-        reg_str = r"^({})(\s+[^\s]+){{{}}}\s+(\d+)"
-        reg_str = reg_str.format(dev, 8 if mode == "up" else 5)
-        reg = re.compile(reg_str)
-        match = (reg.match(line) for line in run(cmd).split("\n"))
+        reg = r"^({})(\s+[^\s]+){{{}}}\s+(\d+)"
 
-        return next((int(i.group(3)) for i in match if i), 0)
+        if mode == "up":
+            col = 8
+        else:
+            col = 5
+
+        reg = reg.format(dev, col)
+        reg = re.compile(reg)
+        match = (reg.match(line) for line in run(cmd).splitlines())
+
+        delta = next((int(i.group(3)) for i in match if i), 0)
+        return delta
 
 
 class Misc(AbstractMisc):
     """ Darwin implementation of AbstractMisc class """
 
+    @property
+    @lru_cache(maxsize=1)
+    def _vol_exe(self):
+        """ Returns the path to the darwin-vol executable """
+        return shutil.which("vol")
+
     def _vol(self):
-        cmd = ["vol"]
-        osa = ["osascript", "-e", "output volume of (get volume settings)"]
-        vol = float(run(cmd if shutil.which("vol") else osa))
+        vol = None
+        if self._vol_exe:
+            out = run([self._vol_exe])
+        else:
+            cmd = ["osascript", "-e", "output volume of (get volume settings)"]
+            out = run(cmd)
+
+        if out is None:
+            return None
+
+        vol = float(out)
         return vol
 
     def _scr(self):
         def check(line):
             return "IODisplayParameters" in line
 
-        current_scr = None
-        max_scr = None
+        scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"])
+        if scr_out is None:
+            return None, None
 
-        scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
-        scr_out = next((i for i in scr_out if check(i)), None)
-        if scr_out is not None:
-            reg = r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)"
+        scr_out = scr_out.splitlines()
+        scr_out = next(filter(check, scr_out), None)
+        if scr_out is None:
+            return None, None
+
+        reg = r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)"
+        scr = re.search(reg, scr_out)
+        if int(scr.group(1)) == 0:
+            reg = r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)"
             scr = re.search(reg, scr_out)
-            if int(scr.group(1)) == 0:
-                reg = r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)"
-                scr = re.search(reg, scr_out)
-            current_scr = int(scr.group(2))
-            max_scr = int(scr.group(1))
+
+        current_scr = int(scr.group(2))
+        max_scr = int(scr.group(1))
 
         return current_scr, max_scr
 

@@ -51,7 +51,11 @@ class Cpu(AbstractCpu):
         return round_trim(int(speed) / 1000, 2)
 
     def _load_avg(self):
-        return Sysctl.query("vm.loadavg").split()[1:4]
+        query = Sysctl.query("vm.loadavg")
+        if query is None:
+            return None
+
+        return query.split()[1:4]
 
     def fan(self, options=None):
         """ Stub """
@@ -59,13 +63,24 @@ class Cpu(AbstractCpu):
 
     def _temp(self):
         temp = Sysctl.query("dev.cpu.0.temperature")
-        return float(re.search(r"\d+\.?\d+", temp).group(0)) if temp else None
+        if temp is None:
+            return None
+
+        reg = re.compile(r"\d+\.?\d+")
+        temp = reg.search(temp)
+        if temp is None or temp.group(0) is None:
+            return None
+
+        return float(temp.group(0))
 
     def _uptime(self):
         reg = re.compile(r"sec = (\d+),")
-        sec = reg.search(Sysctl.query("kern.boottime")).group(1)
-        sec = int(time.time()) - int(sec)
+        query = Sysctl.query("kern.boottime")
+        if query is None:
+            return 0
 
+        sec = reg.search(query).group(1)
+        sec = int(time.time()) - int(sec)
         return sec
 
 
@@ -73,17 +88,19 @@ class Memory(AbstractMemory):
     """ FreeBSD implementation of AbstractMemory class """
 
     def _used(self):
-        total = int(Sysctl.query("hw.realmem"))
-        pagesize = int(Sysctl.query("hw.pagesize"))
+        total = int(Sysctl.query("hw.realmem", default=0))
+        pagesize = int(Sysctl.query("hw.pagesize", default=0))
 
-        keys = [int(Sysctl.query(f"vm.stats.vm.v_{i}_count"))
+        keys = [int(Sysctl.query(f"vm.stats.vm.v_{i}_count", default=0))
                 for i in ["inactive", "free", "cache"]]
 
-        used = total - sum(i * pagesize for i in keys)
+        used = total
+        used -= sum(i * pagesize for i in keys)
         return used, "B"
 
     def _total(self):
-        return int(Sysctl.query("hw.realmem")), "B"
+        total = int(Sysctl.query("hw.realmem", default=0))
+        return total, "B"
 
 
 class Swap(AbstractSwap):
@@ -93,12 +110,16 @@ class Swap(AbstractSwap):
         def extract(line):
             return int(line.split()[2])
 
-        pstat = run(["pstat", "-s"]).strip().split("\n")[1:]
+        pstat = run(["pstat", "-s"])
+        if pstat is None:
+            return 0, "B"
+
+        pstat = pstat.strip().splitlines()[1:]
         pstat = sum(extract(i) for i in pstat)
         return pstat, "KiB"
 
     def _total(self):
-        return int(Sysctl.query("vm.swap_total")), "B"
+        return int(Sysctl.query("vm.swap_total", default=0)), "B"
 
 
 class Disk(AbstractDisk):
@@ -114,21 +135,33 @@ class Disk(AbstractDisk):
 
     def partition(self, options=None):
         devs = self._original_dev(options)
-        partition = {i: None for i in devs.keys()}
-        gpart_out = dict()
+        if devs is None:
+            return None
+
         reg = re.compile(r"^(.*)p(\d+)$")
         dev_reg = {i: reg.search(i) for i in devs.keys()}
 
-        if dev_reg:
-            for k, v in dev_reg.items():
-                if v is not None:
-                    if k not in gpart_out.keys():
-                        gpart_cmd = ["gpart", "show", "-p", v.group(1)]
-                        gpart_out[k] = run(gpart_cmd).strip().split("\n")
+        if not dev_reg:
+            return None
 
-                    geom = v.group(0).split("/")[-1]
-                    out = next((i for i in gpart_out[k] if geom in i), None)
-                    partition[k] = None if out is None else out.split()[3]
+        partition = {k: None for k in devs.keys()}
+        gpart_out = dict()
+        for k, v in dev_reg.items():
+            if v is None:
+                continue
+
+            if k not in gpart_out.keys():
+                gpart_cmd = ["gpart", "show", "-p", v.group(1)]
+                out = run(gpart_cmd)
+                if out is None:
+                    continue
+
+                gpart_out[k] = out.strip().splitlines()
+
+            geom = v.group(0).split("/")[-1]
+            out = next((i for i in gpart_out[k] if geom in i), None)
+            if out is not None:
+                partition[k] = out.split()[3]
 
         return partition
 
@@ -138,40 +171,51 @@ class Battery(AbstractBattery):
 
     def is_present(self, options=None):
         acpiconf = Battery.acpiconf()
-        return acpiconf["State"] != "not present" if acpiconf else False
+        if acpiconf is None:
+            return False
+        return acpiconf.get("State", "") != "not present"
 
     def is_charging(self, options=None):
         acpiconf = Battery.acpiconf()
         is_present = self.is_present(options)
-        return acpiconf["State"] == "charging" if is_present else None
+        if acpiconf is None or not is_present:
+            return None
+        return acpiconf.get("State", "") == "charging"
 
     def is_full(self, options=None):
         acpiconf = Battery.acpiconf()
         is_present = self.is_present(options)
-        return acpiconf["State"] == "high" if is_present else None
+        if acpiconf is None or not is_present:
+            return None
+        return acpiconf.get("State", "") == "high"
 
     def _percent(self):
         pass
 
     def percent(self, options=None):
-        ret = None
+        acpiconf = Battery.acpiconf()
         is_present = self.is_present(options)
-        if is_present:
-            acpiconf = Battery.acpiconf()
-            ret = int(acpiconf["Remaining capacity"][:-1])
-        return ret
+        if acpiconf is None or not is_present:
+            return None
+
+        if "Remaining capacity" not in acpiconf:
+            return None
+
+        return int(acpiconf["Remaining capacity"][:-1])
 
     def _time(self):
         secs = 0
         is_present = self.is_present(None)
-        if is_present:
-            acpiconf = Battery.acpiconf()
-            acpi_time = acpiconf["Remaining time"]
-            if acpi_time != "unknown":
-                acpi_time = [int(i) for i in acpi_time.split(":", maxsplit=3)]
-                secs = acpi_time[0] * 3600 + acpi_time[1] * 60
-            else:
-                secs = 0
+        acpiconf = Battery.acpiconf()
+        if acpiconf is None or not is_present:
+            return 0
+
+        acpi_time = acpiconf.get("Remaining time", "")
+        if acpi_time != "unknown":
+            acpi_time = [int(i) for i in acpi_time.split(":", 3)]
+            secs = (acpi_time[0] * 3600) + (acpi_time[1] * 60)
+        else:
+            secs = 0
 
         return secs
 
@@ -179,18 +223,26 @@ class Battery(AbstractBattery):
         pass
 
     def power(self, options=None):
-        ret = None
         is_present = self.is_present(options)
-        if is_present:
-            acpiconf = Battery.acpiconf()
-            ret = int(acpiconf["Present rate"][:-3]) / 1000
-        return ret
+        acpiconf = Battery.acpiconf()
+        if acpiconf is None or not is_present:
+            return None
+
+        if "Present rate" not in acpiconf:
+            return None
+
+        power = int(acpiconf["Present rate"][:-3]) / 1000
+        return power
 
     @staticmethod
     @lru_cache(maxsize=1)
     def acpiconf():
         """ Returns battery info from acpiconf as dict """
-        bat = run(["acpiconf", "-i", "0"]).strip().split("\n")
+        bat = run(["acpiconf", "-i", "0"])
+        if bat is None:
+            return None
+
+        bat = bat.strip().splitlines()
         bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in bat]
         return dict(i.split(":", 1) for i in bat) if len(bat) > 1 else None
 
@@ -204,11 +256,18 @@ class Network(AbstractNetwork):
 
     def dev(self, options=None):
         def check(dev):
-            return active.search(run(self._LOCAL_IP_CMD + [dev]))
+            out = run(self._LOCAL_IP_CMD + [dev])
+            if out is None:
+                return False
+            return active.search(out)
 
         active = re.compile(r"^\s+status: (associated|active)$", re.M)
-        dev_list = run(self._LOCAL_IP_CMD + ["-l"]).split()
-        return next((i for i in dev_list if check(i)), None)
+        dev_list = run(self._LOCAL_IP_CMD + ["-l"])
+        if dev_list is None:
+            return None
+
+        dev_list = dev_list.split()
+        return next(filter(check, dev_list), None)
 
     def _ssid(self):
         ssid_cmd = tuple(self._LOCAL_IP_CMD + [self.dev()])
@@ -217,8 +276,19 @@ class Network(AbstractNetwork):
 
     def _bytes_delta(self, dev, mode):
         cmd = ["netstat", "-nbiI", dev]
-        index = 10 if mode == "up" else 7
-        return int(run(cmd).strip().split("\n")[1].split()[index])
+        if mode == "up":
+            col = 10
+        else:
+            col = 7
+
+        out = run(cmd)
+        if out is None:
+            return 0
+
+        out = out.strip().splitlines()
+        line = out[1]
+        line = line.split()
+        return int(line[col])
 
 
 class Misc(AbstractMisc):

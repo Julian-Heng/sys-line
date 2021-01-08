@@ -135,13 +135,15 @@ class AbstractMultipleValuesGetter(AbstractGetter):
 
     def _query(self, info, options):
         val = super(AbstractMultipleValuesGetter, self)._query(info, options)
-        if isinstance(val, dict):
-            if hasattr(options, "index"):
-                key = options.index
-            else:
-                key = next(iter(val.keys()), None)
-            val = val.get(key, None)
-        return val
+        if not isinstance(val, dict):
+            return None
+
+        if hasattr(options, "index"):
+            key = options.index
+        else:
+            key = next(iter(val.keys()), None)
+
+        return val.get(key, None)
 
     def _handle_missing_option_value(self, options, info, option_name):
         setattr(options, "index", option_name)
@@ -171,9 +173,13 @@ class AbstractStorage(AbstractGetter):
             options = self.default_options
 
         value, prefix = self._used()
-        used = Storage(value=value, prefix=prefix,
-                       rounding=options.used.round)
-        used.prefix = options.used.prefix
+        if value is None or prefix is None:
+            used = Storage(value=0, prefix="B", rounding="0")
+        else:
+            used = Storage(value=value, prefix=prefix,
+                           rounding=options.used.round)
+            used.prefix = options.used.prefix
+
         return used
 
     @abstractmethod
@@ -191,9 +197,14 @@ class AbstractStorage(AbstractGetter):
             options = self.default_options
 
         value, prefix = self._total()
-        total = Storage(value=value, prefix=prefix,
-                        rounding=options.total.round)
-        total.prefix = options.total.prefix
+
+        if value is None or prefix is None:
+            total = Storage(value=0, prefix="B", rounding="0")
+        else:
+            total = Storage(value=value, prefix=prefix,
+                            rounding=options.total.round)
+            total.prefix = options.total.prefix
+
         return total
 
     def percent(self, options=None):
@@ -208,6 +219,7 @@ class AbstractStorage(AbstractGetter):
             perc = 0.0
         else:
             perc = round_trim(perc, options.percent.round)
+
         return perc
 
 
@@ -253,7 +265,6 @@ class AbstractCpu(AbstractGetter):
             cpu = re.sub(r"@", fmt, cpu)
 
         cpu = re.sub(r"\s+", " ", cpu)
-
         return cpu
 
     @abstractmethod
@@ -266,9 +277,13 @@ class AbstractCpu(AbstractGetter):
             options = self.default_options
 
         load = self._load_avg()
-        if load is not None:
-            load = load[0] if options.load_avg.short else " ".join(load)
-        return load
+        if load is None:
+            return None
+
+        if options.load_avg.short:
+            return load[0]
+
+        return " ".join(load)
 
     def cpu_usage(self, options=None):
         """ Cpu usage method """
@@ -276,9 +291,16 @@ class AbstractCpu(AbstractGetter):
             options = self.default_options
 
         cores = self.cores(options)
-        ps_out = run(["ps", "-e", "-o", "%cpu"]).strip().split("\n")[1:]
-        cpu_usage = sum(float(i) for i in ps_out) / cores
-        return round_trim(cpu_usage, options.cpu_usage.round)
+        ps_cmd = ["ps", "-e", "-o", "%cpu"]
+        ps_out = run(ps_cmd)
+
+        if not ps_out:
+            return None
+
+        ps_out = ps_out.strip().splitlines()[1:]
+        cpu_usage = sum(map(float, ps_out)) / cores
+        cpu_usage = round_trim(cpu_usage, options.cpu_usage.round)
+        return cpu_usage
 
     @abstractmethod
     def fan(self, options=None):
@@ -294,9 +316,11 @@ class AbstractCpu(AbstractGetter):
             options = self.default_options
 
         temp = self._temp()
-        if temp is not None:
-            return round_trim(temp, options.temp.round)
-        return None
+        if temp is None:
+            return None
+
+        temp = round_trim(temp, options.temp.round)
+        return temp
 
     @abstractmethod
     def _uptime(self):
@@ -304,7 +328,12 @@ class AbstractCpu(AbstractGetter):
 
     def uptime(self, options=None):
         """ Uptime method """
-        return unix_epoch_to_str(self._uptime())
+        uptime = self._uptime()
+        if uptime is None:
+            return None
+
+        uptime = unix_epoch_to_str(uptime)
+        return uptime
 
 
 class AbstractMemory(AbstractStorage):
@@ -344,14 +373,22 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
             options.query = tuple(list(options.query) + [option_name])
 
         if not Path(option_name).is_block_device():
-            option_name = self._mount_to_devname(options, option_name)
+            LOG.debug("disk index is a mount, attempting to get device...")
+
+            dev = self._mount_to_devname(options, option_name)
+            if dev is None:
+                LOG.debug("unable to get device")
+            else:
+                LOG.debug("'%s' is '%s'", option_name, dev)
+            option_name = dev
 
         super(AbstractDisk, self)._handle_missing_option_value(options, info,
                                                                option_name)
 
     def _mount_to_devname(self, options, mount_path):
-        return next(k for k, v in self.mount(options).items()
-                    if mount_path == v)
+        mounts = self.mount(options)
+        target = next((k for k, v in mounts.items() if mount_path == v), None)
+        return target
 
     @property
     @abstractmethod
@@ -361,16 +398,22 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
     @property
     @lru_cache(maxsize=1)
     def _df(self):
-        return run(self._DF_FLAGS).strip().split("\n")[1:]
+        df_out = run(self._DF_FLAGS)
+
+        if not df_out:
+            return None
+
+        df_out = df_out.strip().splitlines()[1:]
+        return df_out
 
     @lru_cache(maxsize=1)
     def _df_query(self, query):
         """ Return df entries """
-        results = dict()
         disks = list()
         mounts = list()
+
         if not query:
-            mounts.append("/")
+            mounts.append(r"/")
         else:
             for p in filter(Path.exists, map(Path, query)):
                 if p.is_block_device():
@@ -385,14 +428,20 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
         if mounts:
             mounts = r"|".join(mounts)
             reg.append(fr"({mounts})$")
-        reg = re.compile(r"|".join(reg))
+        reg = r"|".join(reg)
+        reg = re.compile(reg)
 
-        if self._df is not None:
-            for i in filter(reg.search, self._df):
-                split = i.split()
-                if split[0] not in results.keys():
-                    df_entry = DfEntry(*split)
-                    results[df_entry.filesystem] = df_entry
+        results = dict()
+        if self._df is None:
+            return results
+
+        for i in filter(reg.search, self._df):
+            split = i.split()
+            if split[0] in results.keys():
+                continue
+
+            df_entry = DfEntry(*split)
+            results[df_entry.filesystem] = df_entry
 
         return results
 
@@ -403,10 +452,11 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
         else:
             query = options.query
 
-        dev = None
         df = self._df_query(query)
-        if df is not None:
-            dev = {k: v.filesystem for k, v in df.items()}
+        if df is None:
+            return None
+
+        dev = {k: v.filesystem for k, v in df.items()}
         return dev
 
     def dev(self, options=None):
@@ -415,8 +465,13 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
             options = self.default_options
 
         dev = self._original_dev(options)
+
+        if dev is None:
+            return None
+
         if options.dev.short:
             dev = {k: v.split("/")[-1] for k, v in dev.items()}
+
         return dev
 
     @abstractmethod
@@ -430,10 +485,11 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
         else:
             query = options.query
 
-        mount = None
         df = self._df_query(query)
-        if df is not None:
-            mount = {k: v.mount for k, v in df.items()}
+        if df is None:
+            return None
+
+        mount = {k: v.mount for k, v in df.items()}
         return mount
 
     @abstractmethod
@@ -451,15 +507,17 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
         else:
             query = options.query
 
-        used = None
         df = self._df_query(query)
-        if df is not None:
-            used = dict()
-            for k, v in df.items():
-                stor = Storage(int(v.used), "KiB",
-                               rounding=options.used.round)
-                stor.prefix = options.used.prefix
-                used[k] = stor
+        if df is None:
+            return None
+
+        used = dict()
+        for k, v in df.items():
+            stor = Storage(int(v.used), prefix="KiB",
+                           rounding=options.used.round)
+            stor.prefix = options.used.prefix
+            used[k] = stor
+
         return used
 
     def _total(self):
@@ -473,15 +531,17 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
         else:
             query = options.query
 
-        total = None
         df = self._df_query(query)
-        if df is not None:
-            total = dict()
-            for k, v in df.items():
-                stor = Storage(int(v.blocks), "KiB",
-                               rounding=options.total.round)
-                stor.prefix = options.total.prefix
-                total[k] = stor
+        if df is None:
+            return None
+
+        total = dict()
+        for k, v in df.items():
+            stor = Storage(int(v.blocks), prefix="KiB",
+                           rounding=options.total.round)
+            stor.prefix = options.total.prefix
+            total[k] = stor
+
         return total
 
     def percent(self, options=None):
@@ -489,19 +549,22 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
         if options is None:
             options = self.default_options
 
-        perc = None
         devs = self._original_dev(options)
-        if devs is not None:
-            perc = dict()
-            used = self.used(options)
-            total = self.total(options)
-            for dev in devs.keys():
-                value = percent(used[dev].bytes, total[dev].bytes)
-                if value is None:
-                    value = 0.0
-                else:
-                    value = round_trim(value, options.percent.round)
-                perc[dev] = value
+        if devs is None:
+            return None
+
+        perc = dict()
+        used = self.used(options)
+        total = self.total(options)
+
+        for dev in devs.keys():
+            value = percent(used[dev].bytes, total[dev].bytes)
+            if value is None:
+                value = 0.0
+            else:
+                value = round_trim(value, options.percent.round)
+            perc[dev] = value
+
         return perc
 
 
@@ -534,12 +597,15 @@ class AbstractBattery(AbstractGetter):
         if options is None:
             options = self.default_options
 
-        perc = None
-        if self.is_present(options):
-            current, full = self._percent()
-            if current is not None and full is not None:
-                perc = percent(current, full)
-                perc = round_trim(perc, options.percent.round)
+        if not self.is_present(options):
+            return None
+
+        current, full = self._percent()
+        if current is None or full is None:
+            return None
+
+        perc = percent(current, full)
+        perc = round_trim(perc, options.percent.round)
         return perc
 
     @abstractmethod
@@ -565,11 +631,14 @@ class AbstractBattery(AbstractGetter):
         if options is None:
             options = self.default_options
 
-        power = None
-        if self.is_present(options):
-            power = self._power()
-            if power is not None:
-                power = round_trim(power, options.power.round)
+        if not self.is_present(options):
+            return None
+
+        power = self._power()
+        if power is None:
+            return None
+
+        power = round_trim(power, options.power.round)
         return power
 
 
@@ -596,23 +665,32 @@ class AbstractNetwork(AbstractGetter):
 
     def ssid(self, options=None):
         """ Network ssid method """
-        ssid = None
         cmd, reg = self._ssid()
-        if not (cmd is None or reg is None):
-            ssid = (reg.match(i.strip()) for i in run(cmd).split("\n"))
-            ssid = next((i.group(1) for i in ssid if i), None)
+        if cmd is None or reg is None:
+            return None
 
+        out = run(cmd)
+        if not out:
+            return None
+
+        ssid = (reg.match(i.strip()) for i in cmd.splitlines())
+        ssid = next((i.group(1) for i in ssid if i), None)
         return ssid
 
     def local_ip(self, options=None):
         """ Network local ip method """
-        ip_out = None
         dev = self.dev(options)
-        if dev is not None:
-            reg = re.compile(r"^inet\s+((?:[0-9]{1,3}\.){3}[0-9]{1,3})")
-            ip_out = run(self._LOCAL_IP_CMD + [dev]).strip().split("\n")
-            ip_out = (reg.match(line.strip()) for line in ip_out)
-            ip_out = next((i.group(1) for i in ip_out if i), None)
+        if dev is None:
+            return None
+
+        reg = re.compile(r"^inet\s+((?:[0-9]{1,3}\.){3}[0-9]{1,3})")
+        ip_out = run(self._LOCAL_IP_CMD + [dev])
+        if not ip_out:
+            return None
+
+        ip_out = ip_out.strip().splitlines()
+        ip_out = (reg.match(line.strip()) for line in ip_out)
+        ip_out = next((i.group(1) for i in ip_out if i), None)
         return ip_out
 
     @abstractmethod
@@ -654,7 +732,8 @@ class AbstractNetwork(AbstractGetter):
             options = self.default_options
 
         dev = self.dev(options)
-        download = Storage(self._bytes_rate(dev, "down"), "B",
+        bytes_rate = self._bytes_rate(dev, "down")
+        download = Storage(bytes_rate, prefix="B",
                            rounding=options.download.round)
         download.prefix = options.download.prefix
         return download
@@ -665,7 +744,8 @@ class AbstractNetwork(AbstractGetter):
             options = self.default_options
 
         dev = self.dev(options)
-        upload = Storage(self._bytes_rate(dev, "up"), "B",
+        bytes_rate = self._bytes_rate(dev, "up")
+        upload = Storage(bytes_rate, prefix="B",
                          rounding=options.upload.round)
         upload.prefix = options.upload.prefix
         return upload
@@ -743,8 +823,10 @@ class AbstractMisc(AbstractGetter):
             options = self.default_options
 
         vol = self._vol()
-        if vol is not None:
-            vol = round_trim(vol, options.vol.round)
+        if vol is None:
+            return None
+
+        vol = round_trim(vol, options.vol.round)
         return vol
 
     @abstractmethod
