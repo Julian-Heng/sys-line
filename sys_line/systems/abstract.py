@@ -756,9 +756,12 @@ class AbstractMisc(AbstractGetter):
         if options is None:
             options = self.default_options
 
-        scr = self._scr()
-        if scr is not None:
-            scr = round_trim(scr, options.scr.round)
+        current_scr, max_scr = self._scr()
+        if current_scr is None or max_scr is None:
+            return None
+
+        scr = percent(current_scr, max_scr)
+        scr = round_trim(scr, options.scr.roun)
         return scr
 
 
