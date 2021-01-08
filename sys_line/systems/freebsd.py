@@ -230,7 +230,7 @@ class Misc(AbstractMisc):
 
     def _scr(self):
         """ Stub """
-        return None
+        return None, None
 
 
 class FreeBSD(System):
