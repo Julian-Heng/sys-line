@@ -673,7 +673,7 @@ class AbstractNetwork(AbstractGetter):
         if not out:
             return None
 
-        ssid = (reg.match(i.strip()) for i in cmd.splitlines())
+        ssid = (reg.match(i.strip()) for i in out.splitlines())
         ssid = next((i.group(1) for i in ssid if i), None)
         return ssid
 
@@ -843,7 +843,7 @@ class AbstractMisc(AbstractGetter):
             return None
 
         scr = percent(current_scr, max_scr)
-        scr = round_trim(scr, options.scr.roun)
+        scr = round_trim(scr, options.scr.round)
         return scr
 
 
