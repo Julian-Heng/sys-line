@@ -100,10 +100,10 @@ class Xorg(AbstractWindowManager):
             return None
 
         if window_id is None:
-            cmd = [self._xprop_exe, "-root", "-notype", fmt, "\n$0+", prop]
+            cmd = [self._xprop_exe, "-root", "-notype", fmt, r"\n$0+", prop]
         else:
-            cmd = [self._xprop_exe, "-notype", "-id", window_id, fmt, "\n$0+",
-                   prop]
+            cmd = [self._xprop_exe, "-notype", "-id", window_id, fmt,
+                   r"\n$0+", prop]
 
         out = run(cmd)
 
