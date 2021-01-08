@@ -278,7 +278,9 @@ class Misc(AbstractMisc):
         def check(line):
             return "IODisplayParameters" in line
 
-        scr = None
+        current_scr = None
+        max_scr = None
+
         scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"]).split("\n")
         scr_out = next((i for i in scr_out if check(i)), None)
         if scr_out is not None:
@@ -287,9 +289,10 @@ class Misc(AbstractMisc):
             if int(scr.group(1)) == 0:
                 reg = r"\"brightness\"=[^,]+=[^\=]+=(\d+),[^\=]+=(\d+)"
                 scr = re.search(reg, scr_out)
-            scr = percent(int(scr.group(2)), int(scr.group(1)))
+            current_scr = int(scr.group(2))
+            max_scr = int(scr.group(1))
 
-        return scr
+        return current_scr, max_scr
 
 
 class Darwin(System):
