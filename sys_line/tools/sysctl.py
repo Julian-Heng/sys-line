@@ -32,7 +32,13 @@ class Sysctl():
 
     @staticmethod
     @lru_cache()
-    def query(key):
+    def query(key, default=None):
         """ Fetch a sysctl variable """
-        out = run(["sysctl", "-n", key]).strip()
-        return out if out else None
+        out = run(["sysctl", "-n", key])
+        if out is None:
+            return default
+
+        out = out.strip()
+        if not out:
+            return default
+        return out
