@@ -54,19 +54,31 @@ class Yabai(AbstractWindowManager):
 
     def desktop_index(self, options=None):
         query = self._yabai_query("--spaces", "--space")
-        return query.index if query is not None else None
+        if query is None:
+            return None
+
+        return query.index
 
     def desktop_name(self, options=None):
         index = self.desktop_index(options)
-        return f"Desktop {index}" if index is not None else None
+        if index is None:
+            return None
+
+        return f"Desktop {index}"
 
     def app_name(self, options=None):
         query = self._yabai_query("--windows", "--window")
-        return query.app if query is not None and query.app else None
+        if query is None:
+            return None
+
+        return query.app
 
     def window_name(self, options=None):
         query = self._yabai_query("--windows", "--window")
-        return query.title if query is not None and query.title else None
+        if query is None:
+            return None
+
+        return query.title
 
 
 class Xorg(AbstractWindowManager):
@@ -125,36 +137,43 @@ class Xorg(AbstractWindowManager):
         return index
 
     def desktop_name(self, options=None):
-        name = None
         index = self.desktop_index(options)
         desktops = self._xprop_query("8u", "_NET_DESKTOP_NAMES")
 
-        if index is not None and desktops is not None:
-            try:
-                name = desktops[int(index)]
-            except IndexError:
-                name = next(iter(desktops))
+        if index is None:
+            return None
+
+        if desktops is None:
+            return None
+
+        try:
+            name = desktops[int(index)]
+        except IndexError:
+            name = next(iter(desktops), None)
 
         return name
 
     def app_name(self, options=None):
-        name = None
         window_id = self._current_window_id
+        if window_id is None:
+            return None
 
-        if window_id is not None:
-            name = self._xprop_query("8s", "WM_CLASS", window_id=window_id)
-            if name is not None:
-                name = name[-1]
+        name = self._xprop_query("8s", "WM_CLASS", window_id=window_id)
+        if name is None:
+            return None
 
+        name = name[-1]
         return name
 
     def window_name(self, options=None):
-        name = None
         window_id = self._current_window_id
 
-        if window_id is not None:
-            name = self._xprop_query("8s", "WM_NAME", window_id=window_id)
-            if name is not None:
-                name = name[-1]
+        if window_id is None:
+            return None
 
+        name = self._xprop_query("8s", "WM_NAME", window_id=window_id)
+        if name is None:
+            return None
+
+        name = name[-1]
         return name
