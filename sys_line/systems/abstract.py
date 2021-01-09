@@ -68,7 +68,7 @@ class AbstractGetter(ABC):
 
     def query(self, info, options_string):
         """ Returns the value of info """
-        LOG.debug("quering domain '%s' for info '%s'", self.domain_name, info)
+        LOG.debug("querying domain '%s' for info '%s'", self.domain_name, info)
         LOG.debug("options string: %s", options_string)
 
         if info not in self._valid_info:
@@ -84,7 +84,7 @@ class AbstractGetter(ABC):
 
         if LOG.isEnabledFor(DEBUG):
             msg = (
-                f"begin quering domain '{self.domain_name}' for info '{info}'"
+                f"begin querying domain '{self.domain_name}' for info '{info}'"
             )
 
             LOG.debug("=" * len(msg))
@@ -997,7 +997,7 @@ class System(ABC):
 
     def query(self, domain):
         """ Queries a system for a domain and info """
-        LOG.debug("quering system for domain '%s'", domain)
+        LOG.debug("querying system for domain '%s'", domain)
 
         if domain not in self._getters.keys():
             msg = f"domain name '{domain}' not in system"
