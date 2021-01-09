@@ -25,10 +25,14 @@ import shlex
 import shutil
 
 from functools import lru_cache
+from logging import getLogger
 from types import SimpleNamespace
 
 from .abstract import AbstractWindowManager
 from ..tools.utils import run, trim_string
+
+
+LOG = getLogger(__name__)
 
 
 class Yabai(AbstractWindowManager):
@@ -55,6 +59,7 @@ class Yabai(AbstractWindowManager):
     def desktop_index(self, options=None):
         query = self._yabai_query("--spaces", "--space")
         if query is None:
+            LOG.debug("unable to query yabai for desktop index")
             return None
 
         return query.index
@@ -62,6 +67,7 @@ class Yabai(AbstractWindowManager):
     def desktop_name(self, options=None):
         index = self.desktop_index(options)
         if index is None:
+            LOG.debug("unable to query yabai for desktop name")
             return None
 
         return f"Desktop {index}"
@@ -69,6 +75,7 @@ class Yabai(AbstractWindowManager):
     def app_name(self, options=None):
         query = self._yabai_query("--windows", "--window")
         if query is None:
+            LOG.debug("unable to query yabai for application name")
             return None
 
         return query.app
@@ -76,6 +83,7 @@ class Yabai(AbstractWindowManager):
     def window_name(self, options=None):
         query = self._yabai_query("--windows", "--window")
         if query is None:
+            LOG.debug("unable to query yabai for window name")
             return None
 
         return query.title
@@ -131,6 +139,7 @@ class Xorg(AbstractWindowManager):
     def desktop_index(self, options=None):
         current_desktop = self._xprop_query("0c", "_NET_CURRENT_DESKTOP")
         if current_desktop is None:
+            LOG.debug("unable to query xprop for desktop index")
             return None
 
         index = current_desktop[-1]
@@ -141,14 +150,19 @@ class Xorg(AbstractWindowManager):
         desktops = self._xprop_query("8u", "_NET_DESKTOP_NAMES")
 
         if index is None:
+            LOG.debug("index is not valid, unable to get desktop name")
             return None
 
         if desktops is None:
+            LOG.debug("unable to query xprop for desktop names")
             return None
 
         try:
             name = desktops[int(index)]
         except IndexError:
+            LOG.debug(
+                "index is not valid, getting first available desktop name"
+            )
             name = next(iter(desktops), None)
 
         return name
@@ -156,10 +170,12 @@ class Xorg(AbstractWindowManager):
     def app_name(self, options=None):
         window_id = self._current_window_id
         if window_id is None:
+            LOG.debug("unable to get window id")
             return None
 
         name = self._xprop_query("8s", "WM_CLASS", window_id=window_id)
         if name is None:
+            LOG.debug("unable to query xprop for application name")
             return None
 
         name = name[-1]
@@ -169,6 +185,7 @@ class Xorg(AbstractWindowManager):
         window_id = self._current_window_id
 
         if window_id is None:
+            LOG.debug("unable to get window id")
             return None
 
         name = self._xprop_query("8s", "WM_NAME", window_id=window_id)

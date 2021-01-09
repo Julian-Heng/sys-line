@@ -23,8 +23,12 @@
 """ Sysctl module """
 
 from functools import lru_cache
+from logging import getLogger
 
 from .utils import run
+
+
+LOG = getLogger(__name__)
 
 
 class Sysctl():
@@ -36,6 +40,7 @@ class Sysctl():
         """ Fetch a sysctl variable """
         out = run(["sysctl", "-n", key])
         if out is None:
+            LOG.debug("sysctl key '%s' not found", key)
             return default
 
         out = out.strip()

@@ -62,6 +62,7 @@ def parse_cli(args):
     parser.add_argument("-v", "--version", action="version", version=ver)
     parser.add_argument("-a", "--all", nargs="*", choices=System.SHORT_DOMAINS,
                         default=None, metavar="domain")
+    parser.add_argument("--debug", action="store_true", default=False)
 
     groups = {i: parser.add_argument_group(i) for i in System.DOMAINS}
 

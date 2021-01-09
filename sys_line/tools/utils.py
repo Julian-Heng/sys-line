@@ -26,7 +26,11 @@ import os
 import re
 import subprocess
 
+from logging import getLogger
 from types import SimpleNamespace
+
+
+LOG = getLogger(__name__)
 
 
 def percent(num_1, num_2):
@@ -36,6 +40,7 @@ def percent(num_1, num_2):
 
 def open_read(filename):
     """ Wrapper for opening and reading a file """
+    LOG.debug("opening file '%s'", filename)
     try:
         with open(filename, "r") as f:
             return f.read()
@@ -45,6 +50,7 @@ def open_read(filename):
 
 def run(cmd):
     """ Runs cmd and returns output as a string """
+    LOG.debug("running command: %s", cmd)
     with open(os.devnull, "w") as stderr:
         stdout = subprocess.PIPE
         process = subprocess.run(cmd, stdout=stdout, stderr=stderr,

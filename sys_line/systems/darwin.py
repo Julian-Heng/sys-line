@@ -29,6 +29,7 @@ import time
 
 from functools import lru_cache
 from pathlib import Path
+from logging import getLogger
 
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
@@ -36,6 +37,9 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
 from .wm import Yabai
 from ..tools.sysctl import Sysctl
 from ..tools.utils import run
+
+
+LOG = getLogger(__name__)
 
 
 class Cpu(AbstractCpu):
@@ -65,32 +69,38 @@ class Cpu(AbstractCpu):
 
     def fan(self, options=None):
         if not self._osx_cpu_temp_exe:
+            LOG.debug("osx-cpu-temp not installed")
             return None
 
         regex = r"(\d+) RPM"
         out = run([self._osx_cpu_temp_exe, "-f", "-c"])
 
         if out is None:
+            LOG.debug("unable to get output from osx-cpu-temp")
             return None
 
         match = re.search(regex, out)
         if not match:
+            LOG.debug("unable to match fan regex")
             return None
 
         return int(match.group(1))
 
     def _temp(self):
         if not self._osx_cpu_temp_exe:
+            LOG.debug("osx-cpu-temp not installed")
             return None
 
         regex = r"CPU: ((\d+\.)?\d+)"
         out = run([self._osx_cpu_temp_exe, "-f", "-c"])
 
         if out is None:
+            LOG.debug("unable to get output from osx-cpu-temp")
             return None
 
         match = re.search(regex, out)
         if not match:
+            LOG.debug("unable to match temp regex")
             return None
 
         return float(match.group(1))
@@ -114,6 +124,7 @@ class Memory(AbstractMemory):
         vm_stat = run(["vm_stat"])
 
         if vm_stat is None:
+            LOG.debug("unable to get output from vm_stat")
             return None, None
 
         vm_stat = vm_stat.strip().splitlines()[1:]
@@ -144,6 +155,7 @@ class Swap(AbstractSwap):
         match = re.search(regex, self._swapusage)
 
         if not match:
+            LOG.debug("unable to match swap regex")
             return 0
 
         value = int(float(match.group(1)) * pow(1024, 2))
@@ -170,6 +182,7 @@ class Disk(AbstractDisk):
         devs = self._original_dev().values()
         cmd = ["diskutil", "info", "-plist"]
         if devs is None:
+            LOG.debug("unable to get disk devices")
             return None
 
         out = {dev: run(cmd + [dev]).encode("utf-8") for dev in devs}
@@ -195,9 +208,15 @@ class Battery(AbstractBattery):
         current = 0
         is_present = self.is_present()
         if not is_present:
+            LOG.debug("battery is not present")
             return 0
 
         ioreg = Battery.ioreg()
+
+        if ioreg is None:
+            LOG.debug("unable to get ioreg output")
+            return 0
+
         current = int(ioreg.get("InstantAmperage", 0))
 
         # Fix current if it underflows in ioreg
@@ -211,10 +230,12 @@ class Battery(AbstractBattery):
     def _current_capacity(self):
         is_present = self.is_present()
         if not is_present:
+            LOG.debug("battery is not present")
             return None
 
         ioreg = Battery.ioreg()
         if ioreg is None or "CurrentCapacity" not in ioreg:
+            LOG.debug("unable to get ioreg output")
             return None
 
         return int(ioreg["CurrentCapacity"])
@@ -222,6 +243,7 @@ class Battery(AbstractBattery):
     def is_present(self, options=None):
         ioreg = Battery.ioreg()
         if ioreg is None:
+            LOG.debug("unable to get ioreg output")
             return False
 
         is_present = ioreg.get("BatteryInstalled", "") == "Yes"
@@ -230,18 +252,29 @@ class Battery(AbstractBattery):
     def is_charging(self, options=None):
         is_present = self.is_present()
         if not is_present:
+            LOG.debug("battery is not present")
             return None
 
         ioreg = Battery.ioreg()
+        if ioreg is None:
+            LOG.debug("unable to get ioreg output")
+            return None
+
         is_charging = ioreg.get("IsCharging", "") == "Yes"
         return is_charging
 
     def is_full(self, options=None):
         is_present = self.is_present()
         if not is_present:
+            LOG.debug("battery is not present")
             return None
 
         ioreg = Battery.ioreg()
+
+        if ioreg is None:
+            LOG.debug("unable to get ioreg output")
+            return None
+
         is_charging = ioreg.get("FullyCharged", "") == "Yes"
         return is_charging
 
@@ -250,6 +283,7 @@ class Battery(AbstractBattery):
         ioreg = Battery.ioreg()
 
         if ioreg is None:
+            LOG.debug("unable to get ioreg output")
             max_capacity = 0
         else:
             max_capacity = int(ioreg.get("MaxCapacity", 0))
@@ -262,6 +296,10 @@ class Battery(AbstractBattery):
         is_present = self.is_present()
         current = self._current()
         if not is_present or current == 0:
+            if not is_present:
+                LOG.debug("battery is not present")
+            if current == 0:
+                LOG.debug("battery current is 0")
             return 0
 
         charge = self._current_capacity()
@@ -270,11 +308,12 @@ class Battery(AbstractBattery):
         if is_charging:
             ioreg = Battery.ioreg()
             if ioreg is None:
+                LOG.debug("unable to get ioreg output")
                 return 0
 
             charge = int(ioreg.get("MaxCapacity", 0)) - charge
 
-        charge = int((charge / self._current()) * 3600)
+        charge = int((charge / current) * 3600)
         return charge
 
     def _power(self):
@@ -282,10 +321,12 @@ class Battery(AbstractBattery):
 
         is_present = self.is_present()
         if not is_present:
+            LOG.debug("battery is not present")
             return None
 
         ioreg = Battery.ioreg()
         if ioreg is None:
+            LOG.debug("unable to get ioreg output")
             return None
 
         voltage = int(ioreg.get("Voltage", 0))
@@ -325,6 +366,7 @@ class Network(AbstractNetwork):
 
         dev_list = run(["networksetup", "-listallhardwareports"])
         if dev_list is None:
+            LOG.debug("unable to get network device")
             return None
 
         dev_list = dev_list.strip().splitlines()
@@ -372,12 +414,17 @@ class Misc(AbstractMisc):
     def _vol(self):
         vol = None
         if self._vol_exe:
+            LOG.debug("using 'vol' to get volume")
+            vol_bin = "vol"
             out = run([self._vol_exe])
         else:
+            LOG.debug("using 'osascript' to get volume")
+            vol_bin = "osascript"
             cmd = ["osascript", "-e", "output volume of (get volume settings)"]
             out = run(cmd)
 
         if out is None:
+            LOG.debug("unable to get '%s' output", vol_bin)
             return None
 
         vol = float(out)
@@ -389,11 +436,13 @@ class Misc(AbstractMisc):
 
         scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"])
         if scr_out is None:
+            LOG.debug("unable to get ioreg output")
             return None, None
 
         scr_out = scr_out.splitlines()
         scr_out = next(filter(check, scr_out), None)
         if scr_out is None:
+            LOG.debug("unable to find 'IODIsplayParameters' in ioreg output")
             return None, None
 
         reg = r"\"brightness\"=[^\=]+=(\d+),[^,]+,[^\=]+=(\d+)"

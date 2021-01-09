@@ -19,13 +19,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # pylint: disable=invalid-name,too-few-public-methods,unused-argument
-# pylint: disable=no-self-use
+# pylint: disable=no-self-use,too-many-lines
 
 """ Abstract classes for getting system info """
 
 import os
 import re
-import sys
 import time
 
 from abc import ABC, abstractmethod
@@ -33,12 +32,16 @@ from copy import deepcopy
 from datetime import datetime
 from functools import lru_cache, reduce
 from importlib import import_module
+from logging import getLogger, DEBUG
 from pathlib import Path
 
 from ..tools.storage import Storage
 from ..tools.utils import (percent, run, unix_epoch_to_str, round_trim,
                            trim_string, namespace_types_as_dict)
 from ..tools.df import DfEntry
+
+
+LOG = getLogger(__name__)
 
 
 class AbstractGetter(ABC):
@@ -65,16 +68,38 @@ class AbstractGetter(ABC):
 
     def query(self, info, options_string):
         """ Returns the value of info """
+        LOG.debug("quering domain '%s' for info '%s'", self.domain_name, info)
+        LOG.debug("options string: %s", options_string)
+
         if info not in self._valid_info:
             msg = f"info name '{info}' is not in domain"
             raise RuntimeError(msg)
 
         if options_string is None:
+            LOG.debug("options string is empty, using default options")
             options = self.default_options
         else:
+            LOG.debug("parsing options string '%s'", options_string)
             options = self._parse_options(info, options_string)
 
-        return self._query(info, options)
+        if LOG.isEnabledFor(DEBUG):
+            msg = (
+                f"begin quering domain '{self.domain_name}' for info '{info}'"
+            )
+
+            LOG.debug("=" * len(msg))
+            LOG.debug(msg)
+            LOG.debug("=" * len(msg))
+
+        val = self._query(info, options)
+
+        if LOG.isEnabledFor(DEBUG):
+            msg = f"query result for '{self.domain_name}.{info}': '{val}'"
+            LOG.debug("=" * len(msg))
+            LOG.debug(msg)
+            LOG.debug("=" * len(msg))
+
+        return val
 
     def _query(self, info, options):
         return getattr(self, info)(options)
@@ -85,12 +110,23 @@ class AbstractGetter(ABC):
         for o in filter(len, map(trim_string, option_string.split(","))):
             k, v = (o.split("=", 1) + [None, None])[:2]
 
+            LOG.debug("option_key=%s, option_value=%s", k, v)
+
             try:
+                LOG.debug("getting type for option '%s'", k)
                 option_type = reduce(dict.__getitem__, [info, k], option_types)
+                LOG.debug("type for option '%s' is '%s'", k,
+                          option_type.__name__)
             except (KeyError, TypeError):
+                LOG.debug(
+                    "option '%s' does not exist, passing it to handler...",
+                    k
+                )
+
                 try:
                     if v is None:
                         self._handle_missing_option_value(options, info, o)
+                        LOG.debug("option successfully handled")
                         continue
                 except NotImplementedError:
                     pass
@@ -261,6 +297,7 @@ class AbstractCpu(AbstractGetter):
             fmt = fr" ({cores}) @ {speed}GHz"
             cpu = cpu_reg.sub(fmt, cpu)
         else:
+            LOG.debug("unable to get cpu speed, using fallback speed")
             fmt = fr"({cores}) @"
             cpu = re.sub(r"@", fmt, cpu)
 
@@ -278,6 +315,7 @@ class AbstractCpu(AbstractGetter):
 
         load = self._load_avg()
         if load is None:
+            LOG.debug("unable to get load")
             return None
 
         if options.load_avg.short:
@@ -295,6 +333,7 @@ class AbstractCpu(AbstractGetter):
         ps_out = run(ps_cmd)
 
         if not ps_out:
+            LOG.debug("unable to get ps output")
             return None
 
         ps_out = ps_out.strip().splitlines()[1:]
@@ -317,6 +356,7 @@ class AbstractCpu(AbstractGetter):
 
         temp = self._temp()
         if temp is None:
+            LOG.debug("unable to get temp output")
             return None
 
         temp = round_trim(temp, options.temp.round)
@@ -330,6 +370,7 @@ class AbstractCpu(AbstractGetter):
         """ Uptime method """
         uptime = self._uptime()
         if uptime is None:
+            LOG.debug("unable to get uptime")
             return None
 
         uptime = unix_epoch_to_str(uptime)
@@ -413,6 +454,7 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
         mounts = list()
 
         if not query:
+            LOG.debug("df query is empty, defaulting to '/'")
             mounts.append(r"/")
         else:
             for p in filter(Path.exists, map(Path, query)):
@@ -429,10 +471,12 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
             mounts = r"|".join(mounts)
             reg.append(fr"({mounts})$")
         reg = r"|".join(reg)
+        LOG.debug("df query regex is '%s'", reg)
         reg = re.compile(reg)
 
         results = dict()
         if self._df is None:
+            LOG.debug("unable to get df output")
             return results
 
         for i in filter(reg.search, self._df):
@@ -898,6 +942,13 @@ class System(ABC):
 
     def __init__(self, default_options, **kwargs):
         super(System, self).__init__()
+
+        if LOG.isEnabledFor(DEBUG):
+            msg = "Initialising System with: %s"
+            sys_debug = {k: f"{v.__module__}.{v.__name__}"
+                         for k, v in kwargs.items()}
+            LOG.debug(msg, sys_debug)
+
         self._getters = dict(kwargs, date=Date)
         self.default_options = {
             k: getattr(default_options, k, None) for k in self._getters
@@ -919,6 +970,7 @@ class System(ABC):
         importing the module
         """
         os_name = os.uname().sysname
+        LOG.debug("os_name is %s", os_name)
 
         # Module system files format is the output of "uname -s" in lowercase
         mod_prefix = __name__.split(".")[:-1]
@@ -926,11 +978,14 @@ class System(ABC):
         system = None
 
         try:
+            LOG.debug("importing module '%s'...", mod_name)
             mod = import_module(mod_name)
+            LOG.debug("imported module '%s'", mod_name)
+
             system = getattr(mod, os_name)(default_options)
         except ModuleNotFoundError:
-            print(f"Unknown system: '{os_name}'", "Exiting...",
-                  sep="\n", file=sys.stderr)
+            LOG.error("Unknown system: '%s'", os_name)
+            LOG.error("Exiting...")
 
         return system
 
@@ -942,11 +997,15 @@ class System(ABC):
 
     def query(self, domain):
         """ Queries a system for a domain and info """
+        LOG.debug("quering system for domain '%s'", domain)
+
         if domain not in self._getters.keys():
             msg = f"domain name '{domain}' not in system"
             raise RuntimeError(msg)
 
         if self._getters_cache[domain] is None:
+            LOG.debug("domain '%s' is not initialised. Initialising...",
+                      domain)
             opts = self.default_options[domain]
             self._getters_cache[domain] = self._getters[domain](domain, opts)
 

@@ -26,6 +26,7 @@ import re
 import time
 
 from functools import lru_cache
+from logging import getLogger
 
 from . import wm
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
@@ -33,6 +34,9 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractMisc)
 from ..tools.sysctl import Sysctl
 from ..tools.utils import run, round_trim
+
+
+LOG = getLogger(__name__)
 
 
 class Cpu(AbstractCpu):
@@ -47,6 +51,7 @@ class Cpu(AbstractCpu):
     def _cpu_speed(self):
         speed = Sysctl.query("hw.cpuspeed")
         if speed is None:
+            LOG.debug("trying 'hw.clockrate'")
             speed = Sysctl.query("hw.clockrate")
         return round_trim(int(speed) / 1000, 2)
 
@@ -59,7 +64,7 @@ class Cpu(AbstractCpu):
 
     def fan(self, options=None):
         """ Stub """
-        return None
+        LOG.debug("freebsd fan is not implemented")
 
     def _temp(self):
         temp = Sysctl.query("dev.cpu.0.temperature")
@@ -68,7 +73,8 @@ class Cpu(AbstractCpu):
 
         reg = re.compile(r"\d+\.?\d+")
         temp = reg.search(temp)
-        if temp is None or temp.group(0) is None:
+        if temp is None:
+            LOG.debug("unable to match temp regex")
             return None
 
         return float(temp.group(0))
@@ -136,12 +142,14 @@ class Disk(AbstractDisk):
     def partition(self, options=None):
         devs = self._original_dev(options)
         if devs is None:
+            LOG.debug("unable to get disk devices")
             return None
 
         reg = re.compile(r"^(.*)p(\d+)$")
         dev_reg = {i: reg.search(i) for i in devs.keys()}
 
         if not dev_reg:
+            LOG.debug("unable to match disk regex")
             return None
 
         partition = {k: None for k in devs.keys()}
@@ -151,16 +159,20 @@ class Disk(AbstractDisk):
                 continue
 
             if k not in gpart_out.keys():
+                LOG.debug("'%s' is not cached, caching...", k)
                 gpart_cmd = ["gpart", "show", "-p", v.group(1)]
                 out = run(gpart_cmd)
                 if out is None:
+                    LOG.debug("unable to get output from gpart on '%s'", k)
                     continue
 
                 gpart_out[k] = out.strip().splitlines()
 
             geom = v.group(0).split("/")[-1]
             out = next((i for i in gpart_out[k] if geom in i), None)
-            if out is not None:
+            if out is None:
+                LOG.debug("geom is not valid for '%s'", k)
+            else:
                 partition[k] = out.split()[3]
 
         return partition
@@ -172,14 +184,23 @@ class Battery(AbstractBattery):
     def is_present(self, options=None):
         acpiconf = Battery.acpiconf()
         if acpiconf is None:
+            LOG.debug("unable to get acpiconf output")
             return False
+
         return acpiconf.get("State", "") != "not present"
 
     def is_charging(self, options=None):
         acpiconf = Battery.acpiconf()
         is_present = self.is_present(options)
-        if acpiconf is None or not is_present:
+
+        if acpiconf is None:
+            LOG.debug("unable to get acpiconf output")
             return None
+
+        if not is_present:
+            LOG.debug("battery is not present")
+            return None
+
         return acpiconf.get("State", "") == "charging"
 
     def is_full(self, options=None):
@@ -187,6 +208,7 @@ class Battery(AbstractBattery):
         is_present = self.is_present(options)
         if acpiconf is None or not is_present:
             return None
+
         return acpiconf.get("State", "") == "high"
 
     def _percent(self):
@@ -195,19 +217,31 @@ class Battery(AbstractBattery):
     def percent(self, options=None):
         acpiconf = Battery.acpiconf()
         is_present = self.is_present(options)
-        if acpiconf is None or not is_present:
+
+        if acpiconf is None:
+            LOG.debug("unable to get acpiconf output")
+            return None
+
+        if not is_present:
+            LOG.debug("battery is not present")
             return None
 
         if "Remaining capacity" not in acpiconf:
+            LOG.debug("acpiconf does not contain key 'Remaining capacity'")
             return None
 
         return int(acpiconf["Remaining capacity"][:-1])
 
     def _time(self):
-        secs = 0
         is_present = self.is_present(None)
         acpiconf = Battery.acpiconf()
-        if acpiconf is None or not is_present:
+
+        if acpiconf is None:
+            LOG.debug("unable to get acpiconf output")
+            return 0
+
+        if not is_present:
+            LOG.debug("battery is not present")
             return 0
 
         acpi_time = acpiconf.get("Remaining time", "")
@@ -225,10 +259,17 @@ class Battery(AbstractBattery):
     def power(self, options=None):
         is_present = self.is_present(options)
         acpiconf = Battery.acpiconf()
-        if acpiconf is None or not is_present:
+
+        if acpiconf is None:
+            LOG.debug("unable to get acpiconf output")
+            return None
+
+        if not is_present:
+            LOG.debug("battery is not present")
             return None
 
         if "Present rate" not in acpiconf:
+            LOG.debug("acpiconf does not contain key 'Present rate'")
             return None
 
         power = int(acpiconf["Present rate"][:-3]) / 1000
@@ -244,7 +285,10 @@ class Battery(AbstractBattery):
 
         bat = bat.strip().splitlines()
         bat = [re.sub(r"(:)\s+", r"\g<1>", i) for i in bat]
-        return dict(i.split(":", 1) for i in bat) if len(bat) > 1 else None
+        if len(bat) == 0:
+            return None
+
+        return dict(i.split(":", 1) for i in bat)
 
 
 class Network(AbstractNetwork):
@@ -264,6 +308,7 @@ class Network(AbstractNetwork):
         active = re.compile(r"^\s+status: (associated|active)$", re.M)
         dev_list = run(self._LOCAL_IP_CMD + ["-l"])
         if dev_list is None:
+            LOG.debug("unable to get network devices")
             return None
 
         dev_list = dev_list.split()

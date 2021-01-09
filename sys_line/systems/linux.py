@@ -26,6 +26,7 @@ import shutil
 
 from abc import abstractmethod
 from functools import lru_cache
+from logging import getLogger
 from pathlib import Path
 
 from . import wm
@@ -33,6 +34,9 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc, BatteryStub)
 from ..tools.utils import open_read, run, percent, round_trim
+
+
+LOG = getLogger(__name__)
 
 
 class Cpu(AbstractCpu):
@@ -96,6 +100,7 @@ class Cpu(AbstractCpu):
     def _cpu_string(self):
         match = re.search(r"model name\s+: (.*)", self._cpu_file, re.M)
         if match is None:
+            LOG.debug("unable to match cpu regex")
             return None
 
         cpu = match.group(1)
@@ -104,10 +109,12 @@ class Cpu(AbstractCpu):
     def _cpu_speed(self):
         speed_path = self._cpu_speed_file_path
         if speed_path is None:
+            LOG.debug("unable to find cpu speed file")
             return None
 
         speed = open_read(speed_path)
         if speed is None or not speed.strip().isnumeric():
+            LOG.debug("unable to read cpu speed file '%s'", speed_path)
             return None
 
         speed = round_trim(float(speed) / 1e6, 2)
@@ -117,6 +124,7 @@ class Cpu(AbstractCpu):
         load_path = Cpu._FILES["proc_load"]
         load_file = open_read(load_path)
         if load_file is None:
+            LOG.debug("unable to read loadavg file '%s'", load_path)
             return None
 
         load = load_file.strip().split()[:3]
@@ -125,10 +133,12 @@ class Cpu(AbstractCpu):
     def fan(self, options=None):
         fan_path = self._cpu_fan_file_path
         if fan_path is None:
+            LOG.debug("unable to find fan file")
             return None
 
         fan = open_read(fan_path)
         if fan is None or not fan.strip().isnumeric():
+            LOG.debug("unable to read fan file '%s'", fan_path)
             return None
 
         fan = int(fan.strip())
@@ -137,11 +147,13 @@ class Cpu(AbstractCpu):
     def _temp(self):
         temp_paths = self._cpu_temp_file_paths
         if not temp_paths:
+            LOG.debug("unable to find temperature directory")
             return None
 
         temp_path = next(iter(temp_paths))
         temp = open_read(temp_path)
         if temp is None:
+            LOG.debug("unable to read temperature file '%s'", temp_path)
             return None
 
         temp = float(temp) / 1000
@@ -152,6 +164,7 @@ class Cpu(AbstractCpu):
         uptime_path = Cpu._FILES["proc_uptime"]
         uptime_file = open_read(uptime_path)
         if uptime_file is None:
+            LOG.debug("unable to read uptime file '%s'", uptime_path)
             return None
 
         uptime = int(float(uptime_file.strip().split(" ")[0]))
@@ -164,6 +177,7 @@ def _mem_file():
     reg = re.compile(r"\s+|kB")
     mem_file = open_read("/proc/meminfo")
     if mem_file is None:
+        LOG.debug("unable to read memory info file '%s'", mem_file)
         return dict()
 
     mem_file = mem_file.strip().splitlines()
@@ -219,6 +233,7 @@ class Disk(AbstractDisk):
         Returns the output of lsblk in a dictionary with devices as keys
         """
         if not self._lsblk_exe:
+            LOG.debug("unable to find lsblk binary")
             return None
 
         columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
@@ -240,10 +255,12 @@ class Disk(AbstractDisk):
     def name(self, options=None):
         devs = self._original_dev(options)
         if devs is None:
+            LOG.debug("unable to get disk devices")
             return None
 
         lsblk_entries = self._lsblk_entries
         if lsblk_entries is None:
+            LOG.debug("unable to get output from lsblk")
             return {k: None for k in devs.keys()}
 
         labels = ["LABEL", "PARTLABEL"]
@@ -254,10 +271,12 @@ class Disk(AbstractDisk):
     def partition(self, options=None):
         devs = self._original_dev(options)
         if devs is None:
+            LOG.debug("unable to get disk devices")
             return None
 
         lsblk_entries = self._lsblk_entries
         if lsblk_entries is None:
+            LOG.debug("unable to get output from lsblk")
             return {k: None for k in devs.keys()}
 
         partitions = {k: v["FSTYPE"]
@@ -293,11 +312,13 @@ class Battery(AbstractBattery):
         """ Returns cached battery status file """
         bat_dir = Battery.directory()
         if bat_dir is None:
+            LOG.debug("unable to find battery directory")
             return None
 
         status_path = bat_dir.joinpath("status")
         status = open_read(status_path)
         if status is None:
+            LOG.debug("unable to read battery status file '%s'", status_path)
             return None
 
         status = status.strip()
@@ -311,18 +332,24 @@ class Battery(AbstractBattery):
         current_filename = self._current
 
         if bat_dir is None:
+            LOG.debug("unable to find battery directory")
             return None
 
         if current_filename is None:
+            LOG.debug("unable to get battery charge current filename")
             return None
 
         current_path = bat_dir.joinpath(current_filename)
         current_charge = open_read(current_path)
         if current_charge is None:
+            LOG.debug("unable to read battery current charge file '%s'",
+                      current_path)
             return None
 
         current_charge = current_charge.strip()
         if not current_charge.isnumeric():
+            LOG.debug("unable to read battery current charge file '%s'",
+                      current_path)
             return None
 
         current_charge = int(current_charge)
@@ -336,18 +363,24 @@ class Battery(AbstractBattery):
         full_filename = self._full
 
         if bat_dir is None:
+            LOG.debug("unable to find battery directory")
             return None
 
         if full_filename is None:
+            LOG.debug("unable to get battery charge full filename")
             return None
 
         full_path = bat_dir.joinpath(full_filename)
         full_charge = open_read(full_path)
         if full_charge is None:
+            LOG.debug("unable to read battery full charge file '%s'",
+                      full_path)
             return None
 
         full_charge = full_charge.strip()
         if not full_charge.isnumeric():
+            LOG.debug("unable to read battery full charge file '%s'",
+                      full_path)
             return None
 
         full_charge = int(full_charge)
@@ -361,18 +394,24 @@ class Battery(AbstractBattery):
         drain_filename = self._drain
 
         if bat_dir is None:
+            LOG.debug("unable to find battery directory")
             return None
 
         if drain_filename is None:
+            LOG.debug("unable to get battery rate drain filename")
             return None
 
         drain_path = bat_dir.joinpath(drain_filename)
         drain_rate = open_read(drain_path)
         if drain_rate is None:
+            LOG.debug("unable to read battery drain rate file '%s'",
+                      drain_path)
             return None
 
         drain_rate = drain_rate.strip()
         if not drain_rate.isnumeric():
+            LOG.debug("unable to read battery drain rate file '%s'",
+                      drain_path)
             return None
 
         drain_rate = int(drain_rate)
@@ -494,6 +533,7 @@ class BatteryAmp(Battery):
     def _power(self):
         bat_dir = Battery.directory()
         if bat_dir is None:
+            LOG.debug("unable to find battery directory")
             return None
 
         voltage_path = bat_dir.joinpath("voltage_now")
@@ -501,10 +541,12 @@ class BatteryAmp(Battery):
         drain_rate = self._drain_rate
 
         if voltage is None:
+            LOG.debug("unable to read battery voltage file '%s'", voltage)
             return None
 
         voltage = voltage.strip()
         if not voltage.isnumeric():
+            LOG.debug("unable to read battery voltage file '%s'", voltage)
             return None
 
         if drain_rate is None:
@@ -579,11 +621,13 @@ class Network(AbstractNetwork):
     def _ssid(self):
         dev = self.dev()
         if dev is None:
+            LOG.debug("unable to get network device")
             return None, None
 
         wifi_path = Network._FILES["proc_wifi"]
         wifi_out = open_read(wifi_path)
         if wifi_out is None:
+            LOG.debug("unable to read proc wireless file '%s'", wifi_path)
             return None, None
 
         wifi_out = wifi_out.strip().splitlines()
@@ -650,18 +694,31 @@ class Misc(AbstractMisc):
         backlight_glob = backlight_path.rglob("*")
         scr_dir = next(filter(check, backlight_glob), None)
         if scr_dir is None:
+            LOG.debug("unable to find backlight directory")
             return None, None
 
         current_scr = open_read(scr_dir.joinpath("brightness"))
         max_scr = open_read(scr_dir.joinpath("max_brightness"))
 
         if current_scr is None or max_scr is None:
+            if current_scr is None:
+                LOG.debug("unable to read current screen brightness file '%s'",
+                          current_scr)
+            if max_scr is None:
+                LOG.debug("unable to read max screen brightness file '%s'",
+                          max_scr)
             return None, None
 
         current_scr = current_scr.strip()
         max_scr = max_scr.strip()
 
         if not current_scr.isnumeric() or not max_scr.isnumeric():
+            if not current_scr.isnumeric():
+                LOG.debug("unable to read current screen brightness file '%s'",
+                          current_scr)
+            if not max_scr.isnumeric():
+                LOG.debug("unable to read max screen brightness file '%s'",
+                          max_scr)
             return None, None
 
         return current_scr, max_scr
@@ -673,14 +730,17 @@ class Misc(AbstractMisc):
         default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
         pacmd_exe = shutil.which("pacmd")
         if not pacmd_exe:
+            LOG.debug("unable to find pacmd binary")
             return None
 
         pac_dump = run([pacmd_exe, "dump"])
         if pac_dump is None:
+            LOG.debug("unable to get output from pacmd")
             return None
 
         default = default_reg.search(pac_dump)
         if default is None:
+            LOG.debug("unable to process output from pacmd")
             return None
 
         vol_reg = fr"^set-sink-volume {default.group(1)} 0x(.*)$"

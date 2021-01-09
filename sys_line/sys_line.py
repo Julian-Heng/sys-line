@@ -20,6 +20,7 @@
 
 """ sys-line initialization """
 
+import logging
 import sys
 
 from .systems.abstract import System
@@ -27,9 +28,23 @@ from .tools.cli import parse_cli
 from .tools.format import FormatTree
 
 
+LOG = logging.getLogger(__name__)
+
+
 def main():
     """ Main method """
-    options = parse_cli(sys.argv[1:])
+    args = sys.argv[1:]
+    options = parse_cli(args)
+
+    if options.debug:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+
+    logging.basicConfig(level=level)
+    LOG.debug("command line arguments: %s", args)
+    LOG.debug("application options: %s", options)
+
     system = System.create_instance(options)
 
     if system is not None:
