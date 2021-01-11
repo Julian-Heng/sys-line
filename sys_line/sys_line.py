@@ -49,9 +49,11 @@ def main():
 
     if system is not None:
         if options.all is not None:
-            domains = options.all if options.all else system.SHORT_DOMAINS
+            if not options.all:
+                domains = system.SHORT_DOMAINS
             for domain in domains:
-                print(system.query(domain))
+                for name, info in system.query(domain).all_info():
+                    print(f"{domain}.{name}: {info}")
         elif options.format:
             for fmt in options.format:
                 print(FormatTree(system, fmt).build())

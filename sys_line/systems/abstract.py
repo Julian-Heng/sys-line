@@ -167,12 +167,10 @@ class AbstractGetter(ABC):
     def _handle_missing_option_value(self, options, info, option_name):
         raise NotImplementedError()
 
-    def __str__(self):
-        """ The string representation of the getter would return all values """
-        return "\n".join([
-            f"{self.domain_name}.{i}: {self.query(i, None)}"
-            for i in self._valid_info
-        ])
+    def all_info(self):
+        """ Returns a generator object for getting all info in this domain """
+        for i in self._valid_info:
+            yield i, self.query(i, None)
 
 
 class AbstractMultipleValuesGetter(AbstractGetter):
