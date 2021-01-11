@@ -62,9 +62,20 @@ class AbstractGetter(ABC):
         return namespace_types_as_dict(self.default_options)
 
     @property
-    @abstractmethod
+    @lru_cache(maxsize=1)
     def _valid_info(self):
         """ Returns list of info in getter """
+        def check(i):
+            reserved = ["query", "all_info"]
+            return (
+                not i.startswith("_")
+                and i not in reserved
+                and callable(getattr(self, i))
+            )
+
+        info = list(filter(check, dir(self)))
+        LOG.debug("valid info for '%s': %s", self.domain_name, info)
+        return info
 
     def query(self, info, options_string):
         """ Returns the value of info """
@@ -190,10 +201,6 @@ class AbstractStorage(AbstractGetter):
     AbstractStorage for info that fetches used, total and percent attributes
     """
 
-    @property
-    def _valid_info(self):
-        return ["used", "total", "percent"]
-
     @abstractmethod
     def _used(self):
         """
@@ -261,11 +268,6 @@ class AbstractStorage(AbstractGetter):
 
 class AbstractCpu(AbstractGetter):
     """ Abstract cpu class to be implemented by subclass """
-
-    @property
-    def _valid_info(self):
-        return ["cores", "cpu", "load_avg", "cpu_usage", "fan", "temp",
-                "uptime"]
 
     @abstractmethod
     def cores(self, options=None):
@@ -403,11 +405,6 @@ class AbstractSwap(AbstractStorage):
 
 class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
     """ Abstract disk class to be implemented by subclass """
-
-    @property
-    def _valid_info(self):
-        return super(AbstractDisk, self)._valid_info + ["dev", "mount",
-                                                        "name", "partition"]
 
     def _handle_missing_option_value(self, options, info, option_name):
         if option_name not in options.query:
@@ -615,11 +612,6 @@ class AbstractDisk(AbstractStorage, AbstractMultipleValuesGetter):
 class AbstractBattery(AbstractGetter):
     """ Abstract battery class to be implemented by subclass """
 
-    @property
-    def _valid_info(self):
-        return ["is_present", "is_charging", "is_full", "percent",
-                "time", "power"]
-
     @abstractmethod
     def is_present(self, options=None):
         """ Abstract battery present method to be implemented by subclass """
@@ -688,10 +680,6 @@ class AbstractBattery(AbstractGetter):
 
 class AbstractNetwork(AbstractGetter):
     """ Abstract network class to be implemented by subclass """
-
-    @property
-    def _valid_info(self):
-        return ["dev", "ssid", "local_ip", "download", "upload"]
 
     @property
     @abstractmethod
@@ -798,10 +786,6 @@ class AbstractNetwork(AbstractGetter):
 class Date(AbstractGetter):
     """ Date class to fetch date and time """
 
-    @property
-    def _valid_info(self):
-        return ["date", "time"]
-
     @staticmethod
     def _format(fmt):
         """ Wrapper for printing date and time format """
@@ -824,10 +808,6 @@ class Date(AbstractGetter):
 
 class AbstractWindowManager(AbstractGetter):
     """ Abstract window manager class to be implemented by subclass """
-
-    @property
-    def _valid_info(self):
-        return ["desktop_index", "desktop_name", "app_name", "window_name"]
 
     @abstractmethod
     def desktop_index(self, options=None):
@@ -852,10 +832,6 @@ class AbstractWindowManager(AbstractGetter):
 
 class AbstractMisc(AbstractGetter):
     """ Misc class for fetching miscellaneous information """
-
-    @property
-    def _valid_info(self):
-        return ["vol", "scr"]
 
     @abstractmethod
     def _vol(self):
