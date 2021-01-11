@@ -22,14 +22,12 @@
 
 import json
 import shlex
-import shutil
 
-from functools import lru_cache
 from logging import getLogger
 from types import SimpleNamespace
 
 from .abstract import AbstractWindowManager
-from ..tools.utils import run, trim_string
+from ..tools.utils import run, trim_string, which
 
 
 LOG = getLogger(__name__)
@@ -38,26 +36,8 @@ LOG = getLogger(__name__)
 class Yabai(AbstractWindowManager):
     """ Yabai window manager implementation """
 
-    @property
-    @lru_cache(maxsize=1)
-    def _yabai_exe(self):
-        """ Returns the path to the yabai executable """
-        return shutil.which("yabai")
-
-    def _yabai_query(self, *args):
-        """ Returns an object of the json respose from the query """
-        if not self._yabai_exe or not args:
-            return None
-
-        result = run([self._yabai_exe, "-m", "query"] + list(args))
-        if not result:
-            return None
-
-        result = json.loads(result, object_hook=lambda d: SimpleNamespace(**d))
-        return result
-
     def desktop_index(self, options=None):
-        query = self._yabai_query("--spaces", "--space")
+        query = Yabai._yabai_query("--spaces", "--space")
         if query is None:
             LOG.debug("unable to query yabai for desktop index")
             return None
@@ -73,7 +53,7 @@ class Yabai(AbstractWindowManager):
         return f"Desktop {index}"
 
     def app_name(self, options=None):
-        query = self._yabai_query("--windows", "--window")
+        query = Yabai._yabai_query("--windows", "--window")
         if query is None:
             LOG.debug("unable to query yabai for application name")
             return None
@@ -81,63 +61,37 @@ class Yabai(AbstractWindowManager):
         return query.app
 
     def window_name(self, options=None):
-        query = self._yabai_query("--windows", "--window")
+        query = Yabai._yabai_query("--windows", "--window")
         if query is None:
             LOG.debug("unable to query yabai for window name")
             return None
 
         return query.title
 
+    @staticmethod
+    def _yabai_query(*args):
+        """ Returns an object of the json respose from the query """
+        yabai_exe = which("yabai")
+        if not yabai_exe:
+            LOG.debug("unable to find yabai binary")
+
+        if not args:
+            LOG.debug("no arguments are provided")
+            return None
+
+        result = run([yabai_exe, "-m", "query"] + list(args))
+        if not result:
+            return None
+
+        result = json.loads(result, object_hook=lambda d: SimpleNamespace(**d))
+        return result
+
 
 class Xorg(AbstractWindowManager):
     """ Xorg window managers implementation """
 
-    @property
-    @lru_cache(maxsize=1)
-    def _xprop_exe(self):
-        """ Returns the path to the yabai executable """
-        return shutil.which("xprop")
-
-    @property
-    def _current_window_id(self):
-        if not self._xprop_exe:
-            return None
-
-        out = run([
-            self._xprop_exe, "-root", "-notype", "32x", r"\n$0",
-            "_NET_ACTIVE_WINDOW"
-        ])
-
-        if not out or "not found" in out:
-            return None
-
-        window_id = out.split("\n")[-1]
-
-        return window_id
-
-    def _xprop_query(self, fmt, prop, window_id=None):
-        if not self._xprop_exe:
-            return None
-
-        if window_id is None:
-            cmd = [self._xprop_exe, "-root", "-notype", fmt, r"\n$0+", prop]
-        else:
-            cmd = [self._xprop_exe, "-notype", "-id", window_id, fmt,
-                   r"\n$0+", prop]
-
-        out = run(cmd)
-
-        if not out or "not found" in out:
-            return None
-
-        out = out.split("\n")[-1]
-        out = shlex.split(out)
-        out = [trim_string(i.rstrip(",")) for i in out]
-
-        return out
-
     def desktop_index(self, options=None):
-        current_desktop = self._xprop_query("0c", "_NET_CURRENT_DESKTOP")
+        current_desktop = Xorg._xprop_query("0c", "_NET_CURRENT_DESKTOP")
         if current_desktop is None:
             LOG.debug("unable to query xprop for desktop index")
             return None
@@ -147,7 +101,7 @@ class Xorg(AbstractWindowManager):
 
     def desktop_name(self, options=None):
         index = self.desktop_index(options)
-        desktops = self._xprop_query("8u", "_NET_DESKTOP_NAMES")
+        desktops = Xorg._xprop_query("8u", "_NET_DESKTOP_NAMES")
 
         if index is None:
             LOG.debug("index is not valid, unable to get desktop name")
@@ -168,12 +122,12 @@ class Xorg(AbstractWindowManager):
         return name
 
     def app_name(self, options=None):
-        window_id = self._current_window_id
+        window_id = Xorg._current_window_id()
         if window_id is None:
             LOG.debug("unable to get window id")
             return None
 
-        name = self._xprop_query("8s", "WM_CLASS", window_id=window_id)
+        name = Xorg._xprop_query("8s", "WM_CLASS", window_id=window_id)
         if name is None:
             LOG.debug("unable to query xprop for application name")
             return None
@@ -182,15 +136,56 @@ class Xorg(AbstractWindowManager):
         return name
 
     def window_name(self, options=None):
-        window_id = self._current_window_id
+        window_id = Xorg._current_window_id()
 
         if window_id is None:
             LOG.debug("unable to get window id")
             return None
 
-        name = self._xprop_query("8s", "WM_NAME", window_id=window_id)
+        name = Xorg._xprop_query("8s", "WM_NAME", window_id=window_id)
         if name is None:
             return None
 
         name = name[-1]
         return name
+
+    @staticmethod
+    def _current_window_id():
+        xprop_exe = which("xprop")
+        if not xprop_exe:
+            return None
+
+        cmd = [
+            xprop_exe, "-root", "-notype", "32x", r"\n$0",
+            "_NET_ACTIVE_WINDOW"
+        ]
+
+        out = run(cmd)
+        if not out or "not found" in out:
+            return None
+
+        window_id = out.split("\n")[-1]
+
+        return window_id
+
+    @staticmethod
+    def _xprop_query(fmt, prop, window_id=None):
+        xprop_exe = which("xprop")
+        if not xprop_exe:
+            return None
+
+        if window_id is None:
+            cmd = [xprop_exe, "-root", "-notype", fmt, r"\n$0+", prop]
+        else:
+            cmd = [xprop_exe, "-notype", "-id", window_id, fmt,
+                   r"\n$0+", prop]
+
+        out = run(cmd)
+        if not out or "not found" in out:
+            return None
+
+        out = out.split("\n")[-1]
+        out = shlex.split(out)
+        out = [trim_string(i.rstrip(",")) for i in out]
+
+        return out

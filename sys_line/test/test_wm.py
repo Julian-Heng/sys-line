@@ -23,6 +23,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 from ..systems.wm import Yabai
+from ..tools.utils import which
 
 
 class TestYabai(unittest.TestCase):
@@ -33,6 +34,7 @@ class TestYabai(unittest.TestCase):
         self.wm = Yabai("wm", None)
         self.which_patch = patch("shutil.which").start()
         self.run_patch = patch("sys_line.systems.wm.run").start()
+        which.cache_clear()
 
         self.yabai_exe = "/usr/local/bin/yabai"
         self.query_spaces_out = """{

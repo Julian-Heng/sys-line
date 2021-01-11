@@ -22,7 +22,6 @@
 
 import re
 import shlex
-import shutil
 
 from abc import abstractmethod
 from functools import lru_cache
@@ -33,7 +32,7 @@ from . import wm
 from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractDisk, AbstractBattery, AbstractNetwork,
                        AbstractMisc, BatteryStub)
-from ..tools.utils import open_read, run, percent, round_trim
+from ..tools.utils import open_read, percent, round_trim, run, which
 
 
 LOG = getLogger(__name__)
@@ -222,23 +221,17 @@ class Disk(AbstractDisk):
 
     @property
     @lru_cache(maxsize=1)
-    def _lsblk_exe(self):
-        """ Returns the path to the lsblk executable """
-        return shutil.which("lsblk")
-
-    @property
-    @lru_cache(maxsize=1)
     def _lsblk_entries(self):
         """
         Returns the output of lsblk in a dictionary with devices as keys
         """
-        if not self._lsblk_exe:
+        lsblk_exe = which("lsblk")
+        if not lsblk_exe:
             LOG.debug("unable to find lsblk binary")
             return None
 
         columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
-        cmd = [self._lsblk_exe, "--output", ",".join(columns), "--paths",
-               "--pairs"]
+        cmd = [lsblk_exe, "--output", ",".join(columns), "--paths", "--pairs"]
         lsblk_out = run(cmd)
         if lsblk_out is None:
             return None
@@ -597,12 +590,6 @@ class Network(AbstractNetwork):
     def _LOCAL_IP_CMD(self):
         return ["ip", "address", "show", "dev"]
 
-    @property
-    @lru_cache(maxsize=1)
-    def _iw_exe(self):
-        """ Returns the path to the iw executable """
-        return shutil.which("iw")
-
     def dev(self, options=None):
         def check(_file):
             _file = _file.joinpath("operstate")
@@ -631,10 +618,18 @@ class Network(AbstractNetwork):
             return None, None
 
         wifi_out = wifi_out.strip().splitlines()
-        if len(wifi_out) < 3 or not self._iw_exe:
+        if len(wifi_out) < 3:
+            LOG.debug(
+                "proc wireless file does not contain any wireless connections"
+            )
             return None, None
 
-        ssid_cmd = (self._iw_exe, "dev", dev, "link")
+        iw_exe = which("iw")
+        if not iw_exe:
+            LOG.debug("unable to find iw binary")
+            return None, None
+
+        ssid_cmd = (iw_exe, "dev", dev, "link")
         ssid_reg = re.compile(r"^SSID: (.*)$")
         return ssid_cmd, ssid_reg
 
@@ -728,7 +723,7 @@ class Misc(AbstractMisc):
     def _vol_pulseaudio():
         """ Return system volume using pulse audio """
         default_reg = re.compile(r"^set-default-sink (.*)$", re.M)
-        pacmd_exe = shutil.which("pacmd")
+        pacmd_exe = which("pacmd")
         if not pacmd_exe:
             LOG.debug("unable to find pacmd binary")
             return None

@@ -29,6 +29,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 from ..systems.darwin import Darwin
 from ..tools.cli import parse_cli
+from ..tools.utils import which
 
 
 class TestDarwin(unittest.TestCase):
@@ -41,6 +42,7 @@ class TestDarwin(unittest.TestCase):
         self.which_patch = patch("shutil.which").start()
         self.run_patch = patch("sys_line.systems.darwin.run").start()
         self.time_patch = patch("time.time").start()
+        which.cache_clear()
 
     def tearDown(self):
         super(TestDarwin, self).tearDown()

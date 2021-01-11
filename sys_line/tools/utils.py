@@ -24,8 +24,10 @@
 
 import os
 import re
+import shutil
 import subprocess
 
+from functools import lru_cache
 from logging import getLogger
 from types import SimpleNamespace
 
@@ -45,6 +47,7 @@ def open_read(filename):
         with open(filename, "r") as f:
             return f.read()
     except FileNotFoundError:
+        LOG.debug("file '%s' does not exist", filename)
         return None
 
 
@@ -94,3 +97,9 @@ def namespace_types_as_dict(o):
     if isinstance(o, SimpleNamespace):
         return {k: namespace_types_as_dict(v) for k, v in o.__dict__.items()}
     return type(o)
+
+
+@lru_cache()
+def which(exe_name):
+    """ Returns the absolute path to the executable """
+    return shutil.which(exe_name)

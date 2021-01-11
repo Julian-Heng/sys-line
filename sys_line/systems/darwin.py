@@ -24,7 +24,6 @@
 
 import plistlib
 import re
-import shutil
 import time
 
 from functools import lru_cache
@@ -36,7 +35,7 @@ from .abstract import (System, AbstractCpu, AbstractMemory, AbstractSwap,
                        AbstractMisc)
 from .wm import Yabai
 from ..tools.sysctl import Sysctl
-from ..tools.utils import run
+from ..tools.utils import run, which
 
 
 LOG = getLogger(__name__)
@@ -44,12 +43,6 @@ LOG = getLogger(__name__)
 
 class Cpu(AbstractCpu):
     """ Darwin implementation of AbstractCpu class """
-
-    @property
-    @lru_cache(maxsize=1)
-    def _osx_cpu_temp_exe(self):
-        """ Returns the path to the osx-cpu-temp executable """
-        return shutil.which("osx-cpu-temp")
 
     def cores(self, options=None):
         return int(Sysctl.query("hw.logicalcpu_max"))
@@ -68,12 +61,13 @@ class Cpu(AbstractCpu):
         return query.split()[1:4]
 
     def fan(self, options=None):
-        if not self._osx_cpu_temp_exe:
-            LOG.debug("osx-cpu-temp not installed")
+        osx_cpu_temp_exe = which("osx-cpu-temp")
+        if not osx_cpu_temp_exe:
+            LOG.debug("unable to find osx-cpu-temp binary")
             return None
 
         regex = r"(\d+) RPM"
-        out = run([self._osx_cpu_temp_exe, "-f", "-c"])
+        out = run([osx_cpu_temp_exe, "-f", "-c"])
 
         if out is None:
             LOG.debug("unable to get output from osx-cpu-temp")
@@ -87,12 +81,13 @@ class Cpu(AbstractCpu):
         return int(match.group(1))
 
     def _temp(self):
-        if not self._osx_cpu_temp_exe:
-            LOG.debug("osx-cpu-temp not installed")
+        osx_cpu_temp_exe = which("osx-cpu-temp")
+        if not osx_cpu_temp_exe:
+            LOG.debug("unable to find osx-cpu-temp binary")
             return None
 
         regex = r"CPU: ((\d+\.)?\d+)"
-        out = run([self._osx_cpu_temp_exe, "-f", "-c"])
+        out = run([osx_cpu_temp_exe, "-f", "-c"])
 
         if out is None:
             LOG.debug("unable to get output from osx-cpu-temp")
@@ -405,18 +400,13 @@ class Network(AbstractNetwork):
 class Misc(AbstractMisc):
     """ Darwin implementation of AbstractMisc class """
 
-    @property
-    @lru_cache(maxsize=1)
-    def _vol_exe(self):
-        """ Returns the path to the darwin-vol executable """
-        return shutil.which("vol")
-
     def _vol(self):
         vol = None
-        if self._vol_exe:
+        vol_exe = which("vol")
+        if vol_exe:
             LOG.debug("using 'vol' to get volume")
             vol_bin = "vol"
-            out = run([self._vol_exe])
+            out = run([vol_exe])
         else:
             LOG.debug("using 'osascript' to get volume")
             vol_bin = "osascript"

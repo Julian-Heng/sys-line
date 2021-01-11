@@ -29,6 +29,7 @@ from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
 from ..systems.linux import Linux, _mem_file
 from ..tools.cli import parse_cli
+from ..tools.utils import which
 
 
 class TestLinux(unittest.TestCase):
@@ -37,6 +38,7 @@ class TestLinux(unittest.TestCase):
         super(TestLinux, self).setUp()
         self.system = Linux(parse_cli([]))
         self.run_patch = patch("sys_line.systems.linux.run").start()
+        which.cache_clear()
 
     def tearDown(self):
         super(TestLinux, self).tearDown()
