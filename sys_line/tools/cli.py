@@ -85,6 +85,12 @@ def parse_cli(args):
                                action="store", type=int, default=1,
                                metavar="int", dest="cpu.temp.round")
 
+    groups["memory"].add_argument("-mp", "--mem-prefix", action="store",
+                                  default=None, choices=Storage.PREFIXES,
+                                  metavar="prefix", dest="mem.prefix")
+    groups["memory"].add_argument("-mr", "--mem-round",
+                                  action="store", type=int, default=None,
+                                  metavar="int", dest="mem.round")
     groups["memory"].add_argument("-mup", "--mem-used-prefix",
                                   action="store", default="MiB",
                                   choices=Storage.PREFIXES, metavar="prefix",
@@ -103,6 +109,12 @@ def parse_cli(args):
                                   action="store", type=int, default=2,
                                   metavar="int", dest="mem.percent.round")
 
+    groups["swap"].add_argument("-sp", "--swap-prefix", action="store",
+                                default=None, choices=Storage.PREFIXES,
+                                metavar="prefix", dest="swap.prefix")
+    groups["swap"].add_argument("-sr", "--swap-round",
+                                action="store", type=int, default=None,
+                                metavar="int", dest="swap.round")
     groups["swap"].add_argument("-sup", "--swap-used-prefix",
                                 action="store", default="MiB",
                                 choices=Storage.PREFIXES, metavar="prefix",
@@ -121,6 +133,12 @@ def parse_cli(args):
                                 action="store", type=int, default=2,
                                 metavar="int", dest="swap.percent.round")
 
+    groups["disk"].add_argument("-dp", "--disk-prefix", action="store",
+                                default=None, choices=Storage.PREFIXES,
+                                metavar="prefix", dest="disk.prefix")
+    groups["disk"].add_argument("-dr", "--disk-round",
+                                action="store", type=int, default=None,
+                                metavar="int", dest="disk.round")
     groups["disk"].add_argument("-dd", "--disk", nargs="+", action="append",
                                 default=[], metavar="disk",
                                 dest="disk.query")
@@ -213,5 +231,26 @@ def process_args(args):
         setattr(target, attr, value)
 
     options.disk.query = tuple(unique(flatten(options.disk.query)))
+    process_storage_args(options.mem)
+    process_storage_args(options.swap)
+    process_storage_args(options.disk)
 
     return options
+
+
+def process_storage_args(storage):
+    """
+    Process any storage options that contains a prefix and round options that
+    covers both used and total options
+    """
+    if hasattr(storage, "prefix"):
+        if storage.prefix is not None:
+            storage.used.prefix = storage.prefix
+            storage.total.prefix = storage.prefix
+        delattr(storage, "prefix")
+
+    if hasattr(storage, "round"):
+        if storage.round is not None:
+            storage.used.round = storage.round
+            storage.total.round = storage.round
+        delattr(storage, "round")
