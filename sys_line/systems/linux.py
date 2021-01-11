@@ -233,7 +233,7 @@ class Disk(AbstractDisk):
         columns = ["NAME", "LABEL", "PARTLABEL", "FSTYPE"]
         cmd = [lsblk_exe, "--output", ",".join(columns), "--paths", "--pairs"]
         lsblk_out = run(cmd)
-        if lsblk_out is None:
+        if not lsblk_out:
             return None
 
         lsblk_out = lsblk_out.strip().splitlines()
@@ -613,7 +613,7 @@ class Network(AbstractNetwork):
 
         wifi_path = Network._FILES["proc_wifi"]
         wifi_out = open_read(wifi_path)
-        if wifi_out is None:
+        if not wifi_out:
             LOG.debug("unable to read proc wireless file '%s'", wifi_path)
             return None, None
 

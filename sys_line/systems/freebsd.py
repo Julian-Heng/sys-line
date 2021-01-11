@@ -162,7 +162,7 @@ class Disk(AbstractDisk):
                 LOG.debug("'%s' is not cached, caching...", k)
                 gpart_cmd = ["gpart", "show", "-p", v.group(1)]
                 out = run(gpart_cmd)
-                if out is None:
+                if not out:
                     LOG.debug("unable to get output from gpart on '%s'", k)
                     continue
 
@@ -170,7 +170,7 @@ class Disk(AbstractDisk):
 
             geom = v.group(0).split("/")[-1]
             out = next((i for i in gpart_out[k] if geom in i), None)
-            if out is None:
+            if not out:
                 LOG.debug("geom is not valid for '%s'", k)
             else:
                 partition[k] = out.split()[3]
@@ -301,7 +301,7 @@ class Network(AbstractNetwork):
     def dev(self, options=None):
         def check(dev):
             out = run(self._LOCAL_IP_CMD + [dev])
-            if out is None:
+            if not out:
                 return False
             return active.search(out)
 
@@ -327,7 +327,7 @@ class Network(AbstractNetwork):
             col = 7
 
         out = run(cmd)
-        if out is None:
+        if not out:
             return 0
 
         out = out.strip().splitlines()

@@ -69,7 +69,7 @@ class Cpu(AbstractCpu):
         regex = r"(\d+) RPM"
         out = run([osx_cpu_temp_exe, "-f", "-c"])
 
-        if out is None:
+        if not out:
             LOG.debug("unable to get output from osx-cpu-temp")
             return None
 
@@ -89,7 +89,7 @@ class Cpu(AbstractCpu):
         regex = r"CPU: ((\d+\.)?\d+)"
         out = run([osx_cpu_temp_exe, "-f", "-c"])
 
-        if out is None:
+        if not out:
             LOG.debug("unable to get output from osx-cpu-temp")
             return None
 
@@ -413,7 +413,7 @@ class Misc(AbstractMisc):
             cmd = ["osascript", "-e", "output volume of (get volume settings)"]
             out = run(cmd)
 
-        if out is None:
+        if not out:
             LOG.debug("unable to get '%s' output", vol_bin)
             return None
 
@@ -425,13 +425,13 @@ class Misc(AbstractMisc):
             return "IODisplayParameters" in line
 
         scr_out = run(["ioreg", "-rc", "AppleBacklightDisplay"])
-        if scr_out is None:
+        if not scr_out:
             LOG.debug("unable to get ioreg output")
             return None, None
 
         scr_out = scr_out.splitlines()
         scr_out = next(filter(check, scr_out), None)
-        if scr_out is None:
+        if not scr_out:
             LOG.debug("unable to find 'IODIsplayParameters' in ioreg output")
             return None, None
 
