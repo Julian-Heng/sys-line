@@ -18,6 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# pylint: disable=too-many-statements
+
 """ Argument handling """
 
 import argparse
@@ -33,12 +35,17 @@ from ..systems.abstract import System
 
 def parse_cli(args):
     """ Parse the program arguments """
+    output_formats_choices = ("key_value", "json")
+    output_formats = ", ".join(output_formats_choices)
     domains = ", ".join(System.SHORT_DOMAINS)
     prefixes = ", ".join(Storage.PREFIXES)
 
     fmt = argparse.RawDescriptionHelpFormatter
     desc = "a simple status line generator"
     epilog = textwrap.dedent(f"""
+        list of output formats:
+            {output_formats}
+
         list of domains:
             {domains}
 
@@ -62,6 +69,8 @@ def parse_cli(args):
     parser.add_argument("-v", "--version", action="version", version=ver)
     parser.add_argument("-a", "--all", nargs="*", choices=System.SHORT_DOMAINS,
                         default=None, metavar="domain")
+    parser.add_argument("--output-format", choices=output_formats_choices,
+                        default="key_value", metavar="output_format")
     parser.add_argument("--debug", action="store_true", default=False)
 
     groups = {i: parser.add_argument_group(i) for i in System.DOMAINS}

@@ -26,6 +26,7 @@ import sys
 from .systems.abstract import System
 from .tools.cli import parse_cli
 from .tools.format import FormatTree
+from .tools.json import json_pretty_string
 
 
 LOG = logging.getLogger(__name__)
@@ -51,11 +52,24 @@ def main():
         if options.all is not None:
             if not options.all:
                 domains = system.SHORT_DOMAINS
-            for domain in domains:
-                for name, info in system.query(domain).all_info():
-                    print(f"{domain}.{name}: {info}")
+            else:
+                domains = options.all
+            sys_line_print_all(system, domains, options.output_format)
         elif options.format:
             for fmt in options.format:
                 print(FormatTree(system, fmt).build())
     else:
+        sys.exit(2)
+
+
+def sys_line_print_all(system, domains, fmt):
+    """ Prints all info in domains within a system """
+    if fmt == "key_value":
+        for domain in domains:
+            for name, info in system.query(domain).all_info():
+                print(f"{domain}.{name}: {info}")
+    elif fmt == "json":
+        print(json_pretty_string(System.to_json(system, domains)))
+    else:
+        LOG.error("unknown output format: '%s'", fmt)
         sys.exit(2)

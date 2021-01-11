@@ -34,11 +34,13 @@ from functools import lru_cache, reduce
 from importlib import import_module
 from logging import getLogger, DEBUG
 from pathlib import Path
+from types import SimpleNamespace
 
+from ..tools.df import DfEntry
+from ..tools.json import SimpleNamespaceJsonEncoder
 from ..tools.storage import Storage
 from ..tools.utils import (percent, run, unix_epoch_to_str, round_trim,
                            trim_string, namespace_types_as_dict)
-from ..tools.df import DfEntry
 
 
 LOG = getLogger(__name__)
@@ -257,7 +259,7 @@ class AbstractStorage(AbstractGetter):
         total = self.total(options)
         perc = percent(used.bytes, total.bytes)
         if perc is None:
-            perc = 0.0
+            perc = str(0.0)
         else:
             perc = round_trim(perc, options.percent.round)
 
@@ -988,3 +990,16 @@ class System(ABC):
             self._getters_cache[domain] = self._getters[domain](domain, opts)
 
         return self._getters_cache[domain]
+
+    @staticmethod
+    def to_json(system, domains):
+        """ Serialize a system object with the given domains to JSON """
+        obj = SimpleNamespace()
+        for domain in domains:
+            domain_obj = SimpleNamespace()
+            for name, info in system.query(domain).all_info():
+                if info:
+                    info = str(info)
+                setattr(domain_obj, name, info)
+            setattr(obj, domain, domain_obj)
+        return SimpleNamespaceJsonEncoder().encode(obj)
