@@ -303,7 +303,7 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def _status(self):
         """ Returns cached battery status file """
-        bat_dir = Battery.directory()
+        bat_dir = Battery._directory()
         if bat_dir is None:
             LOG.debug("unable to find battery directory")
             return None
@@ -321,7 +321,7 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def _current_charge(self):
         """ Returns cached battery current charge file """
-        bat_dir = Battery.directory()
+        bat_dir = Battery._directory()
         current_filename = self._current
 
         if bat_dir is None:
@@ -352,7 +352,7 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def _full_charge(self):
         """ Returns cached battery full charge file """
-        bat_dir = Battery.directory()
+        bat_dir = Battery._directory()
         full_filename = self._full
 
         if bat_dir is None:
@@ -383,7 +383,7 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def _drain_rate(self):
         """ Returns cached battery drain rate file """
-        bat_dir = Battery.directory()
+        bat_dir = Battery._directory()
         drain_filename = self._drain
 
         if bat_dir is None:
@@ -413,13 +413,13 @@ class Battery(AbstractBattery):
     @lru_cache(maxsize=1)
     def _compare_status(self, query):
         """ Compares status to query """
-        bat_dir = Battery.directory()
+        bat_dir = Battery._directory()
         if bat_dir is not None:
             return self._status == query
         return None
 
     def is_present(self, options=None):
-        return Battery.directory() is not None
+        return Battery._directory() is not None
 
     def is_charging(self, options=None):
         return self._compare_status("Charging")
@@ -446,7 +446,7 @@ class Battery(AbstractBattery):
 
     @staticmethod
     @lru_cache(maxsize=1)
-    def directory():
+    def _directory():
         """ Returns the path for the battery directory """
         def check(_file):
             _file = _file.joinpath("present")
@@ -469,7 +469,7 @@ class Battery(AbstractBattery):
 
     @staticmethod
     @lru_cache(maxsize=1)
-    def detect_battery():
+    def _detect_battery():
         """
         Linux stores battery information in /sys/class/power_supply However,
         depending on the machine/driver it may store different information.
@@ -489,7 +489,7 @@ class Battery(AbstractBattery):
         So the purpose of this method is to determine which implementation it
         should use
         """
-        bat_dir = Battery.directory()
+        bat_dir = Battery._directory()
         if bat_dir is None:
             return BatteryStub
 
@@ -524,7 +524,7 @@ class BatteryAmp(Battery):
         return "current_now"
 
     def _power(self):
-        bat_dir = Battery.directory()
+        bat_dir = Battery._directory()
         if bat_dir is None:
             LOG.debug("unable to find battery directory")
             return None
@@ -757,7 +757,7 @@ class Linux(System):
     def __init__(self, default_options):
         super(Linux, self).__init__(default_options,
                                     cpu=Cpu, mem=Memory, swap=Swap, disk=Disk,
-                                    bat=Battery.detect_battery(), net=Network,
+                                    bat=Battery._detect_battery(), net=Network,
                                     wm=self.detect_window_manager(),
                                     misc=Misc)
 
