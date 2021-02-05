@@ -206,7 +206,7 @@ class Battery(AbstractBattery):
             LOG.debug("battery is not present")
             return 0
 
-        ioreg = Battery.ioreg()
+        ioreg = Battery._ioreg()
 
         if ioreg is None:
             LOG.debug("unable to get ioreg output")
@@ -228,7 +228,7 @@ class Battery(AbstractBattery):
             LOG.debug("battery is not present")
             return None
 
-        ioreg = Battery.ioreg()
+        ioreg = Battery._ioreg()
         if ioreg is None or "CurrentCapacity" not in ioreg:
             LOG.debug("unable to get ioreg output")
             return None
@@ -236,7 +236,7 @@ class Battery(AbstractBattery):
         return int(ioreg["CurrentCapacity"])
 
     def is_present(self, options=None):
-        ioreg = Battery.ioreg()
+        ioreg = Battery._ioreg()
         if ioreg is None:
             LOG.debug("unable to get ioreg output")
             return False
@@ -250,7 +250,7 @@ class Battery(AbstractBattery):
             LOG.debug("battery is not present")
             return None
 
-        ioreg = Battery.ioreg()
+        ioreg = Battery._ioreg()
         if ioreg is None:
             LOG.debug("unable to get ioreg output")
             return None
@@ -264,7 +264,7 @@ class Battery(AbstractBattery):
             LOG.debug("battery is not present")
             return None
 
-        ioreg = Battery.ioreg()
+        ioreg = Battery._ioreg()
 
         if ioreg is None:
             LOG.debug("unable to get ioreg output")
@@ -275,7 +275,7 @@ class Battery(AbstractBattery):
 
     def _percent(self):
         current_capacity = self._current_capacity()
-        ioreg = Battery.ioreg()
+        ioreg = Battery._ioreg()
 
         if ioreg is None:
             LOG.debug("unable to get ioreg output")
@@ -301,7 +301,7 @@ class Battery(AbstractBattery):
         is_charging = self.is_charging()
 
         if is_charging:
-            ioreg = Battery.ioreg()
+            ioreg = Battery._ioreg()
             if ioreg is None:
                 LOG.debug("unable to get ioreg output")
                 return 0
@@ -319,7 +319,7 @@ class Battery(AbstractBattery):
             LOG.debug("battery is not present")
             return None
 
-        ioreg = Battery.ioreg()
+        ioreg = Battery._ioreg()
         if ioreg is None:
             LOG.debug("unable to get ioreg output")
             return None
@@ -330,7 +330,7 @@ class Battery(AbstractBattery):
 
     @staticmethod
     @lru_cache(maxsize=1)
-    def ioreg():
+    def _ioreg():
         """ Returns battery info from ioreg as a dict """
         bat = run(["ioreg", "-rc", "AppleSmartBattery"])
         if bat is None:
