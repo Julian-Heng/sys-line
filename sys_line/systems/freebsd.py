@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # sys-line - a simple status line generator
-# Copyright (C) 2019-2020  Julian Heng
+# Copyright (C) 2019-2021  Julian Heng
 #
 # This file is part of sys-line.
 #
