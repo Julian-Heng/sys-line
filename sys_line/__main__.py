@@ -20,7 +20,139 @@
 
 """ Module main """
 
-from .sys_line import main
+import logging
+import sys
+
+from abc import ABC, abstractmethod
+
+from sys_line.systems.abstract import System
+from sys_line.tools.cli import parse_cli
+from sys_line.tools.format import FormatTree
+from sys_line.tools.json import json_pretty_string
+
+
+LOG = logging.getLogger(__name__)
+
+
+class SysLineApp(ABC):
+    """ Abstract SysLine Application """
+
+    def __init__(self, args, options):
+        self.args = args
+        self.options = options
+
+        if self.options.debug:
+            level = logging.DEBUG
+        else:
+            level = logging.INFO
+
+        logging.basicConfig(level=level)
+        LOG.debug("command line arguments: %s", self.args)
+        LOG.debug("application options: %s", self.options)
+
+        self.system = System.create_instance(options)
+
+    @abstractmethod
+    def run(self):
+        """ Main application action to be implemented by subclasses """
+
+    @staticmethod
+    def create_instance(args):
+        """
+        Creates a SysLine application depending on the command line arguments
+        """
+        options = parse_cli(args)
+        if options.all is not None:
+            fmt = options.output_format
+
+            if fmt == "key_value":
+                return SysLineAllKeyValue(args, options)
+
+            if fmt == "json":
+                return SysLineAllJson(args, options)
+
+            err_msg = f"unknown output format: '{fmt}'"
+            return SysLineError(args, options, err_msg=err_msg, err_code=2)
+
+        if options.format:
+            return SysLineFormat(args, options)
+        return SysLineError(args, options, err_code=2)
+
+
+class SysLineAll(SysLineApp):
+    """ SysLine application running in 'all' mode """
+
+    def __init__(self, args, options):
+        super(SysLineAll, self).__init__(args, options)
+        if not self.options.all:
+            self.domains = self.system.SHORT_DOMAINS
+        else:
+            self.domains = options.all
+
+    def run(self):
+        self.do_print()
+        return 0
+
+    @abstractmethod
+    def do_print(self):
+        """ Abstract printing method to be implemented by subclasses """
+
+
+class SysLineAllKeyValue(SysLineAll):
+    """
+    A subclass of the SysLine application to print all information in key-pair
+    format
+    """
+
+    def do_print(self):
+        for domain in self.domains:
+            for name, info in self.system.query(domain).all_info():
+                print(f"{domain}.{name}: {info}")
+
+
+class SysLineAllJson(SysLineAll):
+    """
+    A subclass of the SysLine application to print all information in json
+    format
+    """
+
+    def do_print(self):
+        print(json_pretty_string(System.to_json(self.system, self.domains)))
+
+
+class SysLineFormat(SysLineApp):
+    """
+    A subclass of the SysLine application to print the specified information
+    in the user provided format
+    """
+
+    def run(self):
+        for fmt in self.options.format:
+            print(FormatTree(self.system, fmt).build())
+        return 0
+
+
+class SysLineError(SysLineApp):
+    """
+    A subclass of the SysLine application to return an error code and
+    optionally print an error message
+    """
+
+    def __init__(self, args, options, err_msg="", err_code=0):
+        super(SysLineError, self).__init__(args, options)
+        self.err_msg = err_msg
+        self.err_code = err_code
+
+    def run(self):
+        if self.err_msg:
+            LOG.error(self.err_msg)
+        return self.err_code
+
+
+def main():
+    """ Main method """
+    return SysLineApp.create_instance(sys.argv[1:]).run()
+
 
 if __name__ == "__main__":
     main()
