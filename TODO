@@ -1,0 +1,4 @@
+- Convert all docstrings to numpydoc format
+- Figure out how to implement an api plugin to allow custom AbstractGetters
+  (i.e. loading a getter that fetches song info or weather info)
+- Support more operating systems?
