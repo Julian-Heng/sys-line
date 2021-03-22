@@ -103,3 +103,18 @@ def namespace_types_as_dict(o):
 def which(exe_name):
     """ Returns the absolute path to the executable """
     return shutil.which(exe_name)
+
+
+@lru_cache(maxsize=1)
+def linux_mem_file():
+    """ Returns a cached dictionary of /proc/meminfo """
+    reg = re.compile(r"\s+|kB")
+    mem_file = open_read("/proc/meminfo")
+    if mem_file is None:
+        LOG.debug("unable to read memory info file '%s'", mem_file)
+        return dict()
+
+    mem_file = mem_file.strip().splitlines()
+    mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
+    mem_file = {k: int(v) for k, v in mem_file.items()}
+    return mem_file
