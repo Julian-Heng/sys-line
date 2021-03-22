@@ -14,6 +14,7 @@ from sys_line.core.plugin import bat
 from sys_line.core.plugin import net
 from sys_line.core.plugin import date
 from sys_line.core.plugin import wm
+from sys_line.core.plugin import misc
 
 
 LOG = getLogger(__name__)
@@ -57,7 +58,7 @@ class System(ABC):
         os_name = os.uname().sysname
         LOG.debug("os_name is %s", os_name)
 
-        core_plugins = [cpu, mem, swap, disk, bat, net, date, wm]
+        core_plugins = [cpu, mem, swap, disk, bat, net, date, wm, misc]
         loaded_plugins = {}
 
         # Load plugins
