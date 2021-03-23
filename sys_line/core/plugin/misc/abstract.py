@@ -41,3 +41,12 @@ class AbstractMisc(AbstractPlugin):
         scr = percent(current_scr, max_scr)
         scr = round_trim(scr, options.scr.round)
         return scr
+
+    @staticmethod
+    def _add_arguments(parser):
+        parser.add_argument("-mvr", "--misc-volume-round", action="store",
+                            type=int, default=0, metavar="int",
+                            dest="misc.vol.round")
+        parser.add_argument("-msr", "--misc-screen-round", action="store",
+                            type=int, default=0, metavar="int",
+                            dest="misc.scr.round")

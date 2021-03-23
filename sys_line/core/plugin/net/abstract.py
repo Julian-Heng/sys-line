@@ -115,4 +115,17 @@ class AbstractNetwork(AbstractPlugin):
         upload.prefix = options.upload.prefix
         return upload
 
-
+    @staticmethod
+    def _add_arguments(parser):
+        parser.add_argument("-ndp", "--net-download-prefix", action="store",
+                            default="KiB", choices=Storage.PREFIXES,
+                            metavar="prefix", dest="net.download.prefix")
+        parser.add_argument("-nup", "--net-upload-prefix", action="store",
+                            default="KiB", choices=Storage.PREFIXES,
+                            metavar="prefix", dest="net.upload.prefix")
+        parser.add_argument("-ndr", "--net-download-round", action="store",
+                            type=int, default=2, metavar="int",
+                            dest="net.download.round")
+        parser.add_argument("-nur", "--net-upload-round", action="store",
+                            type=int, default=2, metavar="int",
+                            dest="net.upload.round")

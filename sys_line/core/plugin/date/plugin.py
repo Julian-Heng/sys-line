@@ -26,3 +26,11 @@ class Date(AbstractPlugin):
             options = self.default_options
 
         return Date._format(options.time.format)
+
+    def _add_arguments(parser):
+        parser.add_argument("-tdf", "--date-format", action="store", type=str,
+                            default="%a, %d %h", metavar="str",
+                            dest="date.date.format")
+        parser.add_argument("-tf", "--time-format", action="store", type=str,
+                            default="%H:%M", metavar="str",
+                            dest="date.time.format")

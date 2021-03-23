@@ -5,12 +5,13 @@ import re
 from abc import abstractmethod
 from functools import lru_cache
 from logging import getLogger
+from pathlib import Path
 
 from sys_line.core.plugin.abstract import (AbstractStoragePlugin,
                                            AbstractMultipleValuesPlugin)
 from sys_line.tools.df import DfEntry
 from sys_line.tools.storage import Storage
-from sys_line.tools.utils import run, percent, round_trim
+from sys_line.tools.utils import run, percent, round_trim, flatten, unique
 
 
 LOG = getLogger(__name__)
@@ -220,3 +221,46 @@ class AbstractDisk(AbstractStoragePlugin, AbstractMultipleValuesPlugin):
             perc[dev] = value
 
         return perc
+
+    @staticmethod
+    def _add_arguments(parser):
+        parser.add_argument("-dp", "--disk-prefix", action="store",
+                            default=None, choices=Storage.PREFIXES,
+                            metavar="prefix", dest="disk.prefix")
+        parser.add_argument("-dr", "--disk-round", action="store", type=int,
+                            default=None, metavar="int", dest="disk.round")
+        parser.add_argument("-dd", "--disk", nargs="+", action="append",
+                            default=[], metavar="disk", dest="disk.query")
+        parser.add_argument("-dm", "--mount", nargs="+", action="append",
+                            default=[], metavar="mount", dest="disk.query")
+        parser.add_argument("-dds", "--disk-dev-short", action="store_true",
+                            default=False, dest="disk.dev.short")
+        parser.add_argument("-dup", "--disk-used-prefix", action="store",
+                            default="GiB", choices=Storage.PREFIXES,
+                            metavar="prefix", dest="disk.used.prefix")
+        parser.add_argument("-dtp", "--disk-total-prefix", action="store",
+                            default="GiB", choices=Storage.PREFIXES,
+                            metavar="prefix", dest="disk.total.prefix")
+        parser.add_argument("-dur", "--disk-used-round", action="store",
+                            type=int, default=2, metavar="int",
+                            dest="disk.used.round")
+        parser.add_argument("-dtr", "--disk-total-round", action="store",
+                            type=int, default=2, metavar="int",
+                            dest="disk.total.round")
+        parser.add_argument("-dpr", "--disk-percent-round", action="store",
+                            type=int, default=2, metavar="int",
+                            dest="disk.percent.round")
+
+    @staticmethod
+    def _post_argument_parse_hook(plugin_options):
+        plugin_options = (
+            super(AbstractDisk, AbstractDisk)._post_argument_parse_hook(
+                plugin_options
+            )
+        )
+
+        plugin_options.query = (
+            tuple(unique(flatten(plugin_options.query)))
+        )
+
+        return plugin_options

@@ -123,3 +123,15 @@ class AbstractCpu(AbstractPlugin):
 
         uptime = unix_epoch_to_str(uptime)
         return uptime
+
+    @staticmethod
+    def _add_arguments(parser):
+        parser.add_argument("-cls", "--cpu-load-short",
+                            action="store_true", default=False,
+                            dest="cpu.load_avg.short")
+        parser.add_argument("-cur", "--cpu-usage-round",
+                            action="store", type=int, default=2,
+                            metavar="int", dest="cpu.cpu_usage.round")
+        parser.add_argument("-ctr", "--cpu-temp-round",
+                            action="store", type=int, default=1,
+                            metavar="int", dest="cpu.temp.round")

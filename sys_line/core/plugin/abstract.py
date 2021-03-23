@@ -39,7 +39,7 @@ class AbstractPlugin(ABC):
         LOG.debug("valid info for '%s': %s", self.domain_name, info)
         return info
 
-    def query(self, info, options_string):
+    def query(self, info, options_string, all_info=False):
         LOG.debug("querying domain '%s' for info '%s'", self.domain_name, info)
         LOG.debug("options string: %s", options_string)
 
@@ -63,7 +63,7 @@ class AbstractPlugin(ABC):
             LOG.debug(msg)
             LOG.debug("=" * len(msg))
 
-        val = self._query(info, options)
+        val = self._query(info, options, all_info)
 
         if LOG.isEnabledFor(DEBUG):
             msg = f"query result for '{self.domain_name}.{info}': '{val}'"
@@ -73,7 +73,7 @@ class AbstractPlugin(ABC):
 
         return val
 
-    def _query(self, info, options):
+    def _query(self, info, options, all_info=False):
         return getattr(self, info)(options)
 
     def _parse_options(self, info, option_string):
@@ -130,17 +130,33 @@ class AbstractPlugin(ABC):
 
     def all_info(self):
         for i in self._valid_info:
-            yield i, self.query(i, None)
+            yield i, self.query(i, None, all_info=True)
 
     @staticmethod
     def _post_import_hook(plugin):
         return plugin
 
+    @staticmethod
+    def _add_arguments(parser):
+        pass
+
+    @staticmethod
+    def _post_argument_parse_hook(plugin_options):
+        return plugin_options
+
 
 class AbstractMultipleValuesPlugin(AbstractPlugin):
 
-    def _query(self, info, options):
-        val = super(AbstractMultipleValuesPlugin, self)._query(info, options)
+    def _query(self, info, options, all_info=False):
+        val = (
+            super(AbstractMultipleValuesPlugin, self)._query(
+                info, options, all_info
+            )
+        )
+
+        if all_info:
+            return val
+
         if not isinstance(val, dict):
             return None
 
@@ -207,3 +223,19 @@ class AbstractStoragePlugin(AbstractPlugin):
             perc = round_trim(perc, options.percent.round)
 
         return perc
+
+    @staticmethod
+    def _post_argument_parse_hook(plugin_options):
+        if hasattr(plugin_options, "prefix"):
+            if plugin_options.prefix is not None:
+                plugin_options.used.prefix = plugin_options.prefix
+                plugin_options.total.prefix = plugin_options.prefix
+            delattr(plugin_options, "prefix")
+
+        if hasattr(plugin_options, "round"):
+            if plugin_options.round is not None:
+                plugin_options.used.round = plugin_options.round
+                plugin_options.total.round = plugin_options.round
+            delattr(plugin_options, "round")
+
+        return plugin_options

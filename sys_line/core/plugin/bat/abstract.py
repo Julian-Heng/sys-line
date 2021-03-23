@@ -78,6 +78,15 @@ class AbstractBattery(AbstractPlugin):
         power = round_trim(power, options.power.round)
         return power
 
+    @staticmethod
+    def _add_arguments(parser):
+        parser.add_argument("-bpr", "--bat-percent-round", action="store",
+                            type=int, default=2, metavar="int",
+                            dest="bat.percent.round")
+        parser.add_argument("-bppr", "--bat-power-round", action="store",
+                            type=int, default=2, metavar="int",
+                            dest="bat.power.round")
+
 
 class BatteryStub(AbstractBattery):
     """ Sub-Battery class for systems that has no battery """

@@ -29,15 +29,27 @@ import textwrap
 from platform import python_build, python_implementation, python_version
 from types import SimpleNamespace
 
-from .storage import Storage
-from ..systems.abstract import System
+from sys_line.tools.storage import Storage
 
 
-def parse_cli(args):
+def parse_early_cli(args):
+    """ Parse the program arguments excluding plugin flags """
+    py_impl = python_implementation()
+    py_ver = python_version()
+    py_build = " ".join(python_build())
+    ver = f"%(prog)s ({py_impl} {py_ver}, {py_build})"
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("-v", "--version", action="version", version=ver)
+    parser.add_argument("--debug", action="store_true", default=False)
+    return parser.parse_known_args(args)
+
+
+def parse_cli(plugins, args):
     """ Parse the program arguments """
     output_formats_choices = ("key_value", "json")
     output_formats = ", ".join(output_formats_choices)
-    domains = ", ".join(System.SHORT_DOMAINS)
+    domains = ", ".join(plugins.keys())
     prefixes = ", ".join(Storage.PREFIXES)
 
     fmt = argparse.RawDescriptionHelpFormatter
@@ -53,12 +65,7 @@ def parse_cli(args):
             {prefixes}
     """)
 
-    py_impl = python_implementation()
-    py_ver = python_version()
-    py_build = " ".join(python_build())
-
     usage_msg = "%(prog)s [options] format..."
-    ver = f"%(prog)s ({py_impl} {py_ver}, {py_build})"
 
     parser = argparse.ArgumentParser(description=desc, epilog=epilog,
                                      usage=usage_msg,
@@ -66,156 +73,27 @@ def parse_cli(args):
 
     parser.add_argument("format", nargs="*", action="store", type=str,
                         default=[])
-    parser.add_argument("-v", "--version", action="version", version=ver)
-    parser.add_argument("-a", "--all", nargs="*", choices=System.SHORT_DOMAINS,
+    parser.add_argument("-a", "--all", nargs="*", action="store",
                         default=None, metavar="domain")
     parser.add_argument("--output-format", choices=output_formats_choices,
                         default="key_value", metavar="output_format")
-    parser.add_argument("--debug", action="store_true", default=False)
 
-    groups = {i: parser.add_argument_group(i) for i in System.DOMAINS}
+    for plugin_name, plugin_class in plugins.items():
+        plugin_class._add_arguments(parser.add_argument_group(plugin_name))
 
-    groups["cpu"].add_argument("-cls", "--cpu-load-short",
-                               action="store_true", default=False,
-                               dest="cpu.load_avg.short")
-    groups["cpu"].add_argument("-cur", "--cpu-usage-round",
-                               action="store", type=int, default=2,
-                               metavar="int", dest="cpu.cpu_usage.round")
-    groups["cpu"].add_argument("-ctr", "--cpu-temp-round",
-                               action="store", type=int, default=1,
-                               metavar="int", dest="cpu.temp.round")
+    options = convert_parsed_to_options(parser.parse_args(args))
+    for plugin_name, plugin_class in plugins.items():
+        try:
+            plugin_options = getattr(options, plugin_name)
+            plugin_options = plugin_class._post_argument_parse_hook(plugin_options)
+            setattr(options, plugin_name, plugin_options)
+        except AttributeError:
+            pass
 
-    groups["memory"].add_argument("-mp", "--mem-prefix", action="store",
-                                  default=None, choices=Storage.PREFIXES,
-                                  metavar="prefix", dest="mem.prefix")
-    groups["memory"].add_argument("-mr", "--mem-round",
-                                  action="store", type=int, default=None,
-                                  metavar="int", dest="mem.round")
-    groups["memory"].add_argument("-mup", "--mem-used-prefix",
-                                  action="store", default="MiB",
-                                  choices=Storage.PREFIXES, metavar="prefix",
-                                  dest="mem.used.prefix")
-    groups["memory"].add_argument("-mtp", "--mem-total-prefix",
-                                  action="store", default="MiB",
-                                  choices=Storage.PREFIXES, metavar="prefix",
-                                  dest="mem.total.prefix")
-    groups["memory"].add_argument("-mur", "--mem-used-round",
-                                  action="store", type=int, default=0,
-                                  metavar="int", dest="mem.used.round")
-    groups["memory"].add_argument("-mtr", "--mem-total-round",
-                                  action="store", type=int, default=0,
-                                  metavar="int", dest="mem.total.round")
-    groups["memory"].add_argument("-mpr", "--mem-percent-round",
-                                  action="store", type=int, default=2,
-                                  metavar="int", dest="mem.percent.round")
-
-    groups["swap"].add_argument("-sp", "--swap-prefix", action="store",
-                                default=None, choices=Storage.PREFIXES,
-                                metavar="prefix", dest="swap.prefix")
-    groups["swap"].add_argument("-sr", "--swap-round",
-                                action="store", type=int, default=None,
-                                metavar="int", dest="swap.round")
-    groups["swap"].add_argument("-sup", "--swap-used-prefix",
-                                action="store", default="MiB",
-                                choices=Storage.PREFIXES, metavar="prefix",
-                                dest="swap.used.prefix")
-    groups["swap"].add_argument("-stp", "--swap-total-prefix",
-                                action="store", default="MiB",
-                                choices=Storage.PREFIXES, metavar="prefix",
-                                dest="swap.total.prefix")
-    groups["swap"].add_argument("-sur", "--swap-used-round",
-                                action="store", type=int, default=0,
-                                metavar="int", dest="swap.used.round")
-    groups["swap"].add_argument("-str", "--swap-total-round",
-                                action="store", type=int, default=0,
-                                metavar="int", dest="swap.total.round")
-    groups["swap"].add_argument("-spr", "--swap-percent-round",
-                                action="store", type=int, default=2,
-                                metavar="int", dest="swap.percent.round")
-
-    groups["disk"].add_argument("-dp", "--disk-prefix", action="store",
-                                default=None, choices=Storage.PREFIXES,
-                                metavar="prefix", dest="disk.prefix")
-    groups["disk"].add_argument("-dr", "--disk-round",
-                                action="store", type=int, default=None,
-                                metavar="int", dest="disk.round")
-    groups["disk"].add_argument("-dd", "--disk", nargs="+", action="append",
-                                default=[], metavar="disk",
-                                dest="disk.query")
-    groups["disk"].add_argument("-dm", "--mount", nargs="+", action="append",
-                                default=[], metavar="mount",
-                                dest="disk.query")
-    groups["disk"].add_argument("-dds", "--disk-dev-short",
-                                action="store_true", default=False,
-                                dest="disk.dev.short")
-    groups["disk"].add_argument("-dup", "--disk-used-prefix",
-                                action="store", default="GiB",
-                                choices=Storage.PREFIXES, metavar="prefix",
-                                dest="disk.used.prefix")
-    groups["disk"].add_argument("-dtp", "--disk-total-prefix",
-                                action="store", default="GiB",
-                                choices=Storage.PREFIXES, metavar="prefix",
-                                dest="disk.total.prefix")
-    groups["disk"].add_argument("-dur", "--disk-used-round",
-                                action="store", type=int, default=2,
-                                metavar="int", dest="disk.used.round")
-    groups["disk"].add_argument("-dtr", "--disk-total-round",
-                                action="store", type=int, default=2,
-                                metavar="int", dest="disk.total.round")
-    groups["disk"].add_argument("-dpr", "--disk-percent-round",
-                                action="store", type=int, default=2,
-                                metavar="int", dest="disk.percent.round")
-
-    groups["battery"].add_argument("-bpr", "--bat-percent-round",
-                                   action="store", type=int, default=2,
-                                   metavar="int", dest="bat.percent.round")
-    groups["battery"].add_argument("-bppr", "--bat-power-round",
-                                   action="store", type=int, default=2,
-                                   metavar="int", dest="bat.power.round")
-
-    groups["network"].add_argument("-ndp", "--net-download-prefix",
-                                   action="store", default="KiB",
-                                   choices=Storage.PREFIXES, metavar="prefix",
-                                   dest="net.download.prefix")
-    groups["network"].add_argument("-nup", "--net-upload-prefix",
-                                   action="store", default="KiB",
-                                   choices=Storage.PREFIXES, metavar="prefix",
-                                   dest="net.upload.prefix")
-    groups["network"].add_argument("-ndr", "--net-download-round",
-                                   action="store", type=int, default=2,
-                                   metavar="int", dest="net.download.round")
-    groups["network"].add_argument("-nur", "--net-upload-round",
-                                   action="store", type=int, default=2,
-                                   metavar="int", dest="net.upload.round")
-
-    groups["date"].add_argument("-tdf", "--date-format",
-                                action="store", type=str, default="%a, %d %h",
-                                metavar="str", dest="date.date.format")
-    groups["date"].add_argument("-tf", "--time-format",
-                                action="store", type=str, default="%H:%M",
-                                metavar="str", dest="date.time.format")
-
-    groups["misc"].add_argument("-mvr", "--misc-volume-round",
-                                action="store", type=int, default=0,
-                                metavar="int", dest="misc.vol.round")
-    groups["misc"].add_argument("-msr", "--misc-screen-round",
-                                action="store", type=int, default=0,
-                                metavar="int", dest="misc.scr.round")
-
-    return process_args(parser.parse_args(args))
+    return options
 
 
-def flatten(_list):
-    """ Converts a list of lists into a single list """
-    return list(itertools.chain(*_list))
-
-
-def unique(_list):
-    """ Removes duplicate values in a list """
-    return list(dict.fromkeys(_list))
-
-
-def process_args(args):
+def convert_parsed_to_options(args):
     """
     Processes the destination of the namespace from the parsed arguments to be
     nested
@@ -230,27 +108,4 @@ def process_args(args):
             target = getattr(target, groupspace)
         setattr(target, attr, value)
 
-    options.disk.query = tuple(unique(flatten(options.disk.query)))
-    process_storage_args(options.mem)
-    process_storage_args(options.swap)
-    process_storage_args(options.disk)
-
     return options
-
-
-def process_storage_args(storage):
-    """
-    Process any storage options that contains a prefix and round options that
-    covers both used and total options
-    """
-    if hasattr(storage, "prefix"):
-        if storage.prefix is not None:
-            storage.used.prefix = storage.prefix
-            storage.total.prefix = storage.prefix
-        delattr(storage, "prefix")
-
-    if hasattr(storage, "round"):
-        if storage.round is not None:
-            storage.used.round = storage.round
-            storage.total.round = storage.round
-        delattr(storage, "round")

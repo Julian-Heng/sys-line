@@ -22,6 +22,7 @@
 
 """ Utility module to provide common functions """
 
+import itertools
 import os
 import re
 import shutil
@@ -118,3 +119,13 @@ def linux_mem_file():
     mem_file = dict(reg.sub("", i).split(":", 1) for i in mem_file)
     mem_file = {k: int(v) for k, v in mem_file.items()}
     return mem_file
+
+
+def flatten(_list):
+    """ Converts a list of lists into a single list """
+    return list(itertools.chain(*_list))
+
+
+def unique(_list):
+    """ Removes duplicate values in a list """
+    return list(dict.fromkeys(_list))

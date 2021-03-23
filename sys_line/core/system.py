@@ -54,43 +54,5 @@ class System(ABC):
         return self.plugins_cache[domain]
 
     @staticmethod
-    def create_instance(default_options):
-        os_name = os.uname().sysname
-        LOG.debug("os_name is %s", os_name)
-
-        core_plugins = [cpu, mem, swap, disk, bat, net, date, wm, misc]
-        loaded_plugins = {}
-
-        # Load plugins
-        for plugin in core_plugins:
-            plugin_split = plugin.__name__.split(".")
-            plugin_import = ".".join(plugin_split + [os_name.lower()])
-
-            LOG.debug("importing plugin '%s'...", plugin_import)
-            try:
-                plugin_mod = import_module(plugin_import)
-            except ModuleNotFoundError as e:
-                plugin_mod = None
-
-            if plugin_mod is None:
-                msg = "failed to import os specific plugin '%s'"
-                LOG.debug(msg, plugin_import)
-                plugin_import = ".".join(plugin_split + ["plugin"])
-
-                LOG.debug("importing plugin '%s'...", plugin_import)
-                try:
-                    plugin_mod = import_module(plugin_import)
-                except ModuleNotFoundError:
-                    plugin_mod = None
-
-            if plugin_mod is None:
-                LOG.error("Failed to import plugin '%s'", plugin_import)
-                LOG.error("Exiting...")
-                return None
-
-            plugin_class = getattr(plugin_mod, plugin.PLUGIN_CLASSNAME)
-            plugin_class = plugin_class._post_import_hook(plugin_class)
-            loaded_plugins[plugin.PLUGIN_NAME] = plugin_class
-            LOG.debug("imported plugin '%s'", plugin_import)
-
-        return System(default_options, **loaded_plugins)
+    def create_instance(default_options, plugins):
+        return System(default_options, **plugins)

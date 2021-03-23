@@ -22,12 +22,14 @@
 
 import logging
 import sys
+import os
 
 from abc import ABC, abstractmethod
+from importlib import import_module
 
-#from sys_line.systems.abstract import System
 from sys_line.core.system import System
-from sys_line.tools.cli import parse_cli
+from sys_line.core.plugin import cpu, mem, swap, disk, bat, net, date, wm, misc
+from sys_line.tools.cli import parse_early_cli, parse_cli
 from sys_line.tools.format import FormatTree
 from sys_line.tools.json import json_pretty_string
 
@@ -38,55 +40,110 @@ LOG = logging.getLogger(__name__)
 class SysLineApp(ABC):
     """ Abstract SysLine Application """
 
-    def __init__(self, args, options):
+    def __init__(self, plugins, args, options):
         self.args = args
         self.options = options
-
-        if self.options.debug:
-            level = logging.DEBUG
-        else:
-            level = logging.INFO
-
-        logging.basicConfig(level=level)
-        LOG.debug("command line arguments: %s", self.args)
         LOG.debug("application options: %s", self.options)
 
-        self.system = System.create_instance(options)
+        self.plugins = plugins
+        self.system = System.create_instance(options, self.plugins)
 
     @abstractmethod
     def run(self):
         """ Main application action to be implemented by subclasses """
 
     @staticmethod
-    def create_instance(args):
+    def create_instance(_args):
         """
         Creates a SysLine application depending on the command line arguments
         """
-        options = parse_cli(args)
+        # Load plugins
+        early_options, args = parse_early_cli(_args)
+        if early_options.debug:
+            level = logging.DEBUG
+        else:
+            level = logging.INFO
+
+        logging.basicConfig(level=level)
+        LOG.debug("command line arguments: %s", _args)
+        LOG.debug("command line arguments after: %s", args)
+
+        plugins = SysLineApp._load_plugins()
+        options = parse_cli(plugins, args)
+
         if options.all is not None:
             fmt = options.output_format
 
             if fmt == "key_value":
-                return SysLineAllKeyValue(args, options)
+                return SysLineAllKeyValue(plugins, args, options)
 
             if fmt == "json":
-                return SysLineAllJson(args, options)
+                return SysLineAllJson(plugins, args, options)
 
             err_msg = f"unknown output format: '{fmt}'"
-            return SysLineError(args, options, err_msg=err_msg, err_code=2)
+            return SysLineError(plugins, args, options, err_msg=err_msg,
+                                err_code=2)
 
         if options.format:
-            return SysLineFormat(args, options)
-        return SysLineError(args, options, err_code=2)
+            return SysLineFormat(plugins, args, options)
+        return SysLineError(plugins, args, options, err_code=2)
+
+    @staticmethod
+    def _load_plugins():
+        # Always load core plugins
+        plugins = [cpu, mem, swap, disk, bat, net, date, wm, misc]
+
+        # Fetch all other plugins from plugins directory
+        # TODO: Actually implement this
+
+        # Get os information to load os specific plugins
+        os_name = os.uname().sysname
+        LOG.debug("os_name is '%s'", os_name)
+
+        # Begin loading
+        loaded = dict()
+        for plugin in plugins:
+            plugin_split = plugin.__name__.split(".")
+            plugin_import = ".".join(plugin_split + [os_name.lower()])
+
+            LOG.debug("importing plugin '%s'...", plugin_import)
+            try:
+                plugin_mod = import_module(plugin_import)
+            except ModuleNotFoundError as e:
+                plugin_mod = None
+
+            if plugin_mod is None:
+                msg = "failed to import os specific plugin '%s'"
+                LOG.debug(msg, plugin_import)
+
+                plugin_import = ".".join(plugin_split + ["plugin"])
+
+                LOG.debug("importing plugin '%s'...", plugin_import)
+                try:
+                    plugin_mod = import_module(plugin_import)
+                except ModuleNotFoundError as e:
+                    plugin_mod = None
+
+            if plugin_mod is None:
+                LOG.error("Failed to import plugin '%s'", plugin_import)
+                LOG.error("Exiting...")
+                return None
+
+            plugin_class = getattr(plugin_mod, plugin.PLUGIN_CLASSNAME)
+            plugin_class = plugin_class._post_import_hook(plugin_class)
+            loaded[plugin.PLUGIN_NAME] = plugin_class
+            LOG.debug("imported plugin '%s'", plugin_import)
+
+        return loaded
 
 
 class SysLineAll(SysLineApp):
     """ SysLine application running in 'all' mode """
 
-    def __init__(self, args, options):
-        super(SysLineAll, self).__init__(args, options)
+    def __init__(self, plugins, args, options):
+        super(SysLineAll, self).__init__(plugins, args, options)
         if not self.options.all:
-            self.domains = self.system.SHORT_DOMAINS
+            self.domains = self.system.plugins.keys()
         else:
             self.domains = options.all
 
@@ -139,8 +196,8 @@ class SysLineError(SysLineApp):
     optionally print an error message
     """
 
-    def __init__(self, args, options, err_msg="", err_code=0):
-        super(SysLineError, self).__init__(args, options)
+    def __init__(self, plugins, args, options, err_msg="", err_code=0):
+        super(SysLineError, self).__init__(plugins, args, options)
         self.err_msg = err_msg
         self.err_code = err_code
 
