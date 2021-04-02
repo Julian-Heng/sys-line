@@ -292,9 +292,12 @@ class AbstractCpu(AbstractGetter):
 
         cores = self.cores(options)
         cpu = self._cpu_string()
-        speed = self._cpu_speed()
+
+        if cpu is None:
+            return None
         cpu = trim_reg.sub("", cpu.strip())
 
+        speed = self._cpu_speed()
         if speed is not None:
             fmt = fr" ({cores}) @ {speed}GHz"
             cpu = cpu_reg.sub(fmt, cpu)
