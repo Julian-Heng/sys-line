@@ -1,4 +1,6 @@
 - Convert all docstrings to numpydoc format
 - Figure out how to implement an api plugin to allow custom AbstractGetters
-  (i.e. loading a getter that fetches song info or weather info)
+  (i.e. loading a getter that fetches song info or weather info) [Need help]
 - Support more operating systems?
+- Support exceptions and mitigate functions that returns None
+- Convert some classes to namedtuples?
